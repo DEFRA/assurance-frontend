@@ -3,56 +3,43 @@
 {% block content %}
   {{ appHeading({
     text: heading,
-    caption: "Core delivery platform Node.js Frontend Template."
+    caption: "View and manage technical assurance reviews for DDTS projects."
   }) }}
 
   <div class="govuk-grid-row">
-    <div class="govuk-grid-column-two-thirds">
-      <div class="govuk-body" data-testid="app-page-body">
-        <p>
-          Welcome to the Frontend Template, a starter kit for Core Delivery Platform Node.js Frontends 🚀
-        </p>
-        <p>
-          Based on <a href="https://defra.github.io/software-development-standards">DEFRA</a> and <a
-            href="https://design-system.service.gov.uk/">GOV.UK</a> best practices this starter kit provides you with
-          a deployable, production ready template 🙌🏻 to start your new service with.
-        </p>
-        <p>This template comes with:</p>
-        <ul>
-          <li>
-            <a href="https://frontend.design-system.service.gov.uk/">GOV.UK Frontend</a>
-          </li>
-          <li>
-            <a href="https://hapi.dev">Hapi.js</a>
-          </li>
-          <li>
-            <a href="https://mozilla.github.io/nunjucks/">Nunjucks</a>
-          </li>
-          <li>
-            <a href="https://github.com/mozilla/node-convict">Node Convict</a>
-          </li>
-          <li>
-            <a href="https://jestjs.io/">Jest testing</a>
-          </li>
-          <li>GitHub Actions Pull Request and Publish jobs</li>
-          <li>
-            <a href="https://github.com/pinojs/pino">PinoJs logging</a>
-          </li>
-          <li>
-            <a href="https://standardjs.com">Standard JS</a>
-          </li>
-          <li>
-            <a href="https://eslint.org">ESLint</a>
-          </li>
-          <li>
-            <a href="https://stylelint.io">StyleLint</a>
-          </li>
-          <li>
-            <a href="https://prettier.io">Prettier</a>
-          </li>
-          <li>and lots more... 😎</li>
-        </ul>
-      </div>
+    <div class="govuk-grid-column-full">
+      <p class="govuk-body">{{ description }}</p>
+
+      <table class="govuk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header">Project name</th>
+            <th scope="col" class="govuk-table__header">RAG status</th>
+            <th scope="col" class="govuk-table__header">Last updated</th>
+            <th scope="col" class="govuk-table__header">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for project in projects %}
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell">{{ project.name }}</td>
+              <td class="govuk-table__cell">
+                <strong class="govuk-tag 
+                  {% if project.status === 'RED' %}govuk-tag--red
+                  {% elif project.status === 'AMBER' %}govuk-tag--yellow
+                  {% elif project.status === 'GREEN' %}govuk-tag--green
+                  {% endif %}">
+                  {{ project.status }}
+                </strong>
+              </td>
+              <td class="govuk-table__cell">{{ project.lastUpdated }}</td>
+              <td class="govuk-table__cell">
+                <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.actions }}</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 

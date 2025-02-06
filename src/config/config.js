@@ -215,6 +215,14 @@ export const config = convict({
       default: 'x-cdp-request-id',
       env: 'TRACING_HEADER'
     }
+  },
+  api: {
+    baseUrl: {
+      doc: 'Base URL for the API',
+      format: String,
+      default: 'http://localhost:5000',
+      env: 'API_BASE_URL'
+    }
   }
 })
 

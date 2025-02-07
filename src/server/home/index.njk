@@ -24,7 +24,7 @@
             <tr class="govuk-table__row">
               <td class="govuk-table__cell">{{ project.name }}</td>
               <td class="govuk-table__cell">
-                <strong class="govuk-tag 
+                <strong class="govuk-tag
                   {% if project.status === 'RED' %}govuk-tag--red
                   {% elif project.status === 'AMBER' %}govuk-tag--yellow
                   {% elif project.status === 'GREEN' %}govuk-tag--green
@@ -40,6 +40,13 @@
           {% endfor %}
         </tbody>
       </table>
+
+      {# Debug response #}
+      <p>
+        <span>Projects: </span>
+        {{ projects | dump }}
+      </p>
+
     </div>
   </div>
 

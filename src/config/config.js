@@ -99,7 +99,7 @@ export const config = convict({
     doc: 'HTTP Proxy',
     format: String,
     nullable: true,
-    default: null,
+    default: 'http://localhost:3000',
     env: 'CDP_HTTP_PROXY'
   }),
   isSecureContextEnabled: {

@@ -20,6 +20,7 @@
           </tr>
         </thead>
         <tbody class="govuk-table__body">
+{#
           {% for project in projects %}
             <tr class="govuk-table__row">
               <td class="govuk-table__cell">{{ project.name }}</td>
@@ -38,13 +39,18 @@
               </td>
             </tr>
           {% endfor %}
+#}
         </tbody>
       </table>
 
       {# Debug response #}
       <p>
-        <span>Projects: </span>
-        {{ projects | dump }}
+        <strong>Data via undiciFetch call: </strong>
+        {{ data | dump }}
+      </p>
+      <p>
+        <strong>Data via fetch call: </strong>
+        {{ data | dump }}
       </p>
 
     </div>

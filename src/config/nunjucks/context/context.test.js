@@ -47,7 +47,7 @@ describe('#context', () => {
             url: '/about'
           }
         ],
-        serviceName: 'assurance-frontend',
+        serviceName: 'DDTS Assurance',
         serviceUrl: '/'
       })
     })
@@ -136,7 +136,7 @@ describe('#context cache', () => {
             url: '/about'
           }
         ],
-        serviceName: 'assurance-frontend',
+        serviceName: 'DDTS Assurance',
         serviceUrl: '/'
       })
     })

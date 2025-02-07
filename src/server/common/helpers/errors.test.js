@@ -22,7 +22,7 @@ describe('#errors', () => {
     })
 
     expect(result).toEqual(
-      expect.stringContaining('Page not found | assurance-frontend')
+      expect.stringContaining('Page not found | DDTS Assurance')
     )
     expect(statusCode).toBe(statusCodes.notFound)
   })

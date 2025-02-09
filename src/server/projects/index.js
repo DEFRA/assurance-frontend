@@ -1,4 +1,5 @@
 import { projectsController } from '~/src/server/projects/controller.js'
+import { addProjectController } from './add/controller.js'
 
 /**
  * Sets up the routes used in the home page.
@@ -11,12 +12,36 @@ import { projectsController } from '~/src/server/projects/controller.js'
 export const projects = {
   plugin: {
     name: 'projects',
-    register(server) {
+    register: (server) => {
+      // Add project routes first
+      server.route({
+        method: 'GET',
+        path: '/projects/add',
+        handler: addProjectController.get
+      })
+
+      server.route({
+        method: 'POST',
+        path: '/projects/add',
+        handler: addProjectController.post
+      })
+
+      // Then the project detail routes
       server.route([
         {
           method: 'GET',
           path: '/projects/{id}',
-          ...projectsController
+          handler: projectsController.get
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/edit',
+          handler: projectsController.getEdit
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/edit',
+          handler: projectsController.postEdit
         }
       ])
     }

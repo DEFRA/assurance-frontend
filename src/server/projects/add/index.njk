@@ -1,0 +1,63 @@
+{% extends "layouts/page.njk" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% block content %}
+  {% if errorMessage %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: [
+        {
+          text: errorMessage
+        }
+      ]
+    }) }}
+  {% endif %}
+
+  <form method="POST" novalidate>
+    {{ govukInput({
+      label: {
+        text: "Project name",
+        classes: "govuk-label--m"
+      },
+      id: "name",
+      name: "name",
+      value: values.name,
+      errorMessage: errors.name,
+      required: true
+    }) }}
+
+    {{ govukSelect({
+      id: "status",
+      name: "status",
+      label: {
+        text: "Current status",
+        classes: "govuk-label--m"
+      },
+      items: statusOptions,
+      value: values.status,
+      errorMessage: errors.status,
+      required: true
+    }) }}
+
+    {{ govukTextarea({
+      name: "commentary",
+      id: "commentary",
+      label: {
+        text: "Project commentary",
+        classes: "govuk-label--m"
+      },
+      value: values.commentary,
+      errorMessage: errors.commentary,
+      required: true
+    }) }}
+
+    {{ govukButton({
+      text: "Add project"
+    }) }}
+  </form>
+{% endblock %} 

@@ -25,6 +25,12 @@ async function fetcher(url, options = {}, request) {
 
     logger.info(`Request completed with status ${response.status}: ${fullUrl}`)
 
+    // Handle 201 Created response
+    if (response.status === 201) {
+      const data = await response.json()
+      return data
+    }
+
     if (!response.ok) {
       return Boom.boomify(new Error(response.statusText), {
         statusCode: response.status

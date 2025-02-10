@@ -1,45 +1,73 @@
 {% extends 'layouts/page.njk' %}
 
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
 {% block content %}
   {{ appHeading({
     text: heading,
     caption: "View and manage technical assurance reviews for DDTS projects."
   }) }}
 
+  {{ govukButton({
+    text: "Add new project",
+    href: "/projects/add",
+    classes: "govuk-button--secondary govuk-!-margin-bottom-6"
+  }) }}
+
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
       <p class="govuk-body">{{ description }}</p>
 
-      <table class="govuk-table">
-        <thead class="govuk-table__head">
-          <tr class="govuk-table__row">
-            <th scope="col" class="govuk-table__header">Project name</th>
-            <th scope="col" class="govuk-table__header">RAG status</th>
-            <th scope="col" class="govuk-table__header">Last updated</th>
-            <th scope="col" class="govuk-table__header">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="govuk-table__body">
-          {% for project in projects %}
-            <tr class="govuk-table__row">
-              <td class="govuk-table__cell">{{ project.name }}</td>
-              <td class="govuk-table__cell">
-                <strong class="govuk-tag 
-                  {% if project.status === 'RED' %}govuk-tag--red
-                  {% elif project.status === 'AMBER' %}govuk-tag--yellow
-                  {% elif project.status === 'GREEN' %}govuk-tag--green
-                  {% endif %}">
-                  {{ project.status }}
-                </strong>
-              </td>
-              <td class="govuk-table__cell">{{ project.lastUpdated }}</td>
-              <td class="govuk-table__cell">
-                <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.actions }}</a>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% if projects and projects.length > 0 %}
+        {% set tableRows = [] %}
+        {% for project in projects %}
+          {% set statusClass = '' %}
+          {% if project.status === 'RED' %}
+            {% set statusClass = 'govuk-tag--red' %}
+          {% elif project.status === 'AMBER' %}
+            {% set statusClass = 'govuk-tag--yellow' %}
+          {% elif project.status === 'GREEN' %}
+            {% set statusClass = 'govuk-tag--green' %}
+          {% endif %}
+
+          {% set row = [
+            {
+              text: project.name
+            },
+            {
+              html: "<strong class='govuk-tag " + statusClass + "'>" + project.status + "</strong>"
+            },
+            {
+              text: project.lastUpdated
+            },
+            {
+              html: "<a href='/projects/" + project.id + "' class='govuk-link'>" + project.actions + "</a>"
+            }
+          ] %}
+          {% set tableRows = (tableRows.push(row), tableRows) %}
+        {% endfor %}
+
+        {{ govukTable({
+          head: [
+            {
+              text: "Project name"
+            },
+            {
+              text: "RAG status"
+            },
+            {
+              text: "Last updated"
+            },
+            {
+              text: "Actions"
+            }
+          ],
+          rows: tableRows
+        }) }}
+      {% else %}
+        <p class="govuk-body">No projects found.</p>
+      {% endif %}
     </div>
   </div>
 

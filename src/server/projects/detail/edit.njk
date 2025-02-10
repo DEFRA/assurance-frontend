@@ -1,0 +1,84 @@
+{% extends "layouts/page.njk" %}
+
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% block content %}
+  {% if errorMessage %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: [
+        {
+          text: errorMessage
+        }
+      ]
+    }) }}
+  {% endif %}
+
+  <form method="POST" novalidate>
+    <h2 class="govuk-heading-m">Overall Assessment</h2>
+    
+    {{ govukSelect({
+      id: "status",
+      name: "status",
+      label: {
+        text: "Project Status",
+        classes: "govuk-label--s"
+      },
+      items: statusOptions,
+      value: project.status
+    }) }}
+
+    {{ govukTextarea({
+      name: "commentary",
+      id: "commentary",
+      label: {
+        text: "Project Commentary",
+        classes: "govuk-label--m"
+      },
+      value: project.commentary
+    }) }}
+
+    <h2 class="govuk-heading-m">Service Standards Assessment</h2>
+
+    {% for standard in project.standards %}
+      <div class="govuk-form-group">
+        <h3 class="govuk-heading-s">Standard {{ standard.standardId }}</h3>
+        
+        {{ govukSelect({
+          id: "standards[" + standard.standardId + "][status]",
+          name: "standards." + standard.standardId + ".status",
+          label: {
+            text: "Status",
+            classes: "govuk-label--s"
+          },
+          items: statusOptions,
+          value: standard.status
+        }) }}
+
+        {{ govukTextarea({
+          name: "standards." + standard.standardId + ".commentary",
+          id: "standards[" + standard.standardId + "][commentary]",
+          label: {
+            text: "Commentary",
+            classes: "govuk-label--s"
+          },
+          value: standard.commentary
+        }) }}
+      </div>
+      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+    {% endfor %}
+
+    {{ govukButton({
+      text: "Save changes"
+    }) }}
+
+    {{ govukButton({
+      text: "Cancel",
+      href: "/projects/" + project.id,
+      classes: "govuk-button--secondary"
+    }) }}
+  </form>
+{% endblock %} 

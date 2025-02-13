@@ -10,7 +10,7 @@
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
-      <h2 class="govuk-heading-m">Overall Assessment</h2>
+      <h2 class="govuk-heading-m">Delivery Confidence</h2>
       <div class="govuk-summary-card">
         <div class="govuk-summary-card__title-wrapper">
           <h2 class="govuk-summary-card__title">Current Status: 
@@ -29,7 +29,7 @@
         </div>
       </div>
 
-      <h2 class="govuk-heading-m">Service Standard Assessment</h2>
+      <h2 class="govuk-heading-m">Service Standard Progress</h2>
       <table class="govuk-table">
         <thead class="govuk-table__head">
           <tr class="govuk-table__row">
@@ -44,6 +44,10 @@
               <td class="govuk-table__cell">
                 {% if standard.number and standard.name %}
                   {{ standard.number }}. {{ standard.name }}
+                  <br>
+                  <a href="/projects/{{ project.id }}/standards/{{ standard.standardId }}/history" class="govuk-link govuk-link--no-visited-state">
+                    View history
+                  </a>
                 {% else %}
                   Standard {{ standard.standardId }}
                 {% endif %}

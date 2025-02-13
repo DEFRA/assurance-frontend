@@ -6,7 +6,8 @@ import { getServiceStandards } from '../services/service-standards.js'
 import Boom from '@hapi/boom'
 import {
   getProjectById,
-  updateProject
+  updateProject,
+  getStandardHistory
 } from '~/src/server/services/projects.js'
 
 export const projectsController = {
@@ -162,6 +163,37 @@ export const projectsController = {
         ],
         errorMessage: 'Failed to update project. Please try again.'
       })
+    }
+  },
+
+  getStandardHistory: async (request, h) => {
+    const { id, standardId } = request.params
+
+    try {
+      const project = await getProjectById(id)
+      if (!project) {
+        return h.redirect('/?notification=Project not found')
+      }
+
+      const standard = project.standards.find(
+        (s) => s.standardId === standardId
+      )
+      if (!standard) {
+        return h.redirect(`/projects/${id}?notification=Standard not found`)
+      }
+
+      const history = await getStandardHistory(id, standardId)
+
+      return h.view('projects/detail/standard-history', {
+        pageTitle: `Standard ${standardId} History | ${project.name}`,
+        heading: `Standard ${standardId} History`,
+        project,
+        standard,
+        history
+      })
+    } catch (error) {
+      request.logger.error(error)
+      throw Boom.boomify(error, { statusCode: 500 })
     }
   }
 }

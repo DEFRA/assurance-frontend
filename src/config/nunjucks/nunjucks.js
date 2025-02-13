@@ -7,23 +7,42 @@ import { config } from '~/src/config/config.js'
 import { context } from './context/context.js'
 import * as filters from './filters/filters.js'
 import * as globals from './globals.js'
+import { formatDate } from './filters/format-date.js'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
-const nunjucksEnvironment = nunjucks.configure(
-  [
-    'node_modules/govuk-frontend/dist/',
-    path.resolve(dirname, '../../server/common/templates'),
-    path.resolve(dirname, '../../server/common/components')
-  ],
-  {
-    autoescape: true,
-    throwOnUndefined: false,
-    trimBlocks: true,
-    lstripBlocks: true,
-    watch: config.get('nunjucks.watch'),
-    noCache: config.get('nunjucks.noCache')
-  }
-)
+
+export function configureNunjucks() {
+  const nunjucksEnvironment = nunjucks.configure(
+    [
+      'node_modules/govuk-frontend/dist/',
+      path.resolve(dirname, '../../server/common/templates'),
+      path.resolve(dirname, '../../server/common/components')
+    ],
+    {
+      autoescape: true,
+      throwOnUndefined: false,
+      trimBlocks: true,
+      lstripBlocks: true,
+      watch: config.get('nunjucks.watch'),
+      noCache: config.get('nunjucks.noCache')
+    }
+  )
+
+  Object.entries(globals).forEach(([name, global]) => {
+    nunjucksEnvironment.addGlobal(name, global)
+  })
+
+  Object.entries(filters).forEach(([name, filter]) => {
+    nunjucksEnvironment.addFilter(name, filter)
+  })
+
+  // Add formatDate filter
+  nunjucksEnvironment.addFilter('formatDate', formatDate)
+
+  return nunjucksEnvironment
+}
+
+const nunjucksEnvironment = configureNunjucks()
 
 /**
  * @satisfies {ServerRegisterPluginObject<ServerViewsConfiguration>}
@@ -53,14 +72,6 @@ export const nunjucksConfig = {
     context
   }
 }
-
-Object.entries(globals).forEach(([name, global]) => {
-  nunjucksEnvironment.addGlobal(name, global)
-})
-
-Object.entries(filters).forEach(([name, filter]) => {
-  nunjucksEnvironment.addFilter(name, filter)
-})
 
 /**
  * @import { ServerRegisterPluginObject } from '@hapi/hapi'

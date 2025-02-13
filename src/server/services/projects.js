@@ -244,3 +244,36 @@ export async function getProjectById(id) {
     throw error
   }
 }
+
+export async function getStandardHistory(projectId, standardId) {
+  const logger = createLogger()
+  try {
+    const endpoint = `/projects/${projectId}/standards/${standardId}/history`
+    logger.info({ projectId, standardId }, 'Fetching standard history from API')
+
+    const data = await fetcher(endpoint)
+
+    if (!data) {
+      logger.warn('No history found', { projectId, standardId })
+      return []
+    }
+
+    logger.info(
+      { historyCount: data.length },
+      'Standard history retrieved successfully'
+    )
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        projectId,
+        standardId
+      },
+      'Failed to fetch standard history'
+    )
+    throw error
+  }
+}

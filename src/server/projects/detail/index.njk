@@ -23,6 +23,9 @@
             </strong>
           </h2>
           <p class="govuk-body">Last updated: {{ project.lastUpdated }}</p>
+          <a href="/projects/{{ project.id }}/history" class="govuk-link govuk-link--no-visited-state">
+            View project history
+          </a>
         </div>
         <div class="govuk-summary-card__content">
           <p class="govuk-body">{{ project.commentary }}</p>

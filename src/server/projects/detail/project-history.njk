@@ -5,7 +5,7 @@
 
 {% block content %}
   {{ appHeading({
-    text: "Standard " + standard.standardId + " History",
+    text: "Project History",
     caption: project.name
   }) }}
 
@@ -48,7 +48,7 @@
           </tbody>
         </table>
       {% else %}
-        <p class="govuk-body">No history found for this standard.</p>
+        <p class="govuk-body">No history found for this project.</p>
       {% endif %}
 
       {{ govukButton({

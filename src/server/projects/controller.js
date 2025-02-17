@@ -7,7 +7,8 @@ import Boom from '@hapi/boom'
 import {
   getProjectById,
   updateProject,
-  getStandardHistory
+  getStandardHistory,
+  getProjectHistory
 } from '~/src/server/services/projects.js'
 
 export const projectsController = {
@@ -189,6 +190,29 @@ export const projectsController = {
         heading: `Standard ${standardId} History`,
         project,
         standard,
+        history
+      })
+    } catch (error) {
+      request.logger.error(error)
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  getProjectHistory: async (request, h) => {
+    const { id } = request.params
+
+    try {
+      const project = await getProjectById(id)
+      if (!project) {
+        return h.redirect('/?notification=Project not found')
+      }
+
+      const history = await getProjectHistory(id)
+
+      return h.view('projects/detail/project-history', {
+        pageTitle: `Project History | ${project.name}`,
+        heading: 'Project History',
+        project,
         history
       })
     } catch (error) {

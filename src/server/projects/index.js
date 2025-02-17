@@ -35,6 +35,11 @@ export const projects = {
         },
         {
           method: 'GET',
+          path: '/projects/{id}/history',
+          handler: projectsController.getProjectHistory
+        },
+        {
+          method: 'GET',
           path: '/projects/{id}/standards/{standardId}/history',
           handler: projectsController.getStandardHistory
         },

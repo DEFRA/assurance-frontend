@@ -33,20 +33,31 @@ describe('#context', () => {
     test('Should provide expected context', () => {
       expect(contextResult).toEqual({
         assetPath: '/public/assets',
-        breadcrumbs: [],
-        getAssetPath: expect.any(Function),
-        navigation: [
+        breadcrumbs: [
           {
-            isActive: true,
             text: 'Home',
-            url: '/'
-          },
-          {
-            isActive: false,
-            text: 'About',
-            url: '/about'
+            href: '/'
           }
         ],
+        getAssetPath: expect.any(Function),
+        navigation: {
+          primary: [
+            {
+              text: 'Home',
+              url: '/'
+            },
+            {
+              text: 'Programmes',
+              url: '/programmes'
+            },
+            {
+              text: 'About',
+              url: '/about'
+            }
+          ],
+          actions: [],
+          admin: []
+        },
         serviceName: 'DDTS Assurance',
         serviceUrl: '/'
       })
@@ -122,20 +133,31 @@ describe('#context cache', () => {
     test('Should provide expected context', () => {
       expect(contextResult).toEqual({
         assetPath: '/public/assets',
-        breadcrumbs: [],
-        getAssetPath: expect.any(Function),
-        navigation: [
+        breadcrumbs: [
           {
-            isActive: true,
             text: 'Home',
-            url: '/'
-          },
-          {
-            isActive: false,
-            text: 'About',
-            url: '/about'
+            href: '/'
           }
         ],
+        getAssetPath: expect.any(Function),
+        navigation: {
+          primary: [
+            {
+              text: 'Home',
+              url: '/'
+            },
+            {
+              text: 'Programmes',
+              url: '/programmes'
+            },
+            {
+              text: 'About',
+              url: '/about'
+            }
+          ],
+          actions: [],
+          admin: []
+        },
         serviceName: 'DDTS Assurance',
         serviceUrl: '/'
       })

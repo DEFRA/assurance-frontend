@@ -3,74 +3,52 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block content %}
-  {{ appHeading({
-    text: heading,
-    caption: "Technical Assessment Details"
-  }) }}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {{ appHeading({
+        text: project.name,
+        classes: "govuk-heading-xl govuk-!-margin-bottom-2 govuk-!-word-break-word"
+      }) }}
+      <p class="govuk-body">
+        A technical assessment of this project's compliance with service standards and best practices.
+      </p>
+    </div>
+    <div class="govuk-grid-column-one-third">
+      <div class="app-status-container">
+        <h2 class="govuk-heading-s govuk-!-margin-bottom-2">OVERALL CCTS STATUS</h2>
+        <strong class="govuk-tag
+          {% if project.status === 'RED' %}govuk-tag--red
+          {% elif project.status === 'AMBER' %}govuk-tag--yellow
+          {% elif project.status === 'GREEN' %}govuk-tag--green
+          {% endif %}">
+          {{ project.status }}
+        </strong>
+      </div>
+    </div>
+  </div>
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
-      <h2 class="govuk-heading-m">Delivery Confidence</h2>
+      <h2 class="govuk-heading-m">Project Commentary</h2>
+      <div class="govuk-body-s govuk-!-margin-bottom-2">
+        Last updated: {{ project.lastUpdated }} - 
+        <a href="/projects/{{ project.id }}/history" class="govuk-link govuk-link--no-visited-state">
+          View history
+        </a>
+      </div>
+      <p class="govuk-body">{{ project.commentary }}</p>
+
       <div class="govuk-summary-card">
         <div class="govuk-summary-card__title-wrapper">
-          <h2 class="govuk-summary-card__title">Current Status: 
-            <strong class="govuk-tag 
-              {% if project.status === 'RED' %}govuk-tag--red
-              {% elif project.status === 'AMBER' %}govuk-tag--yellow
-              {% elif project.status === 'GREEN' %}govuk-tag--green
-              {% endif %}">
-              {{ project.status }}
-            </strong>
-          </h2>
-          <p class="govuk-body">Last updated: {{ project.lastUpdated }}</p>
-          <a href="/projects/{{ project.id }}/history" class="govuk-link govuk-link--no-visited-state">
-            View project history
-          </a>
+          <h2 class="govuk-summary-card__title">Service Standard Progress</h2>
         </div>
         <div class="govuk-summary-card__content">
-          <p class="govuk-body">{{ project.commentary }}</p>
+          <p class="govuk-body">View and manage the project's progress against each service standard.</p>
+          <a href="/projects/{{ project.id }}/standards" class="govuk-button">
+            View Standards Progress
+          </a>
         </div>
       </div>
-
-      <h2 class="govuk-heading-m">Service Standard Progress</h2>
-      <table class="govuk-table">
-        <thead class="govuk-table__head">
-          <tr class="govuk-table__row">
-            <th scope="col" class="govuk-table__header">Service Standard</th>
-            <th scope="col" class="govuk-table__header">Status</th>
-            <th scope="col" class="govuk-table__header">Commentary</th>
-          </tr>
-        </thead>
-        <tbody class="govuk-table__body">
-          {% for standard in project.standards %}
-            <tr class="govuk-table__row">
-              <td class="govuk-table__cell">
-                {% if standard.number and standard.name %}
-                  {{ standard.number }}. {{ standard.name }}
-                  <br>
-                  <a href="/projects/{{ project.id }}/standards/{{ standard.standardId }}/history" class="govuk-link govuk-link--no-visited-state">
-                    View history
-                  </a>
-                {% else %}
-                  Standard {{ standard.standardId }}
-                {% endif %}
-              </td>
-              <td class="govuk-table__cell">
-                <strong class="govuk-tag 
-                  {% if standard.status === 'RED' %}govuk-tag--red
-                  {% elif standard.status === 'AMBER' %}govuk-tag--yellow
-                  {% elif standard.status === 'GREEN' %}govuk-tag--green
-                  {% endif %}">
-                  {{ standard.status }}
-                </strong>
-              </td>
-              <td class="govuk-table__cell">
-                {{ standard.commentary }}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
 
       {{ govukButton({
         text: "Edit project",
@@ -79,4 +57,26 @@
       }) }}
     </div>
   </div>
+{% endblock %}
+
+{% block pageStyles %}
+<style>
+  .app-status-container {
+    border: 2px solid #0b0c0c;
+    padding: 15px;
+    text-align: center;
+  }
+  
+  .app-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .app-tag-list .govuk-tag {
+    margin: 0;
+    white-space: nowrap;
+  }
+</style>
 {% endblock %} 

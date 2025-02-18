@@ -12,6 +12,7 @@ import { getCacheEngine } from '~/src/server/common/helpers/session-cache/cache-
 import { pulse } from '~/src/server/common/helpers/pulse.js'
 import { requestTracing } from '~/src/server/common/helpers/request-tracing.js'
 import { setupProxy } from '~/src/server/common/helpers/proxy/setup-proxy.js'
+import { navigation } from '~/src/server/common/helpers/navigation.js'
 
 export async function createServer() {
   setupProxy()
@@ -63,6 +64,21 @@ export async function createServer() {
   ])
 
   server.ext('onPreResponse', catchAll)
+
+  // Set view context
+  const context = {
+    serviceName: 'DDTS Assurance',
+    serviceUrl: '/',
+    navigation,
+    breadcrumbs: [
+      {
+        text: 'Home',
+        href: '/'
+      }
+    ]
+  }
+
+  server.app.context = context
 
   return server
 }

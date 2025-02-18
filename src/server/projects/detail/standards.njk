@@ -1,0 +1,59 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block content %}
+  {{ appHeading({
+    text: "Service Standard Progress",
+    caption: project.name
+  }) }}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <table class="govuk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header">Service Standard</th>
+            <th scope="col" class="govuk-table__header">Status</th>
+            <th scope="col" class="govuk-table__header">Commentary</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for standard in project.standards %}
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell">
+                {% if standard.number and standard.name %}
+                  {{ standard.number }}. {{ standard.name }}
+                  <br>
+                  <a href="/projects/{{ project.id }}/standards/{{ standard.standardId }}/history" class="govuk-link govuk-link--no-visited-state">
+                    View history
+                  </a>
+                {% else %}
+                  Standard {{ standard.standardId }}
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                <strong class="govuk-tag 
+                  {% if standard.status === 'RED' %}govuk-tag--red
+                  {% elif standard.status === 'AMBER' %}govuk-tag--yellow
+                  {% elif standard.status === 'GREEN' %}govuk-tag--green
+                  {% endif %}">
+                  {{ standard.status }}
+                </strong>
+              </td>
+              <td class="govuk-table__cell">
+                {{ standard.commentary }}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {{ govukButton({
+        text: "Back to project",
+        href: "/projects/" + project.id,
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
+  </div>
+{% endblock %} 

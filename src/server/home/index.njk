@@ -2,21 +2,41 @@
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
 
 {% block content %}
   {{ appHeading({
-    text: heading,
-    caption: "View and manage technical assurance reviews for DDTS projects."
-  }) }}
-
-  {{ govukButton({
-    text: "Add new project",
-    href: "/projects/add",
-    classes: "govuk-button--secondary govuk-!-margin-bottom-6"
+    text: "Projects"
   }) }}
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
+      <form method="GET" class="govuk-!-margin-bottom-6">
+        {{ govukInput({
+          id: "tag",
+          name: "tag",
+          label: {
+            text: "Filter by tag",
+            classes: "govuk-label--s"
+          },
+          value: currentTag
+        }) }}
+        
+        {{ govukButton({
+          text: "Apply filter"
+        }) }}
+        
+        {% if currentTag %}
+          <a href="/" class="govuk-link govuk-!-margin-left-3">Clear filter</a>
+        {% endif %}
+      </form>
+
+      {{ govukButton({
+        text: "Add new project",
+        href: "/projects/add",
+        classes: "govuk-button--secondary govuk-!-margin-bottom-6"
+      }) }}
+
       <p class="govuk-body">{{ description }}</p>
 
       {% if projects and projects.length > 0 %}

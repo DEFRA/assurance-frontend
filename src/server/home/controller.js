@@ -7,29 +7,31 @@ import { getProjects } from '~/src/server/services/projects.js'
  */
 export const homeController = {
   handler: async (request, h) => {
-    request.logger.info('Fetching projects using projects service')
-
-    let projects = []
+    const { tag } = request.query
     try {
-      const result = await getProjects()
-      // Ensure projects is always an array
-      projects = Array.isArray(result) ? result : []
+      const projects = await getProjects()
+
+      // Filter projects if tag is provided
+      const filteredProjects = tag
+        ? projects.filter((project) =>
+            project.tags?.some((t) =>
+              t.toLowerCase().includes(tag.toLowerCase())
+            )
+          )
+        : projects
+
+      return h.view('home/index', {
+        pageTitle: 'Projects | DDTS Assurance',
+        projects: filteredProjects.map((project) => ({
+          ...project,
+          actions: 'View details'
+        })),
+        currentTag: tag
+      })
     } catch (error) {
       request.logger.error(error)
       throw Boom.boomify(error, { statusCode: 500 })
     }
-
-    return h.view('home/index', {
-      pageTitle: 'DDTS Technical Assurance Dashboard',
-      heading: 'DDTS Technical Assurance Dashboard',
-      projects: projects.map((project) => ({
-        id: project?.id || '',
-        name: project?.name || '',
-        status: project?.status || '',
-        lastUpdated: project?.lastUpdated || '',
-        actions: 'View details'
-      }))
-    })
   }
 }
 

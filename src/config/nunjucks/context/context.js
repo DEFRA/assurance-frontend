@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 
 import { config } from '~/src/config/config.js'
 import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
-import { buildNavigation } from '~/src/config/nunjucks/context/build-navigation.js'
+import { navigation } from '~/src/server/common/helpers/navigation.js'
 
 const logger = createLogger()
 const assetPath = config.get('assetPath')
@@ -15,10 +15,7 @@ const manifestPath = path.join(
 /** @type {Record<string, string> | undefined} */
 let webpackManifest
 
-/**
- * @param {Request | null} request
- */
-export function context(request) {
+export function context() {
   if (!webpackManifest) {
     try {
       webpackManifest = JSON.parse(readFileSync(manifestPath, 'utf-8'))
@@ -31,8 +28,13 @@ export function context(request) {
     assetPath: `${assetPath}/assets`,
     serviceName: config.get('serviceName'),
     serviceUrl: '/',
-    breadcrumbs: [],
-    navigation: buildNavigation(request),
+    breadcrumbs: [
+      {
+        text: 'Home',
+        href: '/'
+      }
+    ],
+    navigation,
 
     /**
      * @param {string} asset

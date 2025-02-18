@@ -52,6 +52,11 @@ export const projects = {
           method: 'POST',
           path: '/projects/{id}/edit',
           handler: projectsController.postEdit
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/standards',
+          handler: projectsController.getStandards
         }
       ])
     }

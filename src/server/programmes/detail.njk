@@ -1,0 +1,58 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% block content %}
+  {{ appHeading({
+    text: programme + " Programme",
+    caption: "Programme Overview"
+  }) }}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      {% if projects.length > 0 %}
+        {% set rows = [] %}
+        {% for project in projects %}
+          {% set statusClass = "govuk-tag--grey" %}
+          {% if project.status === "RED" %}
+            {% set statusClass = "govuk-tag--red" %}
+          {% elif project.status === "AMBER" %}
+            {% set statusClass = "govuk-tag--yellow" %}
+          {% elif project.status === "GREEN" %}
+            {% set statusClass = "govuk-tag--green" %}
+          {% endif %}
+
+          {% set row = [
+            {
+              html: "<a href='/projects/" + project.id + "' class='govuk-link'>" + project.name + "</a>"
+            },
+            {
+              html: "<strong class='govuk-tag " + statusClass + "'>" + project.status + "</strong>"
+            },
+            {
+              text: project.standardsNotMet
+            }
+          ] %}
+          {% set rows = (rows.push(row), rows) %}
+        {% endfor %}
+
+        {{ govukTable({
+          head: [
+            {
+              text: "Project name"
+            },
+            {
+              text: "RAG status"
+            },
+            {
+              text: "Standards not met"
+            }
+          ],
+          rows: rows
+        }) }}
+      {% else %}
+        <p class="govuk-body">No projects found in this programme.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %} 

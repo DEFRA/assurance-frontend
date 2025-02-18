@@ -2,6 +2,7 @@
 
 {% from "govuk/components/textarea/macro.njk" import govukTextarea %}
 {% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
@@ -39,6 +40,19 @@
         classes: "govuk-label--m"
       },
       value: project.commentary
+    }) }}
+
+    {{ govukInput({
+      id: "tags",
+      name: "tags",
+      label: {
+        text: "Project Tags",
+        classes: "govuk-label--s"
+      },
+      hint: {
+        text: "Separate multiple tags with commas (e.g. Portfolio1, Supplier1, Team2)"
+      },
+      value: project.tags | join(", ")
     }) }}
 
     <h2 class="govuk-heading-m">Service Standards Assessment</h2>

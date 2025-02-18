@@ -99,11 +99,9 @@ export const projectsController = {
 
   postEdit: async (request, h) => {
     const { id } = request.params
-    const payload = request.payload
+    const { status, commentary, tags, ...payload } = request.payload
 
     try {
-      const { status, commentary } = payload
-
       // Restructure standards data from form
       const standards = []
       Object.keys(payload).forEach((key) => {
@@ -132,9 +130,18 @@ export const projectsController = {
         'Parsed form data'
       )
 
+      // Process tags - split by comma and trim whitespace
+      const processedTags = tags
+        ? tags
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        : []
+
       await updateProject(id, {
         status,
         commentary,
+        tags: processedTags,
         standards: parsedStandards
       })
 
@@ -214,6 +221,45 @@ export const projectsController = {
         heading: 'Project History',
         project,
         history
+      })
+    } catch (error) {
+      request.logger.error(error)
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  getStandards: async (request, h) => {
+    const { id } = request.params
+
+    try {
+      const project = await getProjectById(id)
+      if (!project) {
+        return h.redirect('/?notification=Project not found')
+      }
+
+      // Get service standards to merge with project standards
+      const standards = await getServiceStandards()
+
+      // Map standards to project assessments and ensure proper numeric sorting
+      const standardsWithDetails = project.standards
+        .map((assessment) => {
+          const standard = standards.find(
+            (s) => s.number.toString() === assessment.standardId
+          )
+          return {
+            ...assessment,
+            number: standard?.number || parseInt(assessment.standardId, 10),
+            name: standard?.name
+          }
+        })
+        .sort((a, b) => (a.number || 0) - (b.number || 0))
+
+      return h.view('projects/detail/standards', {
+        pageTitle: `Standards Progress | ${project.name}`,
+        project: {
+          ...project,
+          standards: standardsWithDetails
+        }
       })
     } catch (error) {
       request.logger.error(error)

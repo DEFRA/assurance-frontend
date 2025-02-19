@@ -3,12 +3,17 @@ import {
   getProjectById,
   updateProject,
   getStandardHistory,
-  getProjectHistory
+  getProjectHistory,
+  createProject
 } from './projects.js'
 
 // First declare the mocks
 jest.mock('~/src/server/common/helpers/fetch/fetcher.js', () => ({
   fetcher: jest.fn()
+}))
+
+jest.mock('~/src/server/services/service-standards.js', () => ({
+  getServiceStandards: jest.fn()
 }))
 
 const mockLogger = {
@@ -24,6 +29,9 @@ jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
 // Then get references to the mocks
 const { fetcher: mockFetch } = jest.requireMock(
   '~/src/server/common/helpers/fetch/fetcher.js'
+)
+const { getServiceStandards: mockGetServiceStandards } = jest.requireMock(
+  '~/src/server/services/service-standards.js'
 )
 
 describe('Projects service', () => {
@@ -320,6 +328,60 @@ describe('Projects service', () => {
         })
       ).rejects.toThrow('Update failed')
     })
+
+    test('should handle API validation errors', async () => {
+      // Arrange
+      const currentProject = {
+        id: '123',
+        standards: [{ standardId: '1', status: 'GREEN' }]
+      }
+      mockFetch
+        .mockResolvedValueOnce(currentProject) // getProjectById call
+        .mockResolvedValueOnce({
+          isBoom: true,
+          output: {
+            statusCode: 400,
+            payload: { message: 'Invalid data' }
+          }
+        })
+
+      // Act & Assert
+      await expect(
+        updateProject('123', {
+          status: 'INVALID',
+          commentary: 'Test'
+        })
+      ).rejects.toThrow('Failed to update project: Invalid data')
+    })
+
+    test('should merge updated standards with existing ones', async () => {
+      // Arrange
+      const currentProject = {
+        id: '123',
+        standards: [
+          { standardId: '1', status: 'AMBER', commentary: 'Old' },
+          { standardId: '2', status: 'GREEN', commentary: 'Unchanged' }
+        ]
+      }
+      mockFetch
+        .mockResolvedValueOnce(currentProject)
+        .mockResolvedValueOnce({ success: true })
+
+      // Act
+      await updateProject('123', {
+        status: 'GREEN',
+        commentary: 'Updated',
+        standards: [{ standardId: '1', status: 'GREEN', commentary: 'New' }]
+      })
+
+      // Assert
+      const updateCall = mockFetch.mock.calls[1]
+      const requestBody = JSON.parse(updateCall[1].body)
+      expect(requestBody.standards).toEqual([
+        { standardId: '1', status: 'GREEN', commentary: 'New' },
+        { standardId: '2', status: 'GREEN', commentary: 'Unchanged' }
+      ])
+    })
   })
 
   describe('getStandardHistory', () => {
@@ -353,15 +415,19 @@ describe('Projects service', () => {
       expect(result).toEqual([])
     })
 
-    test('should handle empty API response', async () => {
+    test('should handle null API response and log warning', async () => {
       // Arrange
       mockFetch.mockResolvedValue(null)
 
       // Act
-      const result = await getStandardHistory('1', '2')
+      const result = await getStandardHistory('123', '1')
 
       // Assert
       expect(result).toEqual([])
+      expect(mockLogger.warn).toHaveBeenCalledWith('No history found', {
+        projectId: '123',
+        standardId: '1'
+      })
     })
 
     test('should handle invalid project ID', async () => {
@@ -381,6 +447,25 @@ describe('Projects service', () => {
       // Act & Assert
       await expect(getStandardHistory('1', 'invalid')).rejects.toThrow(
         'Invalid standard ID'
+      )
+    })
+
+    test('should log history count on success', async () => {
+      // Arrange
+      const mockHistory = [
+        { date: '2024-01-01', status: 'GREEN' },
+        { date: '2024-01-02', status: 'AMBER' }
+      ]
+      mockFetch.mockResolvedValue(mockHistory)
+
+      // Act
+      const result = await getStandardHistory('123', '1')
+
+      // Assert
+      expect(result).toEqual(mockHistory)
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        { historyCount: 2 },
+        'Standard history retrieved successfully'
       )
     })
   })
@@ -426,5 +511,98 @@ describe('Projects service', () => {
       // Assert
       expect(result).toEqual([])
     })
+  })
+})
+
+describe('createProject', () => {
+  test('should create project with standards', async () => {
+    // Arrange
+    const mockStandards = [
+      { number: 2, name: 'Standard 2' },
+      { number: 1, name: 'Standard 1' }
+    ]
+    const mockProjectData = {
+      name: 'Test Project',
+      status: 'GREEN',
+      commentary: 'Initial setup'
+    }
+    const mockResponse = { id: '123', ...mockProjectData }
+
+    mockGetServiceStandards.mockResolvedValue(mockStandards)
+    mockFetch.mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await createProject(mockProjectData)
+
+    // Assert
+    expect(result).toEqual(mockResponse)
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"standards":[{') // Verify standards included
+      })
+    )
+    // Verify standards are sorted by number
+    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(requestBody.standards[0].standardId).toBe('1')
+    expect(requestBody.standards[1].standardId).toBe('2')
+  })
+
+  test('should handle missing service standards', async () => {
+    // Arrange
+    mockGetServiceStandards.mockResolvedValue([])
+
+    // Act & Assert
+    await expect(
+      createProject({
+        name: 'Test Project',
+        status: 'GREEN'
+      })
+    ).rejects.toThrow(
+      'Failed to create project: No service standards available'
+    )
+  })
+
+  test('should handle API validation errors', async () => {
+    // Arrange
+    const mockStandards = [{ number: 1, name: 'Standard 1' }]
+    mockGetServiceStandards.mockResolvedValue(mockStandards)
+    mockFetch.mockResolvedValue({
+      isBoom: true,
+      output: {
+        statusCode: 400,
+        payload: { message: 'Invalid data' }
+      }
+    })
+
+    // Act & Assert
+    await expect(
+      createProject({
+        name: 'Test Project',
+        status: 'INVALID'
+      })
+    ).rejects.toThrow('Failed to create project: Invalid data')
+  })
+
+  test('should handle empty API response', async () => {
+    // Arrange
+    const mockStandards = [{ number: 1, name: 'Standard 1' }]
+    mockGetServiceStandards.mockResolvedValue(mockStandards)
+    mockFetch.mockResolvedValue({
+      isBoom: true,
+      output: {
+        statusCode: 500,
+        payload: { message: 'Failed to create project' }
+      }
+    })
+
+    // Act & Assert
+    await expect(
+      createProject({
+        name: 'Test Project',
+        status: 'GREEN'
+      })
+    ).rejects.toThrow('Failed to create project')
   })
 })

@@ -11,6 +11,14 @@ import {
   getProjectHistory
 } from '~/src/server/services/projects.js'
 
+export const NOTIFICATIONS = {
+  NOT_FOUND: 'Project not found',
+  UPDATE_SUCCESS: 'Project updated successfully',
+  VALIDATION_ERROR: 'Please check your input - some fields are invalid',
+  STANDARDS_ERROR: 'Unable to update project: Service standards not available',
+  GENERAL_ERROR: 'Failed to update project. Please try again.'
+}
+
 export const projectsController = {
   get: async (request, h) => {
     const { id } = request.params
@@ -18,7 +26,7 @@ export const projectsController = {
     try {
       const project = await getProjectById(id)
       if (!project) {
-        return h.redirect('/?notification=Project not found')
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       // Get service standards to merge with project standards
@@ -121,6 +129,28 @@ export const projectsController = {
       // Filter out empty entries and convert to array
       const parsedStandards = Object.values(standards).filter(Boolean)
 
+      // Validate standards
+      const hasInvalidStandards = parsedStandards.some(
+        (standard) => !standard.status || standard.status.trim() === ''
+      )
+      if (hasInvalidStandards) {
+        return h.view('projects/detail/edit', {
+          pageTitle: `Edit ${request.payload.name} | DDTS Assurance`,
+          heading: `Edit ${request.payload.name}`,
+          project: {
+            id,
+            ...request.payload,
+            standards: parsedStandards
+          },
+          statusOptions: [
+            { value: 'RED', text: 'Red' },
+            { value: 'AMBER', text: 'Amber' },
+            { value: 'GREEN', text: 'Green' }
+          ],
+          errorMessage: NOTIFICATIONS.VALIDATION_ERROR
+        })
+      }
+
       // Log the restructured data
       request.logger.info(
         {
@@ -146,7 +176,7 @@ export const projectsController = {
       })
 
       return h.redirect(
-        `/projects/${id}?notification=Project updated successfully`
+        `/projects/${id}?notification=${NOTIFICATIONS.UPDATE_SUCCESS}`
       )
     } catch (error) {
       request.logger.error(
@@ -157,20 +187,43 @@ export const projectsController = {
         'Failed to update project standards'
       )
 
-      // Get project data to re-render form with errors
-      const project = await getProjectById(id)
+      try {
+        // Get project data to re-render form with errors
+        const project = await getProjectById(id)
+        const standards = await getServiceStandards()
 
-      return h.view('projects/detail/edit', {
-        pageTitle: `Edit ${project.name} | DDTS Assurance`,
-        heading: `Edit ${project.name}`,
-        project,
-        statusOptions: [
-          { value: 'RED', text: 'Red' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'GREEN', text: 'Green' }
-        ],
-        errorMessage: 'Failed to update project. Please try again.'
-      })
+        // Map standards to project assessments and ensure proper numeric sorting
+        const standardsWithDetails = project.standards
+          .map((assessment) => {
+            const standard = standards.find(
+              (s) => s.number.toString() === assessment.standardId
+            )
+            return {
+              ...assessment,
+              number: standard?.number || parseInt(assessment.standardId, 10),
+              name: standard?.name
+            }
+          })
+          .sort((a, b) => (a.number || 0) - (b.number || 0))
+
+        return h.view('projects/detail/edit', {
+          pageTitle: `Edit ${project.name} | DDTS Assurance`,
+          heading: `Edit ${project.name}`,
+          project: {
+            ...project,
+            standards: standardsWithDetails
+          },
+          statusOptions: [
+            { value: 'RED', text: 'Red' },
+            { value: 'AMBER', text: 'Amber' },
+            { value: 'GREEN', text: 'Green' }
+          ],
+          errorMessage: NOTIFICATIONS.GENERAL_ERROR
+        })
+      } catch (fetchError) {
+        request.logger.error(fetchError)
+        throw Boom.boomify(fetchError, { statusCode: 500 })
+      }
     }
   },
 
@@ -180,7 +233,7 @@ export const projectsController = {
     try {
       const project = await getProjectById(id)
       if (!project) {
-        return h.redirect('/?notification=Project not found')
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       const standard = project.standards.find(
@@ -211,7 +264,7 @@ export const projectsController = {
     try {
       const project = await getProjectById(id)
       if (!project) {
-        return h.redirect('/?notification=Project not found')
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       const history = await getProjectHistory(id)
@@ -234,7 +287,7 @@ export const projectsController = {
     try {
       const project = await getProjectById(id)
       if (!project) {
-        return h.redirect('/?notification=Project not found')
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       // Get service standards to merge with project standards

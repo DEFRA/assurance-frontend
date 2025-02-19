@@ -182,8 +182,8 @@ export async function updateProject(id, projectData) {
       body: JSON.stringify(updatedProject)
     })
 
-    // Check if result is a Boom error (400 Bad Request)
-    if (result.isBoom) {
+    // Check if result exists and is a Boom error (400 Bad Request)
+    if (result?.isBoom) {
       logger.error(
         {
           statusCode: result.output.statusCode,

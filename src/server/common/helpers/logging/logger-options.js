@@ -73,7 +73,9 @@ export function getLoggerOptions() {
     },
     serializers: {
       error: (error) => {
-        if (!error) return error
+        if (!error) {
+          return error
+        }
         return {
           type: error.name,
           message: error.message,
@@ -83,7 +85,9 @@ export function getLoggerOptions() {
         }
       },
       request: (request) => {
-        if (!request) return request
+        if (!request) {
+          return request
+        }
         return {
           method: request.method,
           url: request.url,

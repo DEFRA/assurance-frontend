@@ -206,7 +206,7 @@ export const projectsController = {
     try {
       const project = await getProjectById(id)
       if (!project) {
-        return h.redirect('/?notification=Project not found')
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       const standard = project.standards.find(
@@ -237,7 +237,7 @@ export const projectsController = {
     try {
       const project = await getProjectById(id)
       if (!project) {
-        return h.redirect('/?notification=Project not found')
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       const history = await getProjectHistory(id)
@@ -260,7 +260,7 @@ export const projectsController = {
     try {
       const project = await getProjectById(id)
       if (!project) {
-        return h.redirect('/?notification=Project not found')
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       // Get service standards to merge with project standards

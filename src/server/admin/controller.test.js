@@ -197,6 +197,48 @@ describe('Admin controller', () => {
         '/admin?notification=Standards deleted successfully'
       )
     })
+
+    test('should handle API error', async () => {
+      // Arrange
+      const mockRequest = {
+        logger: {
+          info: jest.fn(),
+          error: jest.fn()
+        }
+      }
+      mockFetch.mockRejectedValue(new Error('API Error'))
+
+      // Act & Assert
+      await expect(
+        adminController.deleteStandards(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+
+    test('should handle null response', async () => {
+      // Arrange
+      const mockRequest = {
+        logger: {
+          info: jest.fn(),
+          error: jest.fn()
+        }
+      }
+      mockFetch.mockResolvedValue(null)
+
+      // Act & Assert
+      await expect(
+        adminController.deleteStandards(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        'Failed to delete standards - no response from API'
+      )
+    })
   })
 
   describe('seedProjects', () => {
@@ -225,6 +267,48 @@ describe('Admin controller', () => {
         '/admin?notification=Projects seeded successfully'
       )
     })
+
+    test('should handle API error', async () => {
+      // Arrange
+      const mockRequest = {
+        logger: {
+          info: jest.fn(),
+          error: jest.fn()
+        }
+      }
+      mockFetch.mockRejectedValue(new Error('API Error'))
+
+      // Act & Assert
+      await expect(
+        adminController.seedProjects(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+
+    test('should handle null response', async () => {
+      // Arrange
+      const mockRequest = {
+        logger: {
+          info: jest.fn(),
+          error: jest.fn()
+        }
+      }
+      mockFetch.mockResolvedValue(null)
+
+      // Act & Assert
+      await expect(
+        adminController.seedProjects(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        'Failed to seed projects - no response from API'
+      )
+    })
   })
 
   describe('deleteProjects', () => {
@@ -251,6 +335,48 @@ describe('Admin controller', () => {
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Projects deleted successfully'
+      )
+    })
+
+    test('should handle API error', async () => {
+      // Arrange
+      const mockRequest = {
+        logger: {
+          info: jest.fn(),
+          error: jest.fn()
+        }
+      }
+      mockFetch.mockRejectedValue(new Error('API Error'))
+
+      // Act & Assert
+      await expect(
+        adminController.deleteProjects(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+
+    test('should handle null response', async () => {
+      // Arrange
+      const mockRequest = {
+        logger: {
+          info: jest.fn(),
+          error: jest.fn()
+        }
+      }
+      mockFetch.mockResolvedValue(null)
+
+      // Act & Assert
+      await expect(
+        adminController.deleteProjects(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        'Failed to delete projects - no response from API'
       )
     })
   })

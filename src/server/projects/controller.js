@@ -11,7 +11,7 @@ import {
   getProjectHistory
 } from '~/src/server/services/projects.js'
 
-const NOTIFICATIONS = {
+export const NOTIFICATIONS = {
   NOT_FOUND: 'Project not found',
   UPDATE_SUCCESS: 'Project updated successfully',
   VALIDATION_ERROR: 'Please check your input - some fields are invalid',
@@ -167,11 +167,29 @@ export const projectsController = {
 
       // Get project data to re-render form with errors
       const project = await getProjectById(id)
+      const standards = await getServiceStandards()
+
+      // Map standards to project assessments and ensure proper numeric sorting
+      const standardsWithDetails = project.standards
+        .map((assessment) => {
+          const standard = standards.find(
+            (s) => s.number.toString() === assessment.standardId
+          )
+          return {
+            ...assessment,
+            number: standard?.number || parseInt(assessment.standardId, 10),
+            name: standard?.name
+          }
+        })
+        .sort((a, b) => (a.number || 0) - (b.number || 0))
 
       return h.view('projects/detail/edit', {
         pageTitle: `Edit ${project.name} | DDTS Assurance`,
         heading: `Edit ${project.name}`,
-        project,
+        project: {
+          ...project,
+          standards: standardsWithDetails
+        },
         statusOptions: [
           { value: 'RED', text: 'Red' },
           { value: 'AMBER', text: 'Amber' },

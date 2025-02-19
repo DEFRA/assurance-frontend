@@ -118,6 +118,133 @@ describe('Projects controller', () => {
         }
       })
     })
+
+    test('should sort standards by number', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standards: [
+          { standardId: '2', status: 'GREEN' },
+          { standardId: '1', status: 'AMBER' }
+        ]
+      }
+      const mockStandards = [
+        { number: 1, name: 'First Standard' },
+        { number: 2, name: 'Second Standard' }
+      ]
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
+
+      // Act
+      await projectsController.get({ params: { id: '1' } }, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/index',
+        expect.objectContaining({
+          project: expect.objectContaining({
+            standards: [
+              expect.objectContaining({ number: 1, standardId: '1' }),
+              expect.objectContaining({ number: 2, standardId: '2' })
+            ]
+          })
+        })
+      )
+    })
+
+    test('should handle missing standard details', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standards: [{ standardId: '999', status: 'GREEN' }]
+      }
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetServiceStandards.mockResolvedValue([])
+
+      // Act
+      await projectsController.get({ params: { id: '1' } }, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/index',
+        expect.objectContaining({
+          project: expect.objectContaining({
+            standards: [expect.objectContaining({ number: 999 })]
+          })
+        })
+      )
+    })
+
+    test('should handle project not found', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '999' },
+        logger: {
+          error: jest.fn()
+        }
+      }
+      mockGetProjectById.mockResolvedValue(null)
+
+      // Act
+      await projectsController.get(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/?notification=Project not found'
+      )
+    })
+
+    test('should handle getProjectById error', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        logger: {
+          error: jest.fn()
+        }
+      }
+      const error = new Error('Database error')
+      mockGetProjectById.mockRejectedValue(error)
+
+      // Act & Assert
+      await expect(
+        projectsController.get(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 500
+        }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(error)
+    })
+
+    test('should handle getServiceStandards error', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        logger: {
+          error: jest.fn()
+        }
+      }
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test Project',
+        standards: []
+      })
+      mockGetServiceStandards.mockRejectedValue(new Error('Standards error'))
+
+      // Act & Assert
+      await expect(
+        projectsController.get(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 500
+        }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
   })
 
   describe('getEdit', () => {
@@ -217,8 +344,10 @@ describe('Projects controller', () => {
       mockUpdateProject.mockRejectedValue(new Error('Update failed'))
       mockGetProjectById.mockResolvedValue({
         id: '1',
-        name: 'Test Project'
+        name: 'Test Project',
+        standards: []
       })
+      mockGetServiceStandards.mockResolvedValue([])
 
       // Act
       await projectsController.postEdit(mockRequest, mockH)
@@ -228,6 +357,64 @@ describe('Projects controller', () => {
         'projects/detail/edit',
         expect.objectContaining({
           errorMessage: 'Failed to update project. Please try again.'
+        })
+      )
+    })
+
+    test('should process comma-separated tags', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        payload: {
+          status: 'GREEN',
+          commentary: 'Updated',
+          tags: 'Tag1, Tag2,Tag3'
+        },
+        logger: {
+          info: jest.fn(),
+          error: jest.fn()
+        }
+      }
+      mockGetProjectById.mockResolvedValue({ id: '1', name: 'Test Project' })
+      mockUpdateProject.mockResolvedValue({ success: true })
+
+      // Act
+      await projectsController.postEdit(mockRequest, mockH)
+
+      // Assert
+      expect(mockUpdateProject).toHaveBeenCalledWith(
+        '1',
+        expect.objectContaining({
+          tags: ['Tag1', 'Tag2', 'Tag3']
+        })
+      )
+    })
+
+    test('should handle empty tags', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        payload: {
+          status: 'GREEN',
+          commentary: 'Updated',
+          tags: ''
+        },
+        logger: {
+          info: jest.fn(),
+          error: jest.fn()
+        }
+      }
+      mockGetProjectById.mockResolvedValue({ id: '1', name: 'Test Project' })
+      mockUpdateProject.mockResolvedValue({ success: true })
+
+      // Act
+      await projectsController.postEdit(mockRequest, mockH)
+
+      // Assert
+      expect(mockUpdateProject).toHaveBeenCalledWith(
+        '1',
+        expect.objectContaining({
+          tags: []
         })
       )
     })
@@ -305,6 +492,52 @@ describe('Projects controller', () => {
         '/?notification=Project not found'
       )
     })
+
+    test('should handle missing standard', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standards: []
+      }
+      mockGetProjectById.mockResolvedValue(mockProject)
+
+      // Act
+      await projectsController.getStandardHistory(
+        { params: { id: '1', standardId: '999' } },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1?notification=Standard not found'
+      )
+    })
+
+    test('should handle error in getStandardHistory', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standards: [{ standardId: '1', status: 'GREEN' }]
+      }
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetStandardHistory.mockRejectedValue(new Error('History error'))
+
+      // Act & Assert
+      const mockRequest = {
+        params: { id: '1', standardId: '1' },
+        logger: {
+          error: jest.fn()
+        }
+      }
+      await expect(
+        projectsController.getStandardHistory(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+    })
   })
 
   describe('getProjectHistory', () => {
@@ -361,6 +594,30 @@ describe('Projects controller', () => {
         projectsController.getProjectHistory(mockRequest, mockH)
       ).rejects.toThrow()
       expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+
+    test('should handle error in getProjectHistory', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project'
+      }
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetProjectHistory.mockRejectedValue(new Error('History error'))
+
+      // Act & Assert
+      const mockRequest = {
+        params: { id: '1' },
+        logger: {
+          error: jest.fn()
+        }
+      }
+      await expect(
+        projectsController.getProjectHistory(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
     })
   })
 

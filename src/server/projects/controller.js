@@ -129,6 +129,28 @@ export const projectsController = {
       // Filter out empty entries and convert to array
       const parsedStandards = Object.values(standards).filter(Boolean)
 
+      // Validate standards
+      const hasInvalidStandards = parsedStandards.some(
+        (standard) => !standard.status || standard.status.trim() === ''
+      )
+      if (hasInvalidStandards) {
+        return h.view('projects/detail/edit', {
+          pageTitle: `Edit ${request.payload.name} | DDTS Assurance`,
+          heading: `Edit ${request.payload.name}`,
+          project: {
+            id,
+            ...request.payload,
+            standards: parsedStandards
+          },
+          statusOptions: [
+            { value: 'RED', text: 'Red' },
+            { value: 'AMBER', text: 'Amber' },
+            { value: 'GREEN', text: 'Green' }
+          ],
+          errorMessage: NOTIFICATIONS.VALIDATION_ERROR
+        })
+      }
+
       // Log the restructured data
       request.logger.info(
         {
@@ -165,38 +187,43 @@ export const projectsController = {
         'Failed to update project standards'
       )
 
-      // Get project data to re-render form with errors
-      const project = await getProjectById(id)
-      const standards = await getServiceStandards()
+      try {
+        // Get project data to re-render form with errors
+        const project = await getProjectById(id)
+        const standards = await getServiceStandards()
 
-      // Map standards to project assessments and ensure proper numeric sorting
-      const standardsWithDetails = project.standards
-        .map((assessment) => {
-          const standard = standards.find(
-            (s) => s.number.toString() === assessment.standardId
-          )
-          return {
-            ...assessment,
-            number: standard?.number || parseInt(assessment.standardId, 10),
-            name: standard?.name
-          }
+        // Map standards to project assessments and ensure proper numeric sorting
+        const standardsWithDetails = project.standards
+          .map((assessment) => {
+            const standard = standards.find(
+              (s) => s.number.toString() === assessment.standardId
+            )
+            return {
+              ...assessment,
+              number: standard?.number || parseInt(assessment.standardId, 10),
+              name: standard?.name
+            }
+          })
+          .sort((a, b) => (a.number || 0) - (b.number || 0))
+
+        return h.view('projects/detail/edit', {
+          pageTitle: `Edit ${project.name} | DDTS Assurance`,
+          heading: `Edit ${project.name}`,
+          project: {
+            ...project,
+            standards: standardsWithDetails
+          },
+          statusOptions: [
+            { value: 'RED', text: 'Red' },
+            { value: 'AMBER', text: 'Amber' },
+            { value: 'GREEN', text: 'Green' }
+          ],
+          errorMessage: NOTIFICATIONS.GENERAL_ERROR
         })
-        .sort((a, b) => (a.number || 0) - (b.number || 0))
-
-      return h.view('projects/detail/edit', {
-        pageTitle: `Edit ${project.name} | DDTS Assurance`,
-        heading: `Edit ${project.name}`,
-        project: {
-          ...project,
-          standards: standardsWithDetails
-        },
-        statusOptions: [
-          { value: 'RED', text: 'Red' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'GREEN', text: 'Green' }
-        ],
-        errorMessage: NOTIFICATIONS.GENERAL_ERROR
-      })
+      } catch (fetchError) {
+        request.logger.error(fetchError)
+        throw Boom.boomify(fetchError, { statusCode: 500 })
+      }
     }
   },
 

@@ -1,4 +1,4 @@
-import { projectsController } from './controller.js'
+import { projectsController, NOTIFICATIONS } from './controller.js'
 
 const mockGetProjectById = jest.fn()
 const mockGetServiceStandards = jest.fn()
@@ -284,6 +284,64 @@ describe('Projects controller', () => {
         ]
       })
     })
+
+    test('should handle error fetching project', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+      mockGetProjectById.mockRejectedValue(new Error('Database error'))
+
+      // Act & Assert
+      await expect(
+        projectsController.getEdit(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+
+    test('should handle error fetching standards', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test Project',
+        standards: []
+      })
+      mockGetServiceStandards.mockRejectedValue(new Error('Standards error'))
+
+      // Act & Assert
+      await expect(
+        projectsController.getEdit(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+
+    test('should handle project not found', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+      mockGetProjectById.mockResolvedValue(null)
+
+      // Act
+      await projectsController.getEdit(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        `/?notification=${NOTIFICATIONS.NOT_FOUND}`
+      )
+    })
   })
 
   describe('postEdit', () => {
@@ -415,6 +473,95 @@ describe('Projects controller', () => {
         '1',
         expect.objectContaining({
           tags: []
+        })
+      )
+    })
+
+    test('should handle validation errors', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        payload: {
+          'standards.1.status': '', // Invalid empty status
+          status: 'RED',
+          commentary: 'Test',
+          tags: 'tag1, tag2'
+        },
+        logger: { error: jest.fn(), info: jest.fn() }
+      }
+
+      // Act
+      await projectsController.postEdit(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/edit',
+        expect.objectContaining({
+          errorMessage: NOTIFICATIONS.VALIDATION_ERROR
+        })
+      )
+    })
+
+    test('should handle error getting standards after update failure', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        payload: {
+          status: 'RED',
+          commentary: 'Test',
+          tags: 'tag1, tag2'
+        },
+        logger: { error: jest.fn(), info: jest.fn() }
+      }
+      mockUpdateProject.mockRejectedValue(new Error('Update failed'))
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test Project',
+        standards: []
+      })
+      mockGetServiceStandards.mockRejectedValue(new Error('Standards error'))
+
+      // Act & Assert
+      await expect(
+        projectsController.postEdit(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+
+    test('should handle validation with invalid standard status', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        payload: {
+          name: 'Test Project',
+          'standards.1.status': '   ', // Invalid whitespace status
+          status: 'RED',
+          commentary: 'Test',
+          tags: 'tag1, tag2'
+        },
+        logger: { error: jest.fn(), info: jest.fn() }
+      }
+
+      // Act
+      await projectsController.postEdit(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/edit',
+        expect.objectContaining({
+          project: expect.objectContaining({
+            id: '1',
+            standards: expect.arrayContaining([
+              expect.objectContaining({
+                standardId: '1',
+                status: '   '
+              })
+            ])
+          }),
+          errorMessage: NOTIFICATIONS.VALIDATION_ERROR
         })
       )
     })
@@ -674,6 +821,53 @@ describe('Projects controller', () => {
       await expect(
         projectsController.getStandards(mockRequest, mockH)
       ).rejects.toThrow()
+      expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+
+    test('should handle error fetching standards', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test Project',
+        standards: []
+      })
+      mockGetServiceStandards.mockRejectedValue(new Error('Standards error'))
+
+      // Act & Assert
+      await expect(
+        projectsController.getStandards(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+
+    test('should handle error when project is found but standards fetch fails', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standards: [{ standardId: '1', status: 'GREEN' }]
+      }
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetServiceStandards.mockRejectedValue(new Error('Standards error'))
+
+      // Act & Assert
+      await expect(
+        projectsController.getStandards(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
       expect(mockRequest.logger.error).toHaveBeenCalled()
     })
   })

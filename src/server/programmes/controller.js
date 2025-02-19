@@ -12,7 +12,14 @@ export const programmesController = {
         .filter((tag) => tag?.startsWith('Portfolio:'))
         .map((tag) => tag.split(': ')[1])
         .filter((value, index, self) => self.indexOf(value) === index)
-        .sort()
+        .sort((a, b) => {
+          // First handle any null/undefined values
+          if (!a) return -1
+          if (!b) return 1
+
+          // Case-insensitive comparison
+          return a.toLowerCase().localeCompare(b.toLowerCase())
+        })
         .map((programme) => {
           const programmeProjects = projects.filter((p) =>
             p.tags?.some((t) => t === `Portfolio: ${programme}`)

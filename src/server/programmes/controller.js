@@ -14,8 +14,12 @@ export const programmesController = {
         .filter((value, index, self) => self.indexOf(value) === index)
         .sort((a, b) => {
           // First handle any null/undefined values
-          if (!a) return -1
-          if (!b) return 1
+          if (!a) {
+            return -1
+          }
+          if (!b) {
+            return 1
+          }
 
           // Case-insensitive comparison
           return a.toLowerCase().localeCompare(b.toLowerCase())

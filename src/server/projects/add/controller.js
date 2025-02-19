@@ -3,6 +3,7 @@ import { createProject } from '~/src/server/services/projects.js'
 
 const PAGE_TITLE = 'Add Project | DDTS Assurance'
 const PAGE_HEADING = 'Add Project'
+const VIEW_TEMPLATE = 'projects/add/index'
 
 const STATUS_OPTIONS = [
   {
@@ -16,7 +17,7 @@ const STATUS_OPTIONS = [
 
 export const addProjectController = {
   get: (_request, h) => {
-    return h.view('projects/add/index', {
+    return h.view(VIEW_TEMPLATE, {
       pageTitle: PAGE_TITLE,
       heading: PAGE_HEADING,
       values: {},
@@ -31,7 +32,7 @@ export const addProjectController = {
     try {
       // Validate required fields
       if (!name || !status || !commentary) {
-        return h.view('projects/add/index', {
+        return h.view(VIEW_TEMPLATE, {
           pageTitle: PAGE_TITLE,
           heading: PAGE_HEADING,
           errorMessage: 'Please fill in all required fields',
@@ -54,7 +55,7 @@ export const addProjectController = {
 
         // Handle validation errors
         if (error.message?.includes('Invalid data')) {
-          return h.view('projects/add/index', {
+          return h.view(VIEW_TEMPLATE, {
             pageTitle: PAGE_TITLE,
             heading: PAGE_HEADING,
             errorMessage: 'Please check your input - some fields are invalid',
@@ -66,7 +67,7 @@ export const addProjectController = {
 
         // Handle standards-related errors
         if (error.message?.includes('standards')) {
-          return h.view('projects/add/index', {
+          return h.view(VIEW_TEMPLATE, {
             pageTitle: PAGE_TITLE,
             heading: PAGE_HEADING,
             errorMessage:

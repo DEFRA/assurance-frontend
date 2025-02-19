@@ -11,6 +11,14 @@ import {
   getProjectHistory
 } from '~/src/server/services/projects.js'
 
+const NOTIFICATIONS = {
+  NOT_FOUND: 'Project not found',
+  UPDATE_SUCCESS: 'Project updated successfully',
+  VALIDATION_ERROR: 'Please check your input - some fields are invalid',
+  STANDARDS_ERROR: 'Unable to update project: Service standards not available',
+  GENERAL_ERROR: 'Failed to update project. Please try again.'
+}
+
 export const projectsController = {
   get: async (request, h) => {
     const { id } = request.params
@@ -18,7 +26,7 @@ export const projectsController = {
     try {
       const project = await getProjectById(id)
       if (!project) {
-        return h.redirect('/?notification=Project not found')
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       // Get service standards to merge with project standards
@@ -146,7 +154,7 @@ export const projectsController = {
       })
 
       return h.redirect(
-        `/projects/${id}?notification=Project updated successfully`
+        `/projects/${id}?notification=${NOTIFICATIONS.UPDATE_SUCCESS}`
       )
     } catch (error) {
       request.logger.error(
@@ -169,7 +177,7 @@ export const projectsController = {
           { value: 'AMBER', text: 'Amber' },
           { value: 'GREEN', text: 'Green' }
         ],
-        errorMessage: 'Failed to update project. Please try again.'
+        errorMessage: NOTIFICATIONS.GENERAL_ERROR
       })
     }
   },

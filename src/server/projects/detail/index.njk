@@ -1,6 +1,7 @@
 {% extends 'layouts/page.njk' %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 
 {% block content %}
   <div class="govuk-grid-row">
@@ -29,24 +30,50 @@
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
-      <h2 class="govuk-heading-m">Project Commentary</h2>
-      <div class="govuk-body-s govuk-!-margin-bottom-2">
-        Last updated: {{ project.lastUpdated }} - 
-        <a href="/projects/{{ project.id }}/history" class="govuk-link govuk-link--no-visited-state">
-          View history
-        </a>
-      </div>
-      <p class="govuk-body">{{ project.commentary }}</p>
+      {{ govukInsetText({
+        html: '
+          <h2 class="govuk-heading-m govuk-!-margin-bottom-2">Project Commentary</h2>
+          <div class="govuk-body-s govuk-!-margin-bottom-2">
+            Last updated: ' + project.lastUpdated + '
+          </div>
+          <p class="govuk-body">' + project.commentary + '</p>
+        '
+      }) }}
 
-      <div class="govuk-summary-card">
-        <div class="govuk-summary-card__title-wrapper">
-          <h2 class="govuk-summary-card__title">Service Standard Progress</h2>
+      <div class="govuk-grid-row">
+        <div class="govuk-grid-column-one-half">
+          <div class="govuk-summary-card">
+            <div class="govuk-summary-card__title-wrapper">
+              <h2 class="govuk-summary-card__title">Project Status History</h2>
+            </div>
+            <div class="govuk-summary-card__content">
+              <div style="flex: 1;">
+                <canvas id="project-history-chart"></canvas>
+              </div>
+              <p class="govuk-body govuk-!-margin-top-4">
+                <a href="/projects/{{ project.id }}/history" class="govuk-link">
+                  View full status history
+                </a>
+              </p>
+            </div>
+          </div>
         </div>
-        <div class="govuk-summary-card__content">
-          <p class="govuk-body">View and manage the project's progress against each service standard.</p>
-          <a href="/projects/{{ project.id }}/standards" class="govuk-button">
-            View Standards Progress
-          </a>
+        <div class="govuk-grid-column-one-half">
+          <div class="govuk-summary-card">
+            <div class="govuk-summary-card__title-wrapper">
+              <h2 class="govuk-summary-card__title">Service Standard Progress</h2>
+            </div>
+            <div class="govuk-summary-card__content">
+              <div class="standards-overview">
+                <canvas id="standards-pie-chart"></canvas>
+              </div>
+              <p class="govuk-body">
+                <a href="/projects/{{ project.id }}/standards" class="govuk-link">
+                  View Standards Progress
+                </a>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -79,4 +106,21 @@
     white-space: nowrap;
   }
 </style>
+{% endblock %}
+
+{% block bodyEnd %}
+  {{ super() }}
+  <script type="module">
+    // Initialize chart with history data
+    const chartContainer = document.getElementById('project-history-chart')
+    if (chartContainer) {
+      window.createProjectHistoryChart(chartContainer, {{ projectHistory | dump | safe }})
+    }
+    
+    // Initialize standards pie chart
+    const pieContainer = document.getElementById('standards-pie-chart')
+    if (pieContainer) {
+      window.createStandardsPieChart(pieContainer, {{ standards | dump | safe }})
+    }
+  </script>
 {% endblock %} 

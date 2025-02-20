@@ -28,6 +28,15 @@
         </div>
       </div>
 
+      <div class="govuk-summary-card govuk-!-margin-top-6">
+        <div class="govuk-summary-card__title-wrapper">
+          <h2 class="govuk-summary-card__title">Status History</h2>
+        </div>
+        <div class="govuk-summary-card__content">
+          <div id="project-history-chart" class="ct-chart ct-perfect-fourth"></div>
+        </div>
+      </div>
+
       <h2 class="govuk-heading-m">Service Standard Assessment</h2>
       
       <table class="govuk-table">
@@ -62,4 +71,17 @@
       </table>
     </div>
   </div>
+{% endblock %}
+
+{% block bodyEnd %}
+  {{ super() }}
+  <script type="module">
+    import { createProjectHistoryChart } from '/components/project-history-chart.js'
+    
+    // Initialize chart with history data
+    const chartContainer = document.getElementById('project-history-chart')
+    if (chartContainer) {
+      createProjectHistoryChart(chartContainer, {{ projectHistory | dump | safe }})
+    }
+  </script>
 {% endblock %} 

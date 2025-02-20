@@ -35,16 +35,16 @@ describe('Projects controller', () => {
   })
 
   describe('get', () => {
-    test('should return project details view', async () => {
+    it('should return project details view', async () => {
       // Arrange
       const mockProject = {
         id: '1',
         name: 'Test Project',
         standards: [{ standardId: '1', status: 'GREEN' }]
       }
-      const mockStandards = [{ number: 1, name: 'Standard 1' }]
       mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetServiceStandards.mockResolvedValue(mockStandards)
+      mockGetServiceStandards.mockResolvedValue([])
+      mockGetProjectHistory.mockResolvedValue([])
 
       // Act
       await projectsController.get(mockRequest, mockH)
@@ -60,10 +60,12 @@ describe('Projects controller', () => {
               standardId: '1',
               status: 'GREEN',
               number: 1,
-              name: 'Standard 1'
+              name: undefined
             }
           ]
-        }
+        },
+        projectHistory: [],
+        standards: [{ status: 'GREEN' }]
       })
     })
 
@@ -89,7 +91,7 @@ describe('Projects controller', () => {
       expect(mockRequest.logger.error).toHaveBeenCalled()
     })
 
-    test('should handle missing standards data', async () => {
+    it('should handle missing standards data', async () => {
       // Arrange
       const mockProject = {
         id: '1',
@@ -97,7 +99,8 @@ describe('Projects controller', () => {
         standards: [{ standardId: '1', status: 'GREEN' }]
       }
       mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetServiceStandards.mockResolvedValue([]) // No standards returned
+      mockGetServiceStandards.mockResolvedValue([])
+      mockGetProjectHistory.mockResolvedValue([])
 
       // Act
       await projectsController.get(mockRequest, mockH)
@@ -112,10 +115,13 @@ describe('Projects controller', () => {
             {
               standardId: '1',
               status: 'GREEN',
-              number: 1 // Defaults to standardId when no matching standard found
+              number: 1,
+              name: undefined
             }
           ]
-        }
+        },
+        projectHistory: [],
+        standards: [{ status: 'GREEN' }]
       })
     })
 

@@ -19,6 +19,21 @@ export const NOTIFICATIONS = {
   GENERAL_ERROR: 'Failed to update project. Please try again.'
 }
 
+function mapStandardsWithDetails(projectStandards, serviceStandards) {
+  return projectStandards
+    .map((assessment) => {
+      const standard = serviceStandards.find(
+        (s) => s.number.toString() === assessment.standardId
+      )
+      return {
+        ...assessment,
+        number: standard?.number || parseInt(assessment.standardId, 10),
+        name: standard?.name
+      }
+    })
+    .sort((a, b) => (a.number || 0) - (b.number || 0))
+}
+
 export const projectsController = {
   get: async (request, h) => {
     const { id } = request.params
@@ -31,20 +46,17 @@ export const projectsController = {
 
       // Get service standards to merge with project standards
       const standards = await getServiceStandards()
+      const projectHistory = await getProjectHistory(id)
 
-      // Map standards to project assessments and ensure proper numeric sorting
-      const standardsWithDetails = project.standards
-        .map((assessment) => {
-          const standard = standards.find(
-            (s) => s.number.toString() === assessment.standardId
-          )
-          return {
-            ...assessment,
-            number: standard?.number || parseInt(assessment.standardId, 10),
-            name: standard?.name
-          }
-        })
-        .sort((a, b) => (a.number || 0) - (b.number || 0))
+      // Get standards with their current status
+      const standardsStatus = project.standards.map((standard) => ({
+        status: standard.status || 'NOT_STARTED'
+      }))
+
+      const standardsWithDetails = mapStandardsWithDetails(
+        project.standards,
+        standards
+      )
 
       return h.view('projects/detail/index', {
         pageTitle: `${project.name} | DDTS Assurance`,
@@ -52,7 +64,9 @@ export const projectsController = {
         project: {
           ...project,
           standards: standardsWithDetails
-        }
+        },
+        projectHistory: projectHistory || [],
+        standards: standardsStatus
       })
     } catch (error) {
       request.logger.error(error)
@@ -73,18 +87,10 @@ export const projectsController = {
       const standards = await getServiceStandards()
 
       // Map standards to project assessments and ensure proper numeric sorting
-      const standardsWithDetails = project.standards
-        .map((assessment) => {
-          const standard = standards.find(
-            (s) => s.number.toString() === assessment.standardId
-          )
-          return {
-            ...assessment,
-            number: standard?.number || parseInt(assessment.standardId, 10),
-            name: standard?.name
-          }
-        })
-        .sort((a, b) => (a.number || 0) - (b.number || 0))
+      const standardsWithDetails = mapStandardsWithDetails(
+        project.standards,
+        standards
+      )
 
       return h.view('projects/detail/edit', {
         pageTitle: `Edit ${project.name} | DDTS Assurance`,
@@ -193,18 +199,10 @@ export const projectsController = {
         const standards = await getServiceStandards()
 
         // Map standards to project assessments and ensure proper numeric sorting
-        const standardsWithDetails = project.standards
-          .map((assessment) => {
-            const standard = standards.find(
-              (s) => s.number.toString() === assessment.standardId
-            )
-            return {
-              ...assessment,
-              number: standard?.number || parseInt(assessment.standardId, 10),
-              name: standard?.name
-            }
-          })
-          .sort((a, b) => (a.number || 0) - (b.number || 0))
+        const standardsWithDetails = mapStandardsWithDetails(
+          project.standards,
+          standards
+        )
 
         return h.view('projects/detail/edit', {
           pageTitle: `Edit ${project.name} | DDTS Assurance`,
@@ -294,25 +292,14 @@ export const projectsController = {
       const standards = await getServiceStandards()
 
       // Map standards to project assessments and ensure proper numeric sorting
-      const standardsWithDetails = project.standards
-        .map((assessment) => {
-          const standard = standards.find(
-            (s) => s.number.toString() === assessment.standardId
-          )
-          return {
-            ...assessment,
-            number: standard?.number || parseInt(assessment.standardId, 10),
-            name: standard?.name
-          }
-        })
-        .sort((a, b) => (a.number || 0) - (b.number || 0))
+      const standardsWithDetails = mapStandardsWithDetails(
+        project.standards,
+        standards
+      )
 
       return h.view('projects/detail/standards', {
         pageTitle: `Standards Progress | ${project.name}`,
-        project: {
-          ...project,
-          standards: standardsWithDetails
-        }
+        project: { ...project, standards: standardsWithDetails }
       })
     } catch (error) {
       request.logger.error(error)

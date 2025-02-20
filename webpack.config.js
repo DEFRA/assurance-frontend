@@ -142,6 +142,10 @@ export default {
         generator: {
           filename: 'assets/fonts/[name][ext]'
         }
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
       }
     ]
   },

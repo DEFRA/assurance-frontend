@@ -71,7 +71,9 @@ services:
       - cdp-tenant
 
   your-backend:
-    image: defradigital/assurance-api
+    build:
+      context: ../assurance-api
+      dockerfile: Dockerfile
     ports:
       - '8085:8080'
     links:

@@ -1,5 +1,5 @@
 import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
-import { fetcher } from '../common/helpers/fetch/fetcher.js'
+import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 
 export async function getServiceStandards() {
   const logger = createLogger()

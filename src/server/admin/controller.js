@@ -1,9 +1,9 @@
 import Boom from '@hapi/boom'
-import { getServiceStandards } from '../services/service-standards.js'
-import { getProjects } from '../services/projects.js'
+import { getServiceStandards } from '~/src/server/services/service-standards.js'
+import { getProjects } from '~/src/server/services/projects.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
-import { defaultServiceStandards } from '../data/service-standards.js'
-import { defaultProjects } from '../data/projects.js'
+import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
+import { defaultProjects } from '~/src/server/data/projects.js'
 
 export const adminController = {
   get: async (request, h) => {

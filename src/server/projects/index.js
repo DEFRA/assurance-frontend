@@ -1,5 +1,5 @@
 import { projectsController } from '~/src/server/projects/controller.js'
-import { addProjectController } from './add/controller.js'
+import { addProjectController } from '~/src/server/projects/add/controller.js'
 
 /**
  * Sets up the routes used in the home page.

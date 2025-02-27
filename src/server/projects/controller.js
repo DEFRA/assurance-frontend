@@ -2,7 +2,6 @@
  * Project details controller
  * @satisfies {Partial<ServerRoute>}
  */
-import { getServiceStandards } from '../services/service-standards.js'
 import Boom from '@hapi/boom'
 import {
   getProjectById,
@@ -10,6 +9,7 @@ import {
   getStandardHistory,
   getProjectHistory
 } from '~/src/server/services/projects.js'
+import { getServiceStandards } from '~/src/server/services/service-standards.js'
 
 export const NOTIFICATIONS = {
   NOT_FOUND: 'Project not found',
@@ -19,6 +19,7 @@ export const NOTIFICATIONS = {
   GENERAL_ERROR: 'Failed to update project. Please try again.'
 }
 
+// Helper function to map standards with details
 function mapStandardsWithDetails(projectStandards, serviceStandards) {
   return projectStandards
     .map((assessment) => {

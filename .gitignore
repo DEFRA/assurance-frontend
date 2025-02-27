@@ -11,3 +11,5 @@ coverage
 .envrc
 tsconfig.tsbuildinfo
 .env*
+compose.yml
+Makefile

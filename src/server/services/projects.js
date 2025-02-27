@@ -1,6 +1,6 @@
 import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
-import { fetcher } from '../common/helpers/fetch/fetcher.js'
-import { getServiceStandards } from './service-standards.js'
+import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
+import { getServiceStandards } from '~/src/server/services/service-standards.js'
 
 export async function getProjects() {
   const logger = createLogger()

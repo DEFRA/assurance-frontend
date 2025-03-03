@@ -59,7 +59,7 @@
 
     {% for standard in project.standards %}
       <div class="govuk-form-group">
-        <h3 class="govuk-heading-s">Standard {{ standard.standardId }}</h3>
+        <h3 class="govuk-heading-s">Standard {{ standard.standardId }}: {{ standard.name }}</h3>
         
         {{ govukSelect({
           id: "standards[" + standard.standardId + "][status]",

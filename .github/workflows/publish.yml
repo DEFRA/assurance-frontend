@@ -26,7 +26,7 @@ jobs:
       - name: Build and Publish
         uses: DEFRA/cdp-build-action/build@main
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}as
       - name: Create Test Coverage Reports
         run: |
           npm ci

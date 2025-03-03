@@ -81,25 +81,38 @@ export const projectsController = {
     try {
       const project = await getProjectById(id)
       if (!project) {
-        return h.redirect('/?notification=Project not found')
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
-      // Get service standards to merge with project standards
-      const standards = await getServiceStandards()
+      // Get service standards to enrich project data
+      const serviceStandards = await getServiceStandards()
 
-      // Map standards to project assessments and ensure proper numeric sorting
-      const standardsWithDetails = mapStandardsWithDetails(
-        project.standards,
-        standards
-      )
+      // Enrich standards with names and numbers
+      const enrichedStandards = project.standards
+        .map((standard) => {
+          const serviceStandard = serviceStandards.find(
+            (s) => s.number.toString() === standard.standardId
+          )
+          return {
+            ...standard,
+            number:
+              serviceStandard?.number || parseInt(standard.standardId, 10),
+            name: serviceStandard?.name,
+            description: serviceStandard?.description
+          }
+        })
+        .sort((a, b) => (a.number || 0) - (b.number || 0))
+
+      // Replace project standards with enriched version
+      const enrichedProject = {
+        ...project,
+        standards: enrichedStandards
+      }
 
       return h.view('projects/detail/edit', {
         pageTitle: `Edit ${project.name} | DDTS Assurance`,
         heading: `Edit ${project.name}`,
-        project: {
-          ...project,
-          standards: standardsWithDetails
-        },
+        project: enrichedProject,
         statusOptions: [
           { value: 'RED', text: 'Red' },
           { value: 'AMBER', text: 'Amber' },

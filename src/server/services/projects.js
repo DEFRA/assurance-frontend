@@ -309,3 +309,35 @@ export async function getProjectHistory(projectId) {
     throw error
   }
 }
+
+/**
+ * Deletes a project by ID
+ * @param {string} id - The project ID to delete
+ * @returns {Promise<boolean>} - True if deletion was successful
+ */
+export async function deleteProject(id) {
+  const logger = createLogger()
+  try {
+    const endpoint = `/projects/${id}`
+    logger.info({ id }, 'Deleting project')
+
+    await fetcher(endpoint, {
+      method: 'DELETE'
+    })
+
+    // A successful delete returns 204 No Content
+    logger.info({ id }, 'Project deleted successfully')
+    return true
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to delete project'
+    )
+    throw error
+  }
+}

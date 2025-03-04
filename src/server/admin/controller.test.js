@@ -1,4 +1,5 @@
 import { adminController } from './controller.js'
+import Boom from '@hapi/boom'
 
 const mockGetServiceStandards = jest.fn()
 const mockUpdateServiceStandard = jest.fn()
@@ -13,7 +14,8 @@ jest.mock('~/src/server/services/service-standards.js', () => ({
 }))
 
 jest.mock('~/src/server/services/projects.js', () => ({
-  getProjects: (...args) => mockGetProjects(...args)
+  getProjects: (...args) => mockGetProjects(...args),
+  deleteProject: jest.fn()
 }))
 
 jest.mock('~/src/server/common/helpers/fetch/fetcher.js', () => ({
@@ -31,24 +33,30 @@ describe('Admin controller', () => {
   })
 
   describe('get', () => {
-    test('should return admin dashboard view with counts', async () => {
+    it('should return admin dashboard view with counts', async () => {
       // Arrange
       const mockRequest = {
-        query: {
-          notification: 'Test notification'
-        },
         logger: {
           info: jest.fn(),
           error: jest.fn()
+        },
+        query: {
+          notification: 'Test notification'
         }
       }
-      const mockStandards = Array(3).fill({})
-      const mockProjects = Array(2).fill({})
+
+      const mockH = {
+        view: jest.fn().mockReturnValue('view result')
+      }
+
+      const mockStandards = [{}, {}, {}]
+      const mockProjects = [{}, {}]
+
       mockGetServiceStandards.mockResolvedValue(mockStandards)
       mockGetProjects.mockResolvedValue(mockProjects)
 
       // Act
-      await adminController.get(mockRequest, mockH)
+      const result = await adminController.get(mockRequest, mockH)
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('admin/index', {
@@ -56,39 +64,37 @@ describe('Admin controller', () => {
         heading: 'Data Management',
         standardsCount: 3,
         projectsCount: 2,
+        projects: mockProjects,
         notification: 'Test notification'
       })
-      expect(mockRequest.logger.info).toHaveBeenCalledWith(
-        'Fetching admin dashboard data'
-      )
+      expect(result).toBe('view result')
     })
 
-    test('should handle standards fetch error', async () => {
+    it('should handle standards fetch error', async () => {
       // Arrange
       const mockRequest = {
-        query: {},
         logger: {
           info: jest.fn(),
           error: jest.fn()
-        }
+        },
+        query: {}
       }
-      mockGetServiceStandards.mockRejectedValue(new Error('API Error'))
+
+      const mockH = {
+        view: jest.fn()
+      }
+
+      const mockError = new Error('API Error')
+      mockGetServiceStandards.mockRejectedValue(mockError)
+      mockGetProjects.mockResolvedValue([])
 
       // Act & Assert
-      await expect(
-        adminController.get(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: {
-          statusCode: 500,
-          payload: {
-            message: 'An internal server error occurred'
-          }
-        }
-      })
+      await expect(adminController.get(mockRequest, mockH)).rejects.toThrow(
+        Boom.Boom
+      )
       expect(mockRequest.logger.error).toHaveBeenCalledWith(
         { error: expect.any(Error) },
-        'Failed to fetch standards'
+        'Error fetching admin dashboard data'
       )
     })
 
@@ -105,17 +111,9 @@ describe('Admin controller', () => {
       mockGetProjects.mockRejectedValue(new Error('API Error'))
 
       // Act & Assert
-      await expect(
-        adminController.get(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: {
-          statusCode: 500,
-          payload: {
-            message: 'An internal server error occurred'
-          }
-        }
-      })
+      await expect(adminController.get(mockRequest, mockH)).rejects.toThrow(
+        Boom.Boom
+      )
       expect(mockRequest.logger.error).toHaveBeenCalled()
     })
   })

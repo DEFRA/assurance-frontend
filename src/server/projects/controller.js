@@ -103,16 +103,13 @@ export const projectsController = {
         })
         .sort((a, b) => (a.number || 0) - (b.number || 0))
 
-      // Replace project standards with enriched version
-      const enrichedProject = {
-        ...project,
-        standards: enrichedStandards
-      }
-
       return h.view('projects/detail/edit', {
         pageTitle: `Edit ${project.name} | DDTS Assurance`,
         heading: `Edit ${project.name}`,
-        project: enrichedProject,
+        project: {
+          ...project,
+          standards: enrichedStandards
+        },
         statusOptions: [
           { value: 'RED', text: 'Red' },
           { value: 'AMBER', text: 'Amber' },
@@ -221,10 +218,8 @@ export const projectsController = {
         return h.view('projects/detail/edit', {
           pageTitle: `Edit ${project.name} | DDTS Assurance`,
           heading: `Edit ${project.name}`,
-          project: {
-            ...project,
-            standards: standardsWithDetails
-          },
+          project,
+          standards: standardsWithDetails,
           statusOptions: [
             { value: 'RED', text: 'Red' },
             { value: 'AMBER', text: 'Amber' },
@@ -313,7 +308,10 @@ export const projectsController = {
 
       return h.view('projects/detail/standards', {
         pageTitle: `Standards Progress | ${project.name}`,
-        project: { ...project, standards: standardsWithDetails }
+        project: {
+          ...project,
+          standards: standardsWithDetails
+        }
       })
     } catch (error) {
       request.logger.error(error)

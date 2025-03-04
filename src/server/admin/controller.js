@@ -1,59 +1,43 @@
 import Boom from '@hapi/boom'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
-import { getProjects } from '~/src/server/services/projects.js'
+import { getProjects, deleteProject } from '~/src/server/services/projects.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProjects } from '~/src/server/data/projects.js'
 
 export const adminController = {
   get: async (request, h) => {
-    request.logger.info('Fetching admin dashboard data')
-
     try {
+      request.logger.info('Fetching admin dashboard data')
+
       let standards = []
       let projects = []
 
       try {
-        standards = await getServiceStandards()
-        request.logger.info(
-          { standardsCount: standards.length },
-          'Standards fetched'
-        )
+        standards = (await getServiceStandards()) || []
       } catch (error) {
-        request.logger.error({ error }, 'Failed to fetch standards')
-        throw Boom.boomify(error, {
-          statusCode: 500,
-          message: 'Failed to fetch standards'
-        })
+        request.logger.error({ error }, 'Error fetching admin dashboard data')
+        throw Boom.boomify(error, { statusCode: 500 })
       }
 
       try {
-        projects = await getProjects()
-        request.logger.info(
-          { projectsCount: projects.length },
-          'Projects fetched'
-        )
+        projects = (await getProjects()) || []
       } catch (error) {
-        request.logger.error({ error }, 'Failed to fetch projects')
-        throw Boom.boomify(error, {
-          statusCode: 500,
-          message: 'Failed to fetch projects'
-        })
+        request.logger.error({ error }, 'Error fetching admin dashboard data')
+        throw Boom.boomify(error, { statusCode: 500 })
       }
 
       return h.view('admin/index', {
         pageTitle: 'Data Management',
         heading: 'Data Management',
-        standardsCount: standards.length,
-        projectsCount: projects.length,
+        standardsCount: standards?.length || 0,
+        projectsCount: projects?.length || 0,
+        projects,
         notification: request.query.notification
       })
     } catch (error) {
-      request.logger.error(error)
-      throw Boom.boomify(error, {
-        statusCode: 500,
-        message: 'Error loading admin dashboard'
-      })
+      request.logger.error({ error }, 'Error fetching admin dashboard data')
+      throw Boom.boomify(error, { statusCode: 500 })
     }
   },
 
@@ -159,6 +143,27 @@ export const adminController = {
     } catch (error) {
       request.logger.error(error)
       throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  deleteProject: async (request, h) => {
+    const { id } = request.params
+
+    try {
+      request.logger.info({ id }, 'Deleting project')
+
+      const result = await deleteProject(id)
+
+      if (!result) {
+        request.logger.warn({ id }, 'Project not found for deletion')
+        return h.redirect('/admin?notification=Project not found')
+      }
+
+      request.logger.info({ id }, 'Project deleted successfully')
+      return h.redirect('/admin?notification=Project deleted successfully')
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to delete project')
+      return h.redirect('/admin?notification=Failed to delete project')
     }
   }
 }

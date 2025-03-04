@@ -47,7 +47,7 @@ export function createProjectHistoryChart(container, history) {
     data: {
       datasets: [
         {
-          data: data,
+          data,
           borderColor: '#b1b4b6',
           borderWidth: 2,
           pointRadius: 8,

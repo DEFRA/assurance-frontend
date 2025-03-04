@@ -1,59 +1,110 @@
 {% extends 'layouts/page.njk' %}
 
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
 {% block content %}
   {{ appHeading({
     text: heading,
     caption: "Admin Tools"
   }) }}
 
+  {% if notification %}
+    {{ govukNotificationBanner({
+      text: notification
+    }) }}
+  {% endif %}
+
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
-      {% if notification %}
-        <div class="govuk-notification-banner" role="region" aria-labelledby="govuk-notification-banner-title">
-          <div class="govuk-notification-banner__header">
-            <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
-              Important
-            </h2>
-          </div>
-          <div class="govuk-notification-banner__content">
-            <p class="govuk-notification-banner__heading">
-              {{ notification }}
-            </p>
-          </div>
-        </div>
+      <h2 class="govuk-heading-m">Projects</h2>
+      <p class="govuk-body">Currently {{ projectsCount }} projects loaded</p>
+      
+      <div class="govuk-button-group">
+        <form method="POST" action="/admin/projects/seed" class="govuk-!-display-inline govuk-!-margin-right-2">
+          <button class="govuk-button" data-module="govuk-button">
+            Add Sample Projects
+          </button>
+        </form>
+        
+        <form method="POST" action="/admin/projects/delete" class="govuk-!-display-inline">
+          <button class="govuk-button govuk-button--warning" data-module="govuk-button">
+            Delete All Projects
+          </button>
+        </form>
+      </div>
+      
+      {% if projects and projects.length > 0 %}
+        <table class="govuk-table">
+          <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+              <th scope="col" class="govuk-table__header">Name</th>
+              <th scope="col" class="govuk-table__header">Status</th>
+              <th scope="col" class="govuk-table__header">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body">
+            {% for project in projects %}
+              <tr class="govuk-table__row">
+                <td class="govuk-table__cell">{{ project.name }}</td>
+                <td class="govuk-table__cell">{{ project.status }}</td>
+                <td class="govuk-table__cell">
+                  <form method="POST" action="/admin/projects/{{ project.id }}/delete" class="govuk-!-margin-bottom-0">
+                    <button type="submit" class="govuk-button govuk-button--warning govuk-!-margin-bottom-0" data-module="govuk-button">
+                      Delete
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="govuk-body">No projects available. Use the "Add Sample Projects" button to create some.</p>
       {% endif %}
-
+      
+      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+      
       <h2 class="govuk-heading-m">Service Standards</h2>
       <p class="govuk-body">Currently {{ standardsCount }} standards loaded</p>
       
-      <form method="POST" action="/admin/standards/seed" class="govuk-!-margin-bottom-6">
-        <button class="govuk-button" data-module="govuk-button">
-          Seed Service Standards
-        </button>
-      </form>
-
-      <form method="POST" action="/admin/standards/delete" class="govuk-!-margin-bottom-6">
-        <button class="govuk-button govuk-button--warning" data-module="govuk-button">
-          Delete All Standards
-        </button>
-      </form>
-
-      <hr class="govuk-section-break govuk-section-break--l">
-
-      <h2 class="govuk-heading-m">Projects</h2>
-      <p class="govuk-body">Currently {{ projectsCount }} projects loaded</p>
-
-      <form method="POST" action="/admin/projects/seed" class="govuk-!-margin-bottom-6">
-        <button class="govuk-button" data-module="govuk-button">
-          Seed Sample Projects
-        </button>
-      </form>
-
-      <form method="POST" action="/admin/projects/delete" class="govuk-!-margin-bottom-6">
-        <button class="govuk-button govuk-button--warning" data-module="govuk-button">
-          Delete All Projects
-        </button>
-      </form>
+      <div class="govuk-button-group">
+        <form method="POST" action="/admin/standards/seed" class="govuk-!-display-inline govuk-!-margin-right-2">
+          <button class="govuk-button" data-module="govuk-button">
+            Add Standards
+          </button>
+        </form>
+        
+        <form method="POST" action="/admin/standards/delete" class="govuk-!-display-inline">
+          <button class="govuk-button govuk-button--warning" data-module="govuk-button">
+            Delete All Standards
+          </button>
+        </form>
+      </div>
+      
+      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+      
+      <h2 class="govuk-heading-m">System Management</h2>
+      
+      <h3 class="govuk-heading-s">Reset Data</h3>
+      <p class="govuk-body">
+        You can reset the database to its initial state by following these steps:
+      </p>
+      
+      <ol class="govuk-list govuk-list--number">
+        <li>Delete all existing data</li>
+        <li>Seed service standards</li>
+        <li>Seed sample projects</li>
+      </ol>
+      
+      <div class="govuk-warning-text">
+        <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+        <strong class="govuk-warning-text__text">
+          <span class="govuk-warning-text__assistive">Warning</span>
+          This action cannot be undone
+        </strong>
+      </div>
     </div>
   </div>
 {% endblock %}

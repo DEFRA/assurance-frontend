@@ -248,7 +248,7 @@ describe('Admin controller', () => {
 
       // Assert
       expect(mockFetch).toHaveBeenCalledWith(
-        '/projects/seedData',
+        '/projects/seedData?clearExisting=false',
         expect.objectContaining({
           method: 'POST'
         }),

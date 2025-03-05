@@ -185,10 +185,10 @@ describe('Admin controller', () => {
       // Assert
       expect(mockFetch).toHaveBeenCalledWith(
         '/serviceStandards/seed',
-        expect.objectContaining({
+        {
           method: 'POST',
-          body: '[]'
-        }),
+          body: JSON.stringify([])
+        },
         mockRequest
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
@@ -207,13 +207,11 @@ describe('Admin controller', () => {
       mockFetch.mockRejectedValue(new Error('API Error'))
 
       // Act & Assert
-      await expect(
-        adminController.deleteStandards(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: { statusCode: 500 }
-      })
+      await adminController.deleteStandards(mockRequest, mockH)
       expect(mockRequest.logger.error).toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to delete standards'
+      )
     })
 
     test('should handle null response', async () => {
@@ -227,14 +225,9 @@ describe('Admin controller', () => {
       mockFetch.mockResolvedValue(null)
 
       // Act & Assert
-      await expect(
-        adminController.deleteStandards(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: { statusCode: 500 }
-      })
-      expect(mockRequest.logger.error).toHaveBeenCalledWith(
-        'Failed to delete standards - no response from API'
+      await adminController.deleteStandards(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Standards deleted successfully'
       )
     })
   })
@@ -309,7 +302,7 @@ describe('Admin controller', () => {
     })
   })
 
-  describe('deleteProjects', () => {
+  describe('deleteAllProjects', () => {
     test('should delete projects and redirect', async () => {
       // Arrange
       const mockRequest = {
@@ -321,18 +314,18 @@ describe('Admin controller', () => {
       mockFetch.mockResolvedValue({ success: true })
 
       // Act
-      await adminController.deleteProjects(mockRequest, mockH)
+      await adminController.deleteAllProjects(mockRequest, mockH)
 
       // Assert
       expect(mockFetch).toHaveBeenCalledWith(
         '/projects/deleteAll',
-        expect.objectContaining({
+        {
           method: 'POST'
-        }),
+        },
         mockRequest
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Projects deleted successfully'
+        '/admin?notification=All projects deleted successfully'
       )
     })
 
@@ -347,13 +340,11 @@ describe('Admin controller', () => {
       mockFetch.mockRejectedValue(new Error('API Error'))
 
       // Act & Assert
-      await expect(
-        adminController.deleteProjects(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: { statusCode: 500 }
-      })
+      await adminController.deleteAllProjects(mockRequest, mockH)
       expect(mockRequest.logger.error).toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to delete all projects'
+      )
     })
 
     test('should handle null response', async () => {
@@ -367,14 +358,9 @@ describe('Admin controller', () => {
       mockFetch.mockResolvedValue(null)
 
       // Act & Assert
-      await expect(
-        adminController.deleteProjects(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: { statusCode: 500 }
-      })
-      expect(mockRequest.logger.error).toHaveBeenCalledWith(
-        'Failed to delete projects - no response from API'
+      await adminController.deleteAllProjects(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=All projects deleted successfully'
       )
     })
   })

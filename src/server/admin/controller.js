@@ -1,6 +1,10 @@
 import Boom from '@hapi/boom'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
-import { getProjects, deleteProject } from '~/src/server/services/projects.js'
+import {
+  getProjects,
+  deleteProject,
+  getProjectById
+} from '~/src/server/services/projects.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProjects } from '~/src/server/data/projects.js'
@@ -68,10 +72,10 @@ export const adminController = {
   },
 
   deleteStandards: async (request, h) => {
-    request.logger.info('Deleting all service standards')
-
     try {
-      const result = await fetcher(
+      request.logger.info('Deleting all standards')
+
+      await fetcher(
         '/serviceStandards/seed',
         {
           method: 'POST',
@@ -80,18 +84,11 @@ export const adminController = {
         request
       )
 
-      if (!result) {
-        request.logger.error(
-          'Failed to delete standards - no response from API'
-        )
-        throw new Error('Failed to delete standards')
-      }
-
-      request.logger.info('Service standards deleted successfully')
+      request.logger.info('Standards deleted successfully')
       return h.redirect('/admin?notification=Standards deleted successfully')
     } catch (error) {
-      request.logger.error(error)
-      throw Boom.boomify(error, { statusCode: 500 })
+      request.logger.error({ error }, 'Failed to delete standards')
+      return h.redirect('/admin?notification=Failed to delete standards')
     }
   },
 
@@ -121,11 +118,11 @@ export const adminController = {
     }
   },
 
-  deleteProjects: async (request, h) => {
-    request.logger.info('Deleting all projects')
-
+  deleteAllProjects: async (request, h) => {
     try {
-      const result = await fetcher(
+      request.logger.info('Deleting all projects')
+
+      await fetcher(
         '/projects/deleteAll',
         {
           method: 'POST'
@@ -133,16 +130,11 @@ export const adminController = {
         request
       )
 
-      if (!result) {
-        request.logger.error('Failed to delete projects - no response from API')
-        throw new Error('Failed to delete projects')
-      }
-
-      request.logger.info('Projects deleted successfully')
-      return h.redirect('/admin?notification=Projects deleted successfully')
+      request.logger.info('All projects deleted successfully')
+      return h.redirect('/admin?notification=All projects deleted successfully')
     } catch (error) {
-      request.logger.error(error)
-      throw Boom.boomify(error, { statusCode: 500 })
+      request.logger.error({ error }, 'Failed to delete all projects')
+      return h.redirect('/admin?notification=Failed to delete all projects')
     }
   },
 
@@ -164,6 +156,97 @@ export const adminController = {
     } catch (error) {
       request.logger.error({ error }, 'Failed to delete project')
       return h.redirect('/admin?notification=Failed to delete project')
+    }
+  },
+
+  confirmDeleteProject: async (request, h) => {
+    const { id } = request.params
+
+    try {
+      // If this is a POST with confirmed=true, proceed with deletion
+      if (request.method === 'post' && request.payload.confirmed === 'true') {
+        return await adminController.deleteProject(request, h)
+      }
+
+      // Otherwise show confirmation page
+      let projectName = 'this project'
+
+      try {
+        const project = await getProjectById(id)
+        if (project) {
+          projectName = project.name
+        }
+      } catch (error) {
+        request.logger.warn(
+          { error, id },
+          'Failed to fetch project for confirmation page'
+        )
+        // Continue with generic name if project fetch fails
+      }
+
+      return h.view('admin/confirm-delete', {
+        pageTitle: 'Confirm Project Deletion',
+        heading: 'Delete Project',
+        message: `Are you sure you want to delete the project "${projectName}"?`,
+        confirmUrl: `/admin/projects/${id}/delete`,
+        cancelUrl: id ? `/projects/${id}` : '/admin',
+        backLink: id ? `/projects/${id}` : '/admin'
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to show delete confirmation')
+      return h.redirect(
+        '/admin?notification=Failed to show delete confirmation'
+      )
+    }
+  },
+
+  confirmDeleteAllProjects: async (request, h) => {
+    try {
+      // If this is a POST with confirmed=true, proceed with deletion
+      if (request.method === 'post' && request.payload.confirmed === 'true') {
+        return await adminController.deleteAllProjects(request, h)
+      }
+
+      // Otherwise show confirmation page
+      return h.view('admin/confirm-delete', {
+        pageTitle: 'Confirm Delete All Projects',
+        heading: 'Delete All Projects',
+        message:
+          'Are you sure you want to delete ALL projects? This will remove all project data from the system.',
+        confirmUrl: '/admin/projects/delete',
+        cancelUrl: '/admin',
+        backLink: '/admin'
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to show delete confirmation')
+      return h.redirect(
+        '/admin?notification=Failed to show delete confirmation'
+      )
+    }
+  },
+
+  confirmDeleteAllStandards: async (request, h) => {
+    try {
+      // If this is a POST with confirmed=true, proceed with deletion
+      if (request.method === 'post' && request.payload.confirmed === 'true') {
+        return await adminController.deleteStandards(request, h)
+      }
+
+      // Otherwise show confirmation page
+      return h.view('admin/confirm-delete', {
+        pageTitle: 'Confirm Delete All Standards',
+        heading: 'Delete All Standards',
+        message:
+          'Are you sure you want to delete ALL service standards? This will remove all standard definitions from the system.',
+        confirmUrl: '/admin/standards/delete',
+        cancelUrl: '/admin',
+        backLink: '/admin'
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to show delete confirmation')
+      return h.redirect(
+        '/admin?notification=Failed to show delete confirmation'
+      )
     }
   }
 }

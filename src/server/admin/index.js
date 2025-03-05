@@ -21,6 +21,11 @@ export const admin = {
           handler: adminController.deleteStandards
         },
         {
+          method: ['GET', 'POST'],
+          path: '/admin/standards/delete/confirm',
+          handler: adminController.confirmDeleteAllStandards
+        },
+        {
           method: 'POST',
           path: '/admin/projects/seed',
           handler: adminController.seedProjects
@@ -28,12 +33,22 @@ export const admin = {
         {
           method: 'POST',
           path: '/admin/projects/delete',
-          handler: adminController.deleteProjects
+          handler: adminController.deleteAllProjects
+        },
+        {
+          method: ['GET', 'POST'],
+          path: '/admin/projects/delete/confirm',
+          handler: adminController.confirmDeleteAllProjects
         },
         {
           method: 'POST',
           path: '/admin/projects/{id}/delete',
           handler: adminController.deleteProject
+        },
+        {
+          method: ['GET', 'POST'],
+          path: '/admin/projects/{id}/delete/confirm',
+          handler: adminController.confirmDeleteProject
         }
       ])
     }

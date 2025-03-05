@@ -4,12 +4,14 @@
  */
 import Boom from '@hapi/boom'
 import {
+  getProjects,
   getProjectById,
   updateProject,
   getStandardHistory,
   getProjectHistory
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
+import { config } from '~/src/config/config.js'
 
 export const NOTIFICATIONS = {
   NOT_FOUND: 'Project not found',
@@ -36,6 +38,45 @@ function mapStandardsWithDetails(projectStandards, serviceStandards) {
 }
 
 export const projectsController = {
+  getAll: async (request, h) => {
+    try {
+      const projects = await getProjects()
+      return h.view('projects/index', {
+        pageTitle: 'Projects',
+        heading: 'Projects',
+        projects
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Error fetching projects')
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  getById: async (request, h) => {
+    const { id } = request.params
+
+    try {
+      const project = await getProjectById(id)
+
+      if (!project) {
+        return h
+          .view('errors/not-found', {
+            pageTitle: 'Project Not Found'
+          })
+          .code(404)
+      }
+
+      return h.view('projects/detail/index', {
+        pageTitle: project.name,
+        project,
+        isTestEnvironment: config.get('env') === 'test'
+      })
+    } catch (error) {
+      request.logger.error({ error, id }, 'Error fetching project')
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
   get: async (request, h) => {
     const { id } = request.params
 
@@ -315,6 +356,76 @@ export const projectsController = {
       })
     } catch (error) {
       request.logger.error(error)
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  edit: async (request, h) => {
+    const { id } = request.params
+    const isNew = !id
+
+    try {
+      let project = null
+      let standards = []
+
+      if (!isNew) {
+        project = await getProjectById(id)
+        if (!project) {
+          return h
+            .view('errors/not-found', {
+              pageTitle: 'Project Not Found'
+            })
+            .code(404)
+        }
+      }
+
+      try {
+        standards = await getServiceStandards()
+      } catch (error) {
+        request.logger.error({ error }, 'Error fetching service standards')
+        throw Boom.boomify(error, { statusCode: 500 })
+      }
+
+      return h.view('projects/edit/index', {
+        pageTitle: isNew ? 'Create Project' : `Edit ${project.name}`,
+        project,
+        standards,
+        formAction: isNew ? '/projects/new' : `/projects/${id}/edit`,
+        cancelUrl: isNew ? '/projects' : `/projects/${id}`,
+        errors: request.pre.errors,
+        isTestEnvironment: config.get('env') === 'test'
+      })
+    } catch (error) {
+      request.logger.error({ error, id }, 'Error preparing project edit form')
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  update: async (request, h) => {
+    const { id } = request.params
+    const payload = request.payload
+
+    try {
+      // Get the existing project
+      const existingProject = await getProjectById(id)
+      if (!existingProject) {
+        return h.redirect(`/?notification=Project not found`)
+      }
+
+      // Update the project with the new data
+      const result = await updateProject(id, payload)
+
+      if (!result) {
+        return h.redirect(
+          `/projects/${id}?notification=Failed to update project`
+        )
+      }
+
+      return h.redirect(
+        `/projects/${id}?notification=Project updated successfully`
+      )
+    } catch (error) {
+      request.logger.error({ error, id }, 'Error updating project')
       throw Boom.boomify(error, { statusCode: 500 })
     }
   }

@@ -7,6 +7,16 @@ const mockGetStandardHistory = jest.fn()
 const mockGetProjects = jest.fn()
 const mockFetch = jest.fn()
 
+// Mock the config.get function
+jest.mock('~/src/config/config.js', () => ({
+  config: {
+    get: jest.fn().mockImplementation((key) => {
+      if (key === 'env') return 'test'
+      return 'mock-value'
+    })
+  }
+}))
+
 jest.mock('~/src/server/services/service-standards.js', () => ({
   getServiceStandards: (...args) => mockGetServiceStandards(...args),
   updateServiceStandard: (...args) => mockUpdateServiceStandard(...args),
@@ -65,7 +75,8 @@ describe('Admin controller', () => {
         standardsCount: 3,
         projectsCount: 2,
         projects: mockProjects,
-        notification: 'Test notification'
+        notification: 'Test notification',
+        isTestEnvironment: expect.any(Boolean)
       })
       expect(result).toBe('view result')
     })

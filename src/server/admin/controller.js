@@ -8,6 +8,7 @@ import {
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProjects } from '~/src/server/data/projects.js'
+import { config } from '~/src/config/config.js'
 
 export const adminController = {
   get: async (request, h) => {
@@ -31,13 +32,19 @@ export const adminController = {
         throw Boom.boomify(error, { statusCode: 500 })
       }
 
+      // Get environment from config or use a default for testing
+      const isTestEnvironment = config.get
+        ? config.get('env') === 'test'
+        : false
+
       return h.view('admin/index', {
         pageTitle: 'Data Management',
         heading: 'Data Management',
         standardsCount: standards?.length || 0,
         projectsCount: projects?.length || 0,
         projects,
-        notification: request.query.notification
+        notification: request.query.notification,
+        isTestEnvironment
       })
     } catch (error) {
       request.logger.error({ error }, 'Error fetching admin dashboard data')

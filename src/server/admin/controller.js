@@ -97,7 +97,7 @@ export const adminController = {
 
     try {
       const result = await fetcher(
-        '/projects/seedData',
+        '/projects/seedData?clearExisting=false',
         {
           method: 'POST',
           body: JSON.stringify(defaultProjects)

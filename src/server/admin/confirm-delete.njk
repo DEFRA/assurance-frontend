@@ -1,0 +1,42 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% block beforeContent %}
+  {{ govukBackLink({
+    text: "Back",
+    href: backLink
+  }) }}
+{% endblock %}
+
+{% block content %}
+  {{ appHeading({
+    text: heading,
+    caption: "Confirm deletion"
+  }) }}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <p class="govuk-body">{{ message }}</p>
+      
+      {{ govukWarningText({
+        text: "This action cannot be undone",
+        iconFallbackText: "Warning"
+      }) }}
+      
+      <form method="POST" action="{{ confirmUrl }}">
+        <input type="hidden" name="confirmed" value="true">
+        <div class="govuk-button-group">
+          {{ govukButton({
+            text: "Yes, delete",
+            classes: "govuk-button--warning"
+          }) }}
+          
+          <a href="{{ cancelUrl }}" class="govuk-link">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %} 

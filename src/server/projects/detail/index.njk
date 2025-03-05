@@ -2,6 +2,7 @@
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 
 {% block content %}
   <div class="govuk-grid-row">
@@ -77,11 +78,19 @@
         </div>
       </div>
 
-      {{ govukButton({
-        text: "Edit project",
-        href: "/projects/" + project.id + "/edit",
-        classes: "govuk-button--secondary govuk-!-margin-top-4"
-      }) }}
+      <div class="govuk-button-group">
+        {{ govukButton({
+          text: "Edit Project",
+          href: "/projects/" + project.id + "/edit",
+          classes: "govuk-button--secondary"
+        }) }}
+        
+        {{ govukButton({
+          text: "Delete Project",
+          href: "/admin/projects/" + project.id + "/delete/confirm",
+          classes: "govuk-button--warning"
+        }) }}
+      </div>
     </div>
   </div>
 {% endblock %}

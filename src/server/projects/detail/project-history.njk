@@ -5,48 +5,56 @@
 
 {% block content %}
   {{ appHeading({
-    text: "Project History",
+    text: "Project engagement",
     caption: project.name
   }) }}
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
-      <h2 class="govuk-heading-m">History Details</h2>
       {% if history and history.length > 0 %}
-        <table class="govuk-table">
-          <thead class="govuk-table__head">
-            <tr class="govuk-table__row">
-              <th scope="col" class="govuk-table__header">Date</th>
-              <th scope="col" class="govuk-table__header">Status</th>
-              <th scope="col" class="govuk-table__header">Commentary</th>
-            </tr>
-          </thead>
-          <tbody class="govuk-table__body">
-            {% for change in history %}
-              <tr class="govuk-table__row">
-                <td class="govuk-table__cell">{{ change.timestamp | formatDate }}</td>
-                <td class="govuk-table__cell">
-                  {% if change.changes.status %}
-                    <strong class="govuk-tag 
-                      {% if change.changes.status.to === 'RED' %}govuk-tag--red
-                      {% elif change.changes.status.to === 'AMBER' %}govuk-tag--yellow
-                      {% elif change.changes.status.to === 'GREEN' %}govuk-tag--green
-                      {% endif %}">
-                      {{ change.changes.status.to }}
-                    </strong>
-                  {% endif %}
-                </td>
-                <td class="govuk-table__cell">
-                  {% if change.changes.commentary %}
-                    <div class="govuk-body">
-                      {{ change.changes.commentary.to }}
-                    </div>
-                  {% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <div class="timeline">
+          {% for change in history %}
+            <div class="timeline__event">
+              <h3 class="timeline__event-title">
+                {% if change.changes.status and change.changes.status.from !== change.changes.status.to %}
+                  Delivery status update:
+                  <strong class="govuk-tag 
+                    {% if change.changes.status.to === 'RED' %}govuk-tag--red
+                    {% elif change.changes.status.to === 'AMBER' %}govuk-tag--yellow
+                    {% elif change.changes.status.to === 'GREEN' %}govuk-tag--green
+                    {% endif %}">
+                    {{ change.changes.status.to }}
+                  </strong>
+                {% elif change.changes.name %}
+                  Project name updated
+                {% else %}
+                  Comment:
+                {% endif %}
+              </h3>
+              <strong class="govuk-tag govuk-tag--grey govuk-!-margin-bottom-2" style="white-space: nowrap; font-size: 8px; line-height: 1; padding: 3px 6px;">
+                {% if change.changedBy === 'system' %}
+                  {% set professions = [
+                    'DELIVERY MANAGEMENT',
+                    'PRODUCT MANAGEMENT',
+                    'USER CENTRED DESIGN',
+                    'ARCHITECTURE',
+                    'SOFTWARE DEVELOPMENT',
+                    'BUSINESS ANALYSIS'
+                  ] %}
+                  {{ professions | random }}
+                {% else %}
+                  {{ change.changedBy | upper }}
+                {% endif %}
+              </strong>
+              {% if change.changes.commentary %}
+                <p class="govuk-body">{{ change.changes.commentary.to }}</p>
+              {% endif %}
+              <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-margin-top-2 govuk-!-font-size-16">
+                Last updated: {{ change.timestamp | formatDate }}
+              </p>
+            </div>
+          {% endfor %}
+        </div>
       {% else %}
         <p class="govuk-body">No history found for this project.</p>
       {% endif %}

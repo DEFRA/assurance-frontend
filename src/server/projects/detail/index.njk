@@ -7,27 +7,95 @@
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
 
+{# Create a macro for the project engagement timeline #}
+{% macro projectEngagementTimeline(history) %}
+  {% if history and history.length > 0 %}
+    <div class="timeline">
+      {% for change in history %}
+        <div class="timeline__event">
+          <h3 class="timeline__event-title govuk-heading-s">
+            {% if change.changes.status and change.changes.status.from !== change.changes.status.to %}
+              Delivery status update:
+              <strong class="govuk-tag 
+                {% if change.changes.status.to === "RED" %}govuk-tag--red
+                {% elif change.changes.status.to === "AMBER" %}govuk-tag--yellow
+                {% elif change.changes.status.to === "GREEN" %}govuk-tag--green
+                {% endif %}">
+                {{ change.changes.status.to }}
+              </strong>
+            {% elif change.changes.name %}
+              Project name updated
+            {% else %}
+              Comment:
+            {% endif %}
+          </h3>
+          <strong class="govuk-tag govuk-tag--grey govuk-!-margin-bottom-2" style="white-space: nowrap; font-size: 10px; line-height: 1; padding: 3px 6px;">
+            {% if change.changedBy === "system" %}
+              {% set professions = [
+                "DELIVERY MANAGEMENT",
+                "PRODUCT MANAGEMENT",
+                "USER CENTRED DESIGN",
+                "ARCHITECTURE",
+                "SOFTWARE DEVELOPMENT",
+                "BUSINESS ANALYSIS"
+              ] %}
+              {{ professions | random }}
+            {% else %}
+              {{ change.changedBy | upper }}
+            {% endif %}
+          </strong>
+          {% if change.changes.commentary %}
+            <p class="govuk-body">{{ change.changes.commentary.to }}</p>
+          {% endif %}
+          <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-margin-top-2 govuk-!-font-size-16">
+            Last updated: {{ change.timestamp | formatDate }}
+          </p>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="govuk-body">No history found for this project.</p>
+  {% endif %}
+{% endmacro %}
+
+{# Create a macro for the overview tab content #}
+{% macro projectOverview(project) %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <div class="govuk-summary-card">
+        <div class="govuk-summary-card__title-wrapper">
+          <h2 class="govuk-summary-card__title">Project Status History</h2>
+        </div>
+        <div class="govuk-summary-card__content">
+          <div style="flex: 1;">
+            <canvas id="project-history-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
 {% block content %}
   <div class="govuk-grid-row">
-    <div class="govuk-grid-column-two-thirds">
+    <div class="govuk-grid-column-full">
       {{ appHeading({
         text: project.name,
         classes: "govuk-heading-xl govuk-!-margin-bottom-2 govuk-!-word-break-word"
       }) }}
-      <p class="govuk-body">
-        A technical assessment of this project's compliance with service standards and best practices.
-      </p>
-    </div>
-    <div class="govuk-grid-column-one-third">
-      <div class="app-status-container">
-        <h2 class="govuk-heading-s govuk-!-margin-bottom-2">OVERALL CCTS STATUS</h2>
-        <strong class="govuk-tag
-          {% if project.status === 'RED' %}govuk-tag--red
-          {% elif project.status === 'AMBER' %}govuk-tag--yellow
-          {% elif project.status === 'GREEN' %}govuk-tag--green
-          {% endif %}">
-          {{ project.status }}
-        </strong>
+      <div class="govuk-grid-row govuk-!-margin-top-4 status-row">
+        <div class="govuk-grid-column-one-third">
+          <h2 class="govuk-heading-m govuk-!-margin-bottom-0">Current delivery status:</h2>
+        </div>
+        <div class="govuk-grid-column-two-thirds">
+          <strong class="govuk-tag govuk-tag--large status-tag
+            {% if project.status === 'RED' %}govuk-tag--red
+            {% elif project.status === 'AMBER' %}govuk-tag--yellow
+            {% elif project.status === 'GREEN' %}govuk-tag--green
+            {% endif %}">
+            {{ project.status }}
+          </strong>
+        </div>
       </div>
     </div>
   </div>
@@ -35,51 +103,36 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
       {{ govukInsetText({
-        html: '
-          <h2 class="govuk-heading-m govuk-!-margin-bottom-2">Project Commentary</h2>
-          <div class="govuk-body-s govuk-!-margin-bottom-2">
-            Last updated: ' + project.lastUpdated + '
-          </div>
-          <p class="govuk-body">' + project.commentary + '</p>
-        '
+        html: '<p class="govuk-body">' + project.commentary + '</p><div class="govuk-body-s govuk-!-margin-bottom-0 govuk-!-margin-top-2">Last updated: ' + project.lastUpdated + '</div>'
       }) }}
 
-      <div class="govuk-grid-row">
-        <div class="govuk-grid-column-one-half">
-          <div class="govuk-summary-card">
-            <div class="govuk-summary-card__title-wrapper">
-              <h2 class="govuk-summary-card__title">Project Status History</h2>
-            </div>
-            <div class="govuk-summary-card__content">
-              <div style="flex: 1;">
-                <canvas id="project-history-chart"></canvas>
-              </div>
-              <p class="govuk-body govuk-!-margin-top-4">
-                <a href="/projects/{{ project.id }}/history" class="govuk-link">
-                  View full status history
-                </a>
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="govuk-grid-column-one-half">
-          <div class="govuk-summary-card">
-            <div class="govuk-summary-card__title-wrapper">
-              <h2 class="govuk-summary-card__title">Service Standards Progress</h2>
-            </div>
-            <div class="govuk-summary-card__content">
-              <div class="standards-overview">
-                <canvas id="standards-pie-chart"></canvas>
-              </div>
-              <p class="govuk-body govuk-!-margin-top-4">
-                <a href="/projects/{{ project.id }}/standards" class="govuk-link">
-                  View standards progress
-                </a>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {% set overviewHtml %}
+        {{ projectOverview(project) }}
+      {% endset %}
+
+      {% set engagementHtml %}
+        <h2 class="govuk-heading-m">Project Engagement History</h2>
+        {{ projectEngagementTimeline(projectHistory) }}
+      {% endset %}
+
+      {{ govukTabs({
+        items: [
+          {
+            id: "overview",
+            label: "Overview",
+            panel: {
+              html: overviewHtml
+            }
+          },
+          {
+            id: "project-engagement",
+            label: "Project engagement",
+            panel: {
+              html: engagementHtml
+            }
+          }
+        ]
+      }) }}
 
       <div class="govuk-button-group">
         {{ govukButton({
@@ -110,6 +163,17 @@
   .app-tag-list .govuk-tag {
     margin: 0;
     white-space: nowrap;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+  }
+  
+  .status-tag {
+    margin-top: 0;
+    position: relative;
+    top: -2px;
   }
 </style>
 {% endblock %}

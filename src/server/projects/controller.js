@@ -90,6 +90,15 @@ export const projectsController = {
       const standards = await getServiceStandards()
       const projectHistory = await getProjectHistory(id)
 
+      // Log project history to check if we're getting data
+      request.logger.info(
+        {
+          historyExists: !!projectHistory,
+          historyLength: projectHistory?.length || 0
+        },
+        'Project history data check'
+      )
+
       // Get standards with their current status
       const standardsStatus = project.standards.map((standard) => ({
         status: standard.status || 'NOT_STARTED'
@@ -213,7 +222,7 @@ export const projectsController = {
       request.logger.info(
         {
           originalPayload: payload,
-          parsedStandards: parsedStandards
+          parsedStandards
         },
         'Parsed form data'
       )

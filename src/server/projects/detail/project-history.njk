@@ -15,7 +15,7 @@
         <div class="timeline">
           {% for change in history %}
             <div class="timeline__event">
-              <h3 class="timeline__event-title">
+              <h3 class="timeline__event-title govuk-heading-s">
                 {% if change.changes.status and change.changes.status.from !== change.changes.status.to %}
                   Delivery status update:
                   <strong class="govuk-tag 
@@ -31,7 +31,7 @@
                   Comment:
                 {% endif %}
               </h3>
-              <strong class="govuk-tag govuk-tag--grey govuk-!-margin-bottom-2" style="white-space: nowrap; font-size: 8px; line-height: 1; padding: 3px 6px;">
+              <strong class="govuk-tag govuk-tag--grey govuk-!-margin-bottom-2" style="white-space: nowrap; font-size: 10px; line-height: 1; padding: 3px 6px;">
                 {% if change.changedBy === 'system' %}
                   {% set professions = [
                     'DELIVERY MANAGEMENT',

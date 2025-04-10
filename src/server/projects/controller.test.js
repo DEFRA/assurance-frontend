@@ -143,7 +143,16 @@ describe('Projects controller', () => {
       mockGetServiceStandards.mockResolvedValue(mockStandards)
 
       // Act
-      await projectsController.get({ params: { id: '1' } }, mockH)
+      await projectsController.get(
+        {
+          params: { id: '1' },
+          logger: {
+            error: jest.fn(),
+            info: jest.fn()
+          }
+        },
+        mockH
+      )
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
@@ -170,7 +179,16 @@ describe('Projects controller', () => {
       mockGetServiceStandards.mockResolvedValue([])
 
       // Act
-      await projectsController.get({ params: { id: '1' } }, mockH)
+      await projectsController.get(
+        {
+          params: { id: '1' },
+          logger: {
+            error: jest.fn(),
+            info: jest.fn()
+          }
+        },
+        mockH
+      )
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
@@ -188,7 +206,8 @@ describe('Projects controller', () => {
       const mockRequest = {
         params: { id: '999' },
         logger: {
-          error: jest.fn()
+          error: jest.fn(),
+          info: jest.fn()
         }
       }
       mockGetProjectById.mockResolvedValue(null)
@@ -207,7 +226,8 @@ describe('Projects controller', () => {
       const mockRequest = {
         params: { id: '1' },
         logger: {
-          error: jest.fn()
+          error: jest.fn(),
+          info: jest.fn()
         }
       }
       const error = new Error('Database error')
@@ -230,7 +250,8 @@ describe('Projects controller', () => {
       const mockRequest = {
         params: { id: '1' },
         logger: {
-          error: jest.fn()
+          error: jest.fn(),
+          info: jest.fn()
         }
       }
       mockGetProjectById.mockResolvedValue({
@@ -295,7 +316,10 @@ describe('Projects controller', () => {
       // Arrange
       const mockRequest = {
         params: { id: '1' },
-        logger: { error: jest.fn() }
+        logger: {
+          error: jest.fn(),
+          info: jest.fn()
+        }
       }
       mockGetProjectById.mockRejectedValue(new Error('Database error'))
 
@@ -313,7 +337,10 @@ describe('Projects controller', () => {
       // Arrange
       const mockRequest = {
         params: { id: '1' },
-        logger: { error: jest.fn() }
+        logger: {
+          error: jest.fn(),
+          info: jest.fn()
+        }
       }
       mockGetProjectById.mockResolvedValue({
         id: '1',
@@ -681,7 +708,8 @@ describe('Projects controller', () => {
       const mockRequest = {
         params: { id: '1', standardId: '1' },
         logger: {
-          error: jest.fn()
+          error: jest.fn(),
+          info: jest.fn()
         }
       }
       await expect(
@@ -762,7 +790,8 @@ describe('Projects controller', () => {
       const mockRequest = {
         params: { id: '1' },
         logger: {
-          error: jest.fn()
+          error: jest.fn(),
+          info: jest.fn()
         }
       }
       await expect(

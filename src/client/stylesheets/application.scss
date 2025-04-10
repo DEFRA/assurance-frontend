@@ -23,7 +23,6 @@
 .standards-overview {
   height: 150px;
 }
-
 // Timeline Component Styles
 .timeline {
   margin-bottom: 2em;
@@ -31,8 +30,8 @@
 }
 
 .timeline::before {
-  background-color: #1d70b8;
-  content: "";
+  background-color: #000000;
+  content: '';
   height: 100%;
   left: 0;
   position: absolute;
@@ -47,8 +46,8 @@
 }
 
 .timeline__event::before {
-  background-color: #1d70b8;
-  content: "";
+  background-color: #000000;
+  content: '';
   height: 5px;
   left: 0;
   position: absolute;

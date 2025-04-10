@@ -83,18 +83,18 @@
         text: project.name,
         classes: "govuk-heading-xl govuk-!-margin-bottom-2 govuk-!-word-break-word"
       }) }}
-      <div class="govuk-grid-row govuk-!-margin-top-4 status-row">
-        <div class="govuk-grid-column-one-third">
-          <h2 class="govuk-heading-m govuk-!-margin-bottom-0">Current delivery status:</h2>
-        </div>
-        <div class="govuk-grid-column-two-thirds">
-          <strong class="govuk-tag govuk-tag--large status-tag
-            {% if project.status === 'RED' %}govuk-tag--red
-            {% elif project.status === 'AMBER' %}govuk-tag--yellow
-            {% elif project.status === 'GREEN' %}govuk-tag--green
-            {% endif %}">
-            {{ project.status }}
-          </strong>
+      <div class="govuk-grid-row govuk-!-margin-top-4">
+        <div class="govuk-grid-column-full">
+          <h2 class="govuk-heading-m inline-heading">
+            Current delivery status:
+            <strong class="govuk-tag govuk-tag--large govuk-!-margin-left-1
+              {% if project.status === 'RED' %}govuk-tag--red
+              {% elif project.status === 'AMBER' %}govuk-tag--yellow
+              {% elif project.status === 'GREEN' %}govuk-tag--green
+              {% endif %}">
+              {{ project.status }}
+            </strong>
+          </h2>
         </div>
       </div>
     </div>
@@ -165,15 +165,11 @@
     white-space: nowrap;
   }
 
-  .status-row {
+  .inline-heading {
     display: flex;
     align-items: center;
-  }
-  
-  .status-tag {
-    margin-top: 0;
-    position: relative;
-    top: -2px;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 </style>
 {% endblock %}

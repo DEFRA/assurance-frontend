@@ -25,16 +25,17 @@ export const plugin = {
         path: '/',
         clearInvalid: true,
         strictHeader: false,
-        ignoreErrors: true
+        ignoreErrors: true,
+        isSameSite: 'Lax'
       },
       keepAlive: true,
       redirectTo: false,
+      appendNext: false,
       validate: async (request, session) => {
         try {
           // Log the session object to debug
           logger.info('Validating session', {
-            sessionId: session?.id,
-            cookies: Object.keys(request.state || {})
+            sessionId: session?.id
           })
 
           // Check if session and session.id exist
@@ -55,7 +56,6 @@ export const plugin = {
 
           logger.info('Session validated successfully', { id: session.id })
 
-          // Make sure we return isValid: true, not valid: true
           return {
             isValid: true,
             credentials: cached
@@ -89,13 +89,16 @@ export const plugin = {
         path: '/auth',
         handler: auth,
         options: {
-          auth: { mode: 'try', strategy: 'session' }
+          auth: { mode: 'try' }
         }
       },
       {
         method: 'GET',
         path: '/auth/logout',
-        handler: logout
+        handler: logout,
+        options: {
+          auth: { mode: 'try' }
+        }
       }
     ])
   }

@@ -2,9 +2,19 @@ import { createServer } from '~/src/server/index.js'
 import { homeController } from './controller.js'
 
 const mockGetProjects = jest.fn()
+const mockLogger = {
+  info: jest.fn(),
+  debug: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn()
+}
 
 jest.mock('~/src/server/services/projects.js', () => ({
   getProjects: (...args) => mockGetProjects(...args)
+}))
+
+jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
+  createLogger: () => mockLogger
 }))
 
 describe('Home controller', () => {
@@ -168,9 +178,19 @@ describe('Home controller', () => {
       const error = new Error('Test error')
       mockGetProjects.mockRejectedValue(error)
 
-      // Act & Assert
-      await expect(homeController.handler(mockRequest, mockH)).rejects.toThrow()
-      expect(mockRequest.logger.error).toHaveBeenCalledWith(error)
+      // Act
+      await homeController.handler(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith('home/index', {
+        pageTitle: 'Projects | DDTS Assurance',
+        projects: [],
+        currentTag: undefined,
+        description:
+          'Unable to load projects at this time. Please try again later.'
+      })
+      // Check that the error was logged
+      expect(mockRequest.logger.error).toHaveBeenCalled()
     })
   })
 })

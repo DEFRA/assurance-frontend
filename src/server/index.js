@@ -92,49 +92,32 @@ export async function createServer() {
 
   server.app.context = baseContext
 
-  // Update onPreResponse extension to use cookieAuth
+  // Update onPreResponse extension for consistent auth state handling
   server.ext('onPreResponse', (request, h) => {
     const response = request.response
 
+    // Only inject into view responses
     if (response.variety === 'view') {
-      // Log all cookies for debugging
-      const cookies = Object.keys(request.state || {})
+      const currentPath = request.path
+      const credentials = request.auth?.credentials
 
-      // Check if we have a valid session authentication
-      let isAuthenticated = Boolean(request.auth.isAuthenticated)
-      let authSource = 'session'
+      // Simple and effective authentication check
+      const isAuthenticated = !!credentials
 
-      // If not authenticated through session, check fallback cookie
-      if (!isAuthenticated && request.state.auth_status === 'authenticated') {
-        isAuthenticated = true
-        authSource = 'auth_status_cookie'
-      }
-
-      // Also check for sid cookie as another indicator
-      if (!isAuthenticated && request.state.sid) {
-        isAuthenticated = true
-        authSource = 'sid_cookie'
-      }
-
-      // Log authentication status for debugging
       logger.debug(
-        `Auth state for ${request.path}: ${isAuthenticated ? 'authenticated' : 'not authenticated'} (source: ${authSource})`
+        `Auth state for ${currentPath}: ${isAuthenticated ? 'authenticated' : 'not authenticated'}`
       )
-      logger.debug(`Cookies present: ${cookies.join(', ')}`)
 
-      // Use auth state for templates
-      const auth = {
-        isAuthenticated,
-        credentials: request.auth.credentials
-      }
+      // Create the navigation with auth status
+      const nav = navigation({ isAuthenticated, credentials }, currentPath)
 
-      // Create the navigation with auth status for the template
-      const nav = navigation(auth, request.path)
-
-      // Update response context with base context, auth state, and navigation
+      // Update response context with consistent auth data
       response.source.context = {
         ...baseContext,
-        auth,
+        ...response.source.context,
+        user: credentials,
+        isAuthenticated,
+        currentPath,
         navigation: nav
       }
     }

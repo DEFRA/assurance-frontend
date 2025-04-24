@@ -10,7 +10,10 @@ export const programmes = {
           path: '/programmes',
           handler: programmesController.handler,
           options: {
-            auth: 'session'
+            auth: {
+              mode: 'try',
+              strategy: 'session'
+            }
           }
         },
         {
@@ -18,7 +21,10 @@ export const programmes = {
           path: '/programmes/{programme}',
           handler: programmesController.getProgramme,
           options: {
-            auth: 'session'
+            auth: {
+              mode: 'try',
+              strategy: 'session'
+            }
           }
         }
       ])

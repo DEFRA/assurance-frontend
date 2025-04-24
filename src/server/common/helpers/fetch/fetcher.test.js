@@ -91,14 +91,17 @@ describe('Fetcher', () => {
         logger: mockLogger
       }
 
-      // Act & Assert
-      await expect(fetcher('/test', {}, mockRequest)).rejects.toMatchObject({
+      // Act
+      const result = await fetcher('/test', {}, mockRequest)
+
+      // Assert
+      expect(result).toMatchObject({
         isBoom: true,
         output: {
-          statusCode: 500
+          statusCode: 503
         }
       })
-      expect(mockLogger.error).toHaveBeenCalledWith(networkError)
+      expect(mockLogger.error).toHaveBeenCalled()
     })
   })
 

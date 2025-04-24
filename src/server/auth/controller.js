@@ -86,7 +86,8 @@ const setCookie = (h, name, value, options = {}) => {
     isSecure: config.get('session.cookie.secure'),
     isHttpOnly: true,
     path: '/',
-    encoding: 'none'
+    encoding: 'none',
+    isSameSite: 'Lax' // Allow cookie to be sent with same-site navigation
   }
   h.state(name, value, { ...defaultOptions, ...options })
 }
@@ -240,16 +241,10 @@ export const auth = async (request, h) => {
         // Create the redirect response
         const response = h.redirect(redirectTo || '/')
 
-        // Set an additional auth_status cookie as fallback
-        setCookie(response, 'auth_status', 'authenticated', {
-          ttl: tokenSet.expires_in ? tokenSet.expires_in * 1000 : 3600 * 1000
-        })
-
         // Log authentication success
         log('Session and auth state set successfully, redirecting to', {
           redirectTo: redirectTo || '/',
-          isAuthenticated: Boolean(request.auth.isAuthenticated),
-          cookies: Object.keys(request.state || {})
+          isAuthenticated: Boolean(request.auth.isAuthenticated)
         })
 
         return response
@@ -325,25 +320,61 @@ export const auth = async (request, h) => {
  */
 export const logout = (request, h) => {
   log('Logout initiated', {
-    isAuthenticated: request.auth.isAuthenticated,
-    cookies: Object.keys(request.state || {})
+    isAuthenticated: request.auth.isAuthenticated
   })
 
-  // Clear the session cookie using cookieAuth API
-  if (request.cookieAuth) {
-    request.cookieAuth.clear()
+  try {
+    // 1. First clear any server-side cache if we have the session ID
+    if (request.auth?.credentials?.id || request.auth?.artifacts?.sid) {
+      const sid = request.auth?.artifacts?.sid || request.auth?.credentials?.id
+      if (sid && request.server.app.cache) {
+        log('Clearing session from cache', { sid })
+        request.server.app.cache
+          .drop(sid)
+          .catch((err) => log('Error dropping cache', { error: err.message }))
+      }
+    }
+
+    // 2. Clear the auth state from the current request
+    request.auth.credentials = null
+    request.auth.isAuthenticated = false
+
+    // 3. Clear the session cookie using cookieAuth API
+    if (request.cookieAuth) {
+      log('Clearing cookieAuth session')
+      request.cookieAuth.clear()
+    }
+
+    // 4. Create redirect response
+    const response = h.redirect('/')
+
+    // 5. Explicitly clear all auth-related cookies with stronger settings
+    const cookieOptions = {
+      path: '/',
+      isSecure: config.get('session.cookie.secure'),
+      isHttpOnly: true,
+      isSameSite: 'Strict'
+    }
+
+    // Unset all auth cookies
+    response.unstate('sid', cookieOptions)
+    response.unstate('auth_state', cookieOptions)
+    response.unstate('redirect_to', cookieOptions)
+
+    log('Logout completed - all auth state cleared')
+
+    return response
+  } catch (error) {
+    log('Error during logout', { error: error.message, stack: error.stack })
+
+    // Even if there was an error, try to clear cookies in the response
+    const response = h.redirect('/')
+
+    // Clear other cookies
+    response.unstate('sid')
+    response.unstate('auth_state')
+    response.unstate('redirect_to')
+
+    return response
   }
-
-  // Create redirect response
-  const response = h.redirect('/')
-
-  // Explicitly clear all cookies
-  response.unstate('sid')
-  response.unstate('auth_state')
-  response.unstate('redirect_to')
-  response.unstate('auth_status')
-
-  log('Logout completed - cookies cleared')
-
-  return response
 }

@@ -1,51 +1,45 @@
-import { createServer } from '~/src/server/index.js'
 import { homeController } from './controller.js'
 
 const mockGetProjects = jest.fn()
-const mockLogger = {
-  info: jest.fn(),
-  debug: jest.fn(),
-  error: jest.fn(),
-  warn: jest.fn()
-}
+const mockLoggerError = jest.fn()
+const mockLoggerInfo = jest.fn()
 
 jest.mock('~/src/server/services/projects.js', () => ({
   getProjects: (...args) => mockGetProjects(...args)
 }))
 
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
-  createLogger: () => mockLogger
+  createLogger: () => ({
+    info: mockLoggerInfo,
+    error: mockLoggerError,
+    debug: jest.fn(),
+    warn: jest.fn()
+  })
+}))
+
+// Skip actual server creation
+jest.mock('~/src/server/index.js', () => ({
+  createServer: jest.fn().mockImplementation(() => ({
+    initialize: jest.fn().mockResolvedValue({}),
+    stop: jest.fn().mockResolvedValue({})
+  }))
 }))
 
 describe('Home controller', () => {
-  /** @type {Server} */
-  let server
-
-  beforeAll(async () => {
-    server = await createServer()
-    await server.initialize()
-  })
-
-  afterAll(async () => {
-    await server.stop({ timeout: 0 })
-  })
-
-  test('should return view with projects', () => {
-    expect(true).toBe(true)
-  })
-
   const mockH = {
     view: jest.fn()
   }
+
   const mockRequest = {
-    query: {},
-    logger: {
-      error: jest.fn()
-    }
+    query: {}
   }
 
   beforeEach(() => {
     jest.clearAllMocks()
+  })
+
+  afterAll(() => {
+    jest.resetModules()
   })
 
   describe('handler', () => {
@@ -189,8 +183,9 @@ describe('Home controller', () => {
         description:
           'Unable to load projects at this time. Please try again later.'
       })
+
       // Check that the error was logged
-      expect(mockRequest.logger.error).toHaveBeenCalled()
+      expect(mockLoggerError).toHaveBeenCalled()
     })
   })
 })

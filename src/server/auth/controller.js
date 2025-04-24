@@ -25,7 +25,7 @@ const safeGetCookie = (request, key) => {
     try {
       return request.cookieAuth.get(key)
     } catch (error) {
-      log('Error getting cookie value', { key, error: error.message })
+      log('Error getting cookie value', { key })
       return undefined
     }
   }
@@ -44,7 +44,7 @@ const safeSetCookie = (request, key, value) => {
       request.cookieAuth.set(key, value)
       return true
     } catch (error) {
-      log('Error setting cookie value', { key, error: error.message })
+      log('Error setting cookie value', { key })
       return false
     }
   }
@@ -66,7 +66,7 @@ const safeClearCookie = (request, key) => {
       }
       return true
     } catch (error) {
-      log('Error clearing cookie', { key, error: error.message })
+      log('Error clearing cookie', { key })
       return false
     }
   }
@@ -102,11 +102,7 @@ export const auth = async (request, h) => {
     // If this is a callback from Azure AD
     if (request.query.code) {
       try {
-        log('Received auth code from Azure AD', {
-          code: request.query.code,
-          state: request.query.state,
-          session_state: request.query.session_state
-        })
+        log('Received auth callback from Azure AD')
 
         // Get stored state and redirect URL
         const storedState =
@@ -115,12 +111,6 @@ export const auth = async (request, h) => {
           safeGetCookie(request, 'redirect_to') ||
           request.state.redirect_to ||
           '/'
-
-        log('Stored session data', {
-          storedState,
-          redirectTo,
-          cookies: Object.keys(request.state || {})
-        })
 
         if (!storedState) {
           log('State not found in session, using state from query')
@@ -138,8 +128,6 @@ export const auth = async (request, h) => {
         const clientSecret = config.get('azure.clientSecret')
         const tenantId = config.get('azure.tenantId')
         const callbackUrl = config.get('azure.callbackUrl')
-
-        log('Using OAuth configuration', { clientId, tenantId, callbackUrl })
 
         // Create OIDC client if not already available
         let oidcClient
@@ -175,19 +163,11 @@ export const auth = async (request, h) => {
           { state: storedState || request.query.state }
         )
 
-        log('Token exchange successful', {
-          access_token: tokenSet.access_token ? '[present]' : '[missing]',
-          id_token: tokenSet.id_token ? '[present]' : '[missing]',
-          expires_in: tokenSet.expires_in
-        })
+        log('Token exchange successful')
 
         // Get user info from the ID token
         const claims = tokenSet.claims()
-        log('Successfully retrieved user info', {
-          id: claims.sub,
-          email: claims.email || claims.preferred_username,
-          name: claims.name
-        })
+        log('Successfully retrieved user info')
 
         // Create the session with user data
         const sessionData = {
@@ -205,23 +185,17 @@ export const auth = async (request, h) => {
           // Store with a longer TTL to ensure it's not expiring too quickly
           // 0 means use the default TTL from config
           await request.server.app.cache.set(sid, sessionData, 0)
-          log('Session stored in cache', {
-            sid,
-            sessionData: JSON.stringify(sessionData)
-          })
+          log('Session stored in cache')
 
           // For debugging, immediately try to get it back
           const testGet = await request.server.app.cache.get(sid)
           if (testGet) {
-            log('Session cache test retrieval successful', { sid })
+            log('Session cache test retrieval successful')
           } else {
-            log('Session cache test retrieval FAILED', { sid })
+            log('Session cache test retrieval FAILED')
           }
         } catch (error) {
-          log('Error storing session in cache', {
-            error: error.message,
-            stack: error.stack
-          })
+          log('Error storing session in cache')
         }
 
         // Set the session cookie with ONLY the ID as required by validate function
@@ -231,7 +205,7 @@ export const auth = async (request, h) => {
         ) {
           // The cookie should only contain the id field which validate() will use
           request.cookieAuth.set({ id: sid })
-          log('Session cookie set', { id: sid })
+          log('Session cookie set')
         }
 
         // Clear auth state after successful authentication
@@ -242,19 +216,12 @@ export const auth = async (request, h) => {
         const response = h.redirect(redirectTo || '/')
 
         // Log authentication success
-        log('Session and auth state set successfully, redirecting to', {
-          redirectTo: redirectTo || '/',
-          isAuthenticated: Boolean(request.auth.isAuthenticated)
-        })
+        log('Authentication successful, redirecting user')
 
         return response
       } catch (error) {
-        log('Authentication error details', {
-          message: error.message,
-          stack: error.stack,
-          response: error.response?.data,
-          status: error.response?.status,
-          headers: error.response?.headers
+        log('Authentication error', {
+          message: error.message
         })
 
         return h.view('common/templates/error', {
@@ -286,7 +253,7 @@ export const auth = async (request, h) => {
       redirectPath = '/'
     }
 
-    log('Setting redirect path', { redirectPath })
+    log('Starting authentication flow')
     safeSetCookie(request, 'redirect_to', redirectPath)
     setCookie(response, 'redirect_to', redirectPath)
 
@@ -301,10 +268,7 @@ export const auth = async (request, h) => {
     response.redirect(authUrl.toString())
     return response
   } catch (error) {
-    log('Unexpected error in auth flow', {
-      message: error.message,
-      stack: error.stack
-    })
+    log('Unexpected error in auth flow')
 
     return h.view('common/templates/error', {
       title: 'Authentication Error',
@@ -319,19 +283,18 @@ export const auth = async (request, h) => {
  * @param {import('@hapi/hapi').ResponseToolkit} h
  */
 export const logout = (request, h) => {
-  log('Logout initiated', {
-    isAuthenticated: request.auth.isAuthenticated
-  })
+  log('Logout initiated')
 
   try {
     // 1. First clear any server-side cache if we have the session ID
     if (request.auth?.credentials?.id || request.auth?.artifacts?.sid) {
       const sid = request.auth?.artifacts?.sid || request.auth?.credentials?.id
       if (sid && request.server.app.cache) {
-        log('Clearing session from cache', { sid })
-        request.server.app.cache
-          .drop(sid)
-          .catch((err) => log('Error dropping cache', { error: err.message }))
+        log('Clearing session from cache')
+        request.server.app.cache.drop(sid).catch((error) => {
+          // Properly handle the error by logging its message
+          log('Error dropping cache', { message: error.message })
+        })
       }
     }
 
@@ -361,11 +324,11 @@ export const logout = (request, h) => {
     response.unstate('auth_state', cookieOptions)
     response.unstate('redirect_to', cookieOptions)
 
-    log('Logout completed - all auth state cleared')
+    log('Logout completed')
 
     return response
   } catch (error) {
-    log('Error during logout', { error: error.message, stack: error.stack })
+    log('Error during logout')
 
     // Even if there was an error, try to clear cookies in the response
     const response = h.redirect('/')

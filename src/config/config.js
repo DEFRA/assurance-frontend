@@ -228,13 +228,13 @@ export const config = convict({
     tenantId: {
       doc: 'Azure AD Tenant ID',
       format: String,
-      default: '',
+      default: '6f504113-6b64-43f2-ade9-242e05780007',
       env: 'AZURE_TENANT_ID'
     },
     clientId: {
       doc: 'Azure AD Client ID',
       format: String,
-      default: '',
+      default: 'a741690c-cc36-410d-a83a-b64a1bbc635a',
       env: 'AZURE_CLIENT_ID'
     },
     clientSecret: {

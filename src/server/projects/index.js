@@ -31,18 +31,12 @@ export const projects = {
         {
           method: 'GET',
           path: '/projects',
-          handler: projectsController.get,
-          options: {
-            auth: 'session'
-          }
+          handler: projectsController.get
         },
         {
           method: 'GET',
           path: '/projects/{id}',
-          handler: projectsController.getById,
-          options: {
-            auth: 'session'
-          }
+          handler: projectsController.getById
         },
         {
           method: 'GET',

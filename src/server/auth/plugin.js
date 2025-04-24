@@ -72,7 +72,10 @@ export const plugin = {
     })
 
     // Set default auth strategy
-    server.auth.default('session')
+    server.auth.default({
+      strategy: 'session',
+      mode: 'try'
+    })
 
     // Register routes
     server.route([

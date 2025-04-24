@@ -223,6 +223,33 @@ export const config = convict({
       default: 'http://localhost:5000',
       env: 'API_BASE_URL'
     }
+  },
+  azure: {
+    tenantId: {
+      doc: 'Azure AD Tenant ID',
+      format: String,
+      default: '6f504113-6b64-43f2-ade9-242e05780007',
+      env: 'AZURE_TENANT_ID'
+    },
+    clientId: {
+      doc: 'Azure AD Client ID',
+      format: String,
+      default: 'a741690c-cc36-410d-a83a-b64a1bbc635a',
+      env: 'AZURE_CLIENT_ID'
+    },
+    clientSecret: {
+      doc: 'Azure AD Client Secret',
+      format: String,
+      default: '',
+      sensitive: true,
+      env: 'AZURE_CLIENT_SECRET'
+    },
+    callbackUrl: {
+      doc: 'Azure AD OAuth callback URL',
+      format: String,
+      default: 'http://localhost:3000/auth',
+      env: 'AUTH_CALLBACK_URL'
+    }
   }
 })
 

@@ -1,4 +1,4 @@
-import { projectsController } from '~/src/server/projects/controller.js'
+import { projectsController } from './controller.js'
 import { addProjectController } from '~/src/server/projects/add/controller.js'
 
 /**
@@ -30,8 +30,18 @@ export const projects = {
       server.route([
         {
           method: 'GET',
+          path: '/projects',
+          handler: projectsController.getAll
+        },
+        {
+          method: 'GET',
           path: '/projects/{id}',
           handler: projectsController.get
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/history',
+          handler: projectsController.getProjectHistory
         },
         {
           method: 'GET',

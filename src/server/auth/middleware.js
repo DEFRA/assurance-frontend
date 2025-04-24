@@ -1,6 +1,20 @@
 import Boom from '@hapi/boom'
 
 /**
+ * Safely sets a value in cookieAuth
+ * @param {import('@hapi/hapi').Request} request
+ * @param {string} key
+ * @param {any} value
+ */
+const safeSetCookie = (request, key, value) => {
+  if (request.cookieAuth && typeof request.cookieAuth.set === 'function') {
+    request.cookieAuth.set(key, value)
+    return true
+  }
+  return false
+}
+
+/**
  * Middleware to ensure user is authenticated
  * @param {import('@hapi/hapi').Request} request
  * @param {import('@hapi/hapi').ResponseToolkit} h
@@ -10,9 +24,7 @@ export const requireAuth = (request, h) => {
     // Check if user is authenticated
     if (!request.auth.isAuthenticated) {
       // Store the original URL to redirect back after login
-      if (request.cookieAuth?.set) {
-        request.cookieAuth.set('redirect_to', request.url.pathname)
-      }
+      safeSetCookie(request, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
     }
 
@@ -20,9 +32,7 @@ export const requireAuth = (request, h) => {
     const user = request.auth.credentials.user
 
     if (!user) {
-      if (request.cookieAuth?.set) {
-        request.cookieAuth.set('redirect_to', request.url.pathname)
-      }
+      safeSetCookie(request, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
     }
 
@@ -30,8 +40,8 @@ export const requireAuth = (request, h) => {
     return h.continue
   } catch (error) {
     // Only store redirect URL if not already authenticated
-    if (!request.auth.isAuthenticated && request.cookieAuth?.set) {
-      request.cookieAuth.set('redirect_to', request.url.pathname)
+    if (!request.auth.isAuthenticated) {
+      safeSetCookie(request, 'redirect_to', request.url.pathname)
     }
     return h.redirect('/auth/login')
   }
@@ -48,17 +58,13 @@ export const requireRole = (requiredRoles) => {
   return (request, h) => {
     try {
       if (!request.auth.isAuthenticated) {
-        if (request.cookieAuth?.set) {
-          request.cookieAuth.set('redirect_to', request.url.pathname)
-        }
+        safeSetCookie(request, 'redirect_to', request.url.pathname)
         return h.redirect('/auth/login')
       }
 
       const user = request.auth.credentials.user
       if (!user) {
-        if (request.cookieAuth?.set) {
-          request.cookieAuth.set('redirect_to', request.url.pathname)
-        }
+        safeSetCookie(request, 'redirect_to', request.url.pathname)
         return h.redirect('/auth/login')
       }
 
@@ -73,9 +79,7 @@ export const requireRole = (requiredRoles) => {
       if (error.isBoom) {
         throw error
       }
-      if (request.cookieAuth?.set) {
-        request.cookieAuth.set('redirect_to', request.url.pathname)
-      }
+      safeSetCookie(request, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
     }
   }

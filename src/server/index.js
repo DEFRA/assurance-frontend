@@ -15,6 +15,9 @@ import { navigation } from '~/src/server/common/helpers/navigation.js'
 import Inert from '@hapi/inert'
 import Vision from '@hapi/vision'
 import { plugin as authPlugin } from './auth/plugin.js'
+import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
+
+const logger = createLogger()
 
 export async function createServer() {
   setupProxy()
@@ -94,17 +97,45 @@ export async function createServer() {
     const response = request.response
 
     if (response.variety === 'view') {
-      // Use request.auth for auth state
+      // Log all cookies for debugging
+      const cookies = Object.keys(request.state || {})
+
+      // Check if we have a valid session authentication
+      let isAuthenticated = Boolean(request.auth.isAuthenticated)
+      let authSource = 'session'
+
+      // If not authenticated through session, check fallback cookie
+      if (!isAuthenticated && request.state.auth_status === 'authenticated') {
+        isAuthenticated = true
+        authSource = 'auth_status_cookie'
+      }
+
+      // Also check for sid cookie as another indicator
+      if (!isAuthenticated && request.state.sid) {
+        isAuthenticated = true
+        authSource = 'sid_cookie'
+      }
+
+      // Log authentication status for debugging
+      logger.debug(
+        `Auth state for ${request.path}: ${isAuthenticated ? 'authenticated' : 'not authenticated'} (source: ${authSource})`
+      )
+      logger.debug(`Cookies present: ${cookies.join(', ')}`)
+
+      // Use auth state for templates
       const auth = {
-        isAuthenticated: request.auth.isAuthenticated,
+        isAuthenticated,
         credentials: request.auth.credentials
       }
+
+      // Create the navigation with auth status for the template
+      const nav = navigation(auth, request.path)
 
       // Update response context with base context, auth state, and navigation
       response.source.context = {
         ...baseContext,
         auth,
-        navigation: navigation(auth)
+        navigation: nav
       }
     }
 

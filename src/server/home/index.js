@@ -16,7 +16,13 @@ export const home = {
         {
           method: 'GET',
           path: '/',
-          handler: homeController.handler
+          handler: homeController.handler,
+          options: {
+            auth: {
+              mode: 'try',
+              strategy: 'session'
+            }
+          }
         }
       ])
     }

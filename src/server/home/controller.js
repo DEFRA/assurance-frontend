@@ -6,6 +6,10 @@ import { getProjects } from '~/src/server/services/projects.js'
  * @satisfies {Partial<ServerRoute>}
  */
 export const homeController = {
+  /**
+   * @param {import('@hapi/hapi').Request} request
+   * @param {import('@hapi/hapi').ResponseToolkit} h
+   */
   handler: async (request, h) => {
     const { tag } = request.query
     try {

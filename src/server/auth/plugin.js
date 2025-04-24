@@ -1,6 +1,9 @@
 import { getAuthConfig } from '~/src/server/auth/config.js'
 import { auth, logout } from '~/src/server/auth/controller.js'
 import Cookie from '@hapi/cookie'
+import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
+
+const logger = createLogger()
 
 export const plugin = {
   name: 'auth',
@@ -21,16 +24,50 @@ export const plugin = {
         isHttpOnly: true,
         path: '/',
         clearInvalid: true,
-        strictHeader: true
+        strictHeader: false,
+        ignoreErrors: true
       },
-      redirectTo: '/auth/login',
+      keepAlive: true,
+      redirectTo: false,
       validate: async (request, session) => {
-        // Validate the session
-        const cached = await request.server.app.cache.get(session.id)
-        if (!cached) {
-          return { valid: false }
+        try {
+          // Log the session object to debug
+          logger.info('Validating session', {
+            sessionId: session?.id,
+            cookies: Object.keys(request.state || {})
+          })
+
+          // Check if session and session.id exist
+          if (!session?.id) {
+            logger.warn('Invalid session structure', {
+              session: JSON.stringify(session)
+            })
+            return { isValid: false }
+          }
+
+          // Validate the session
+          const cached = await request.server.app.cache.get(session.id)
+
+          if (!cached) {
+            logger.warn('No cached session found for ID', { id: session.id })
+            return { isValid: false }
+          }
+
+          logger.info('Session validated successfully', { id: session.id })
+
+          // Make sure we return isValid: true, not valid: true
+          return {
+            isValid: true,
+            credentials: cached
+          }
+        } catch (error) {
+          logger.error('Session validation error', {
+            error: error.message,
+            stack: error.stack,
+            session: JSON.stringify(session)
+          })
+          return { isValid: false }
         }
-        return { valid: true, credentials: cached }
       }
     })
 
@@ -49,10 +86,10 @@ export const plugin = {
       },
       {
         method: 'GET',
-        path: '/auth/callback',
+        path: '/auth',
         handler: auth,
         options: {
-          auth: false
+          auth: { mode: 'try', strategy: 'session' }
         }
       },
       {

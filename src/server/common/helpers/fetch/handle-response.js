@@ -2,9 +2,9 @@ import Boom from '@hapi/boom'
 
 /**
  * Handle HTTP response
- * @param {Object} response
- * @param {Object} response.res
- * @param {Object} response.payload
+ * @param {object} response
+ * @param {object} response.res
+ * @param {object} response.payload
  * @returns {Promise<{res: *, error}|{res: *, payload: *}>}
  */
 function handleResponse({ res, payload }) {

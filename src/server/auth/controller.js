@@ -2,17 +2,7 @@ import * as client from 'openid-client'
 import { config } from '../../config/config.js'
 import { URL } from 'url'
 import crypto from 'node:crypto'
-
-/**
- * Log a message to stdout with timestamp
- * @param {string} message
- * @param {object} [data]
- */
-const log = (message, data = {}) => {
-  const timestamp = new Date().toISOString()
-  const logData = JSON.stringify({ timestamp, message, ...data })
-  process.stdout.write(`${logData}\n`)
-}
+import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
 
 /**
  * Safely gets a value from cookieAuth
@@ -25,7 +15,8 @@ const safeGetCookie = (request, key) => {
     try {
       return request.cookieAuth.get(key)
     } catch (error) {
-      log('Error getting cookie value', { key })
+      const logger = createLogger()
+      logger.error({ key, error: error.message }, 'Error getting cookie value')
       return undefined
     }
   }
@@ -44,7 +35,8 @@ const safeSetCookie = (request, key, value) => {
       request.cookieAuth.set(key, value)
       return true
     } catch (error) {
-      log('Error setting cookie value', { key })
+      const logger = createLogger()
+      logger.error({ key, error: error.message }, 'Error setting cookie value')
       return false
     }
   }
@@ -66,7 +58,8 @@ const safeClearCookie = (request, key) => {
       }
       return true
     } catch (error) {
-      log('Error clearing cookie', { key })
+      const logger = createLogger()
+      logger.error({ key, error: error.message }, 'Error clearing cookie')
       return false
     }
   }
@@ -98,11 +91,12 @@ const setCookie = (h, name, value, options = {}) => {
  * @param {import('@hapi/hapi').ResponseToolkit} h
  */
 export const auth = async (request, h) => {
+  const logger = createLogger()
   try {
     // If this is a callback from Azure AD
     if (request.query.code) {
       try {
-        log('Received auth callback from Azure AD')
+        logger.info('Received auth callback from Azure AD')
 
         // Get stored state and redirect URL
         const storedState =
@@ -113,7 +107,7 @@ export const auth = async (request, h) => {
           '/'
 
         if (!storedState) {
-          log('State not found in session, using state from query')
+          logger.info('State not found in session, using state from query')
           // If we can't find the state, we'll accept the state from the query parameter
           // This is less secure but allows authentication to work when cookies aren't properly set
         } else if (storedState !== request.query.state) {
@@ -121,7 +115,7 @@ export const auth = async (request, h) => {
         }
 
         // Exchange the code for tokens
-        log('Attempting to exchange code for tokens')
+        logger.info('Attempting to exchange code for tokens')
 
         // Get OAuth parameters from config
         const clientId = config.get('azure.clientId')
@@ -163,11 +157,11 @@ export const auth = async (request, h) => {
           { state: storedState || request.query.state }
         )
 
-        log('Token exchange successful')
+        logger.info('Token exchange successful')
 
         // Get user info from the ID token
         const claims = tokenSet.claims()
-        log('Successfully retrieved user info')
+        logger.info('Successfully retrieved user info')
 
         // Create the session with user data
         const sessionData = {
@@ -185,17 +179,20 @@ export const auth = async (request, h) => {
           // Store with a longer TTL to ensure it's not expiring too quickly
           // 0 means use the default TTL from config
           await request.server.app.cache.set(sid, sessionData, 0)
-          log('Session stored in cache')
+          logger.info('Session stored in cache')
 
           // For debugging, immediately try to get it back
           const testGet = await request.server.app.cache.get(sid)
           if (testGet) {
-            log('Session cache test retrieval successful')
+            logger.info('Session cache test retrieval successful')
           } else {
-            log('Session cache test retrieval FAILED')
+            logger.warn('Session cache test retrieval FAILED')
           }
         } catch (error) {
-          log('Error storing session in cache')
+          logger.error(
+            { error: error.message },
+            'Error storing session in cache'
+          )
         }
 
         // Set the session cookie with ONLY the ID as required by validate function
@@ -205,7 +202,7 @@ export const auth = async (request, h) => {
         ) {
           // The cookie should only contain the id field which validate() will use
           request.cookieAuth.set({ id: sid })
-          log('Session cookie set')
+          logger.info('Session cookie set')
         }
 
         // Clear auth state after successful authentication
@@ -216,13 +213,16 @@ export const auth = async (request, h) => {
         const response = h.redirect(redirectTo || '/')
 
         // Log authentication success
-        log('Authentication successful, redirecting user')
+        logger.info('Authentication successful, redirecting user')
 
         return response
       } catch (error) {
-        log('Authentication error', {
-          message: error.message
-        })
+        logger.error(
+          {
+            message: error.message
+          },
+          'Authentication error'
+        )
 
         return h.view('common/templates/error', {
           title: 'Authentication Error',
@@ -253,7 +253,7 @@ export const auth = async (request, h) => {
       redirectPath = '/'
     }
 
-    log('Starting authentication flow')
+    logger.info('Starting authentication flow')
     safeSetCookie(request, 'redirect_to', redirectPath)
     setCookie(response, 'redirect_to', redirectPath)
 
@@ -268,7 +268,7 @@ export const auth = async (request, h) => {
     response.redirect(authUrl.toString())
     return response
   } catch (error) {
-    log('Unexpected error in auth flow')
+    logger.error({ error: error.message }, 'Unexpected error in auth flow')
 
     return h.view('common/templates/error', {
       title: 'Authentication Error',
@@ -283,17 +283,18 @@ export const auth = async (request, h) => {
  * @param {import('@hapi/hapi').ResponseToolkit} h
  */
 export const logout = (request, h) => {
-  log('Logout initiated')
+  const logger = createLogger()
+  logger.info('Logout initiated')
 
   try {
     // 1. First clear any server-side cache if we have the session ID
     if (request.auth?.credentials?.id || request.auth?.artifacts?.sid) {
       const sid = request.auth?.artifacts?.sid || request.auth?.credentials?.id
       if (sid && request.server.app.cache) {
-        log('Clearing session from cache')
+        logger.info('Clearing session from cache')
         request.server.app.cache.drop(sid).catch((error) => {
           // Properly handle the error by logging its message
-          log('Error dropping cache', { message: error.message })
+          logger.error({ message: error.message }, 'Error dropping cache')
         })
       }
     }
@@ -304,7 +305,7 @@ export const logout = (request, h) => {
 
     // 3. Clear the session cookie using cookieAuth API
     if (request.cookieAuth) {
-      log('Clearing cookieAuth session')
+      logger.info('Clearing cookieAuth session')
       request.cookieAuth.clear()
     }
 
@@ -324,11 +325,11 @@ export const logout = (request, h) => {
     response.unstate('auth_state', cookieOptions)
     response.unstate('redirect_to', cookieOptions)
 
-    log('Logout completed')
+    logger.info('Logout completed')
 
     return response
   } catch (error) {
-    log('Error during logout')
+    logger.error({ error: error.message }, 'Error during logout')
 
     // Even if there was an error, try to clear cookies in the response
     const response = h.redirect('/')

@@ -8,47 +8,74 @@ export const admin = {
         {
           method: 'GET',
           path: '/admin',
-          handler: adminController.get
+          handler: adminController.get,
+          options: {
+            auth: 'session'
+          }
         },
         {
           method: 'POST',
           path: '/admin/standards/seed',
-          handler: adminController.seedStandards
+          handler: adminController.seedStandards,
+          options: {
+            auth: 'session'
+          }
         },
         {
           method: 'POST',
           path: '/admin/standards/delete',
-          handler: adminController.deleteStandards
+          handler: adminController.deleteStandards,
+          options: {
+            auth: 'session'
+          }
         },
         {
           method: ['GET', 'POST'],
           path: '/admin/standards/delete/confirm',
-          handler: adminController.confirmDeleteAllStandards
+          handler: adminController.confirmDeleteAllStandards,
+          options: {
+            auth: 'session'
+          }
         },
         {
           method: 'POST',
           path: '/admin/projects/seed',
-          handler: adminController.seedProjects
+          handler: adminController.seedProjects,
+          options: {
+            auth: 'session'
+          }
         },
         {
           method: 'POST',
           path: '/admin/projects/delete',
-          handler: adminController.deleteAllProjects
+          handler: adminController.deleteAllProjects,
+          options: {
+            auth: 'session'
+          }
         },
         {
           method: ['GET', 'POST'],
           path: '/admin/projects/delete/confirm',
-          handler: adminController.confirmDeleteAllProjects
+          handler: adminController.confirmDeleteAllProjects,
+          options: {
+            auth: 'session'
+          }
         },
         {
           method: 'POST',
           path: '/admin/projects/{id}/delete',
-          handler: adminController.deleteProject
+          handler: adminController.deleteProject,
+          options: {
+            auth: 'session'
+          }
         },
         {
           method: ['GET', 'POST'],
           path: '/admin/projects/{id}/delete/confirm',
-          handler: adminController.confirmDeleteProject
+          handler: adminController.confirmDeleteProject,
+          options: {
+            auth: 'session'
+          }
         }
       ])
     }

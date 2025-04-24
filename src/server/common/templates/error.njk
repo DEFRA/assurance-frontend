@@ -1,0 +1,30 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% block content %}
+  {{ appHeading({
+    text: title,
+    caption: "Authentication"
+  }) }}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {{ govukErrorSummary({
+        titleText: "There was a problem",
+        errorList: [
+          {
+            text: message
+          }
+        ]
+      }) }}
+
+      {{ govukButton({
+        text: "Try again",
+        href: returnTo,
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
+  </div>
+{% endblock %} 

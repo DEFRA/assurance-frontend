@@ -1,6 +1,5 @@
 import path from 'path'
 import hapi from '@hapi/hapi'
-
 import { config } from '~/src/config/config.js'
 import { nunjucksConfig } from '~/src/config/nunjucks/nunjucks.js'
 import { router } from './router.js'
@@ -13,12 +12,18 @@ import { pulse } from '~/src/server/common/helpers/pulse.js'
 import { requestTracing } from '~/src/server/common/helpers/request-tracing.js'
 import { setupProxy } from '~/src/server/common/helpers/proxy/setup-proxy.js'
 import { navigation } from '~/src/server/common/helpers/navigation.js'
+import Inert from '@hapi/inert'
+import Vision from '@hapi/vision'
+import { plugin as authPlugin } from './auth/plugin.js'
 
 export async function createServer() {
   setupProxy()
   const server = hapi.server({
     port: config.get('port'),
     routes: {
+      auth: {
+        mode: 'try'
+      },
       validate: {
         options: {
           abortEarly: false
@@ -53,23 +58,27 @@ export async function createServer() {
       strictHeader: false
     }
   })
+
+  // Register plugins
   await server.register([
+    Inert,
+    Vision,
     requestLogger,
     requestTracing,
     secureContext,
     pulse,
+    authPlugin,
     sessionCache,
     nunjucksConfig,
-    router // Register all the controllers/routes defined in src/server/router.js
+    router
   ])
 
   server.ext('onPreResponse', catchAll)
 
-  // Set view context
-  const context = {
+  // Set base view context
+  const baseContext = {
     serviceName: 'DDTS Assurance',
     serviceUrl: '/',
-    navigation,
     breadcrumbs: [
       {
         text: 'Home',
@@ -78,7 +87,29 @@ export async function createServer() {
     ]
   }
 
-  server.app.context = context
+  server.app.context = baseContext
+
+  // Update onPreResponse extension to use cookieAuth
+  server.ext('onPreResponse', (request, h) => {
+    const response = request.response
+
+    if (response.variety === 'view') {
+      // Use request.auth for auth state
+      const auth = {
+        isAuthenticated: request.auth.isAuthenticated,
+        credentials: request.auth.credentials
+      }
+
+      // Update response context with base context, auth state, and navigation
+      response.source.context = {
+        ...baseContext,
+        auth,
+        navigation: navigation(auth)
+      }
+    }
+
+    return h.continue
+  })
 
   return server
 }

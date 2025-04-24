@@ -3,13 +3,15 @@
     <div class="app-navigation__list">
       <ul class="app-navigation__primary">
         {% for item in navigation.primary %}
-          <li class="app-navigation__list-item">
-            <a class="app-navigation__link{% if item.isActive %} app-navigation__link--active{% endif %}"
-               href="{{ item.url }}"
-               data-testid="nav-{{ item.text | lower | replace(" ", "-") }}">
-              {{ item.text }}
-            </a>
-          </li>
+          {% if item.text != 'Admin' or (auth and auth.isAuthenticated) %}
+            <li class="app-navigation__list-item">
+              <a class="app-navigation__link{% if item.isActive %} app-navigation__link--active{% endif %}"
+                 href="{{ item.url }}"
+                 data-testid="nav-{{ item.text | lower | replace(" ", "-") }}">
+                {{ item.text }}
+              </a>
+            </li>
+          {% endif %}
         {% endfor %}
       </ul>
       
@@ -24,17 +26,17 @@
           </li>
         {% endfor %}
         
-        {% if navigation.admin | length %}
-          {% for item in navigation.admin %}
-            <li class="app-navigation__list-item app-navigation__list-item--section">
-              <a class="app-navigation__link{% if item.isActive %} app-navigation__link--active{% endif %}"
-                href="{{ item.url }}"
-                data-testid="nav-{{ item.text | lower | replace(" ", "-") }}">
-                {{ item.text }}
-              </a>
-            </li>
-          {% endfor %}
-        {% endif %}
+        <li class="app-navigation__list-item">
+          {% if auth and auth.isAuthenticated %}
+            <a class="app-navigation__link" href="/auth/logout" data-testid="nav-sign-out">
+              Sign out
+            </a>
+          {% else %}
+            <a class="app-navigation__link" href="/auth/login" data-testid="nav-sign-in">
+              Sign in
+            </a>
+          {% endif %}
+        </li>
       </ul>
     </div>
   </div>

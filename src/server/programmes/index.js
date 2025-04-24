@@ -8,12 +8,18 @@ export const programmes = {
         {
           method: 'GET',
           path: '/programmes',
-          handler: programmesController.handler
+          handler: programmesController.handler,
+          options: {
+            auth: 'session'
+          }
         },
         {
           method: 'GET',
           path: '/programmes/{programme}',
-          handler: programmesController.getProgramme
+          handler: programmesController.getProgramme,
+          options: {
+            auth: 'session'
+          }
         }
       ])
     }

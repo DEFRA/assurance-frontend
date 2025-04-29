@@ -1,14 +1,27 @@
 import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
+import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 
-export async function getProjects() {
+export async function getProjects(request) {
   const logger = createLogger()
   try {
     const endpoint = '/projects'
     logger.info({ endpoint }, 'Fetching projects from API')
 
-    const data = await fetcher(endpoint)
+    let data
+    // ALWAYS use authenticated fetcher if request is provided
+    if (request) {
+      logger.info('[API_AUTH] Using authenticated fetcher for projects API')
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      // Fall back to unauthenticated fetcher only if no request context
+      logger.warn(
+        '[API_AUTH] No request context provided, using unauthenticated fetcher'
+      )
+      data = await fetcher(endpoint)
+    }
 
     // Handle case where data is null, undefined, or not an array
     if (!data || !Array.isArray(data)) {
@@ -47,14 +60,14 @@ export async function getProjects() {
   }
 }
 
-export async function createProject(projectData) {
+export async function createProject(projectData, request) {
   const logger = createLogger()
   try {
     const endpoint = '/projects'
     logger.info({ projectData }, 'Creating new project')
 
     // Get all service standards
-    const standards = await getServiceStandards()
+    const standards = await getServiceStandards(request)
 
     if (!standards || standards.length === 0) {
       logger.error('No service standards available')
@@ -90,10 +103,21 @@ export async function createProject(projectData) {
 
     logger.info({ projectWithStandards }, 'Creating project with standards')
 
-    const result = await fetcher(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(projectWithStandards)
-    })
+    let result
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      result = await authedFetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(projectWithStandards)
+      })
+    } else {
+      // Fall back to unauthenticated fetcher
+      result = await fetcher(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(projectWithStandards)
+      })
+    }
 
     // Check if result is a Boom error (400 Bad Request)
     if (result.isBoom) {
@@ -134,14 +158,14 @@ export async function createProject(projectData) {
   }
 }
 
-export async function updateProject(id, projectData) {
+export async function updateProject(id, projectData, request) {
   const logger = createLogger()
   try {
     const endpoint = `/projects/${id}`
     logger.info({ id, projectData }, 'Updating project')
 
     // Get current project to preserve existing data
-    const currentProject = await getProjectById(id)
+    const currentProject = await getProjectById(id, request)
     if (!currentProject) {
       throw new Error('Project not found')
     }
@@ -175,12 +199,21 @@ export async function updateProject(id, projectData) {
       })
     }
 
-    logger.info({ updatedProject }, 'Sending update to API')
-
-    const result = await fetcher(endpoint, {
-      method: 'PUT',
-      body: JSON.stringify(updatedProject)
-    })
+    let result
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      result = await authedFetch(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(updatedProject)
+      })
+    } else {
+      // Fall back to unauthenticated fetcher
+      result = await fetcher(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(updatedProject)
+      })
+    }
 
     // Check if result exists and is a Boom error (400 Bad Request)
     if (result?.isBoom) {
@@ -216,13 +249,21 @@ export async function updateProject(id, projectData) {
   }
 }
 
-export async function getProjectById(id) {
+export async function getProjectById(id, request) {
   const logger = createLogger()
   try {
     const endpoint = `/projects/${id}`
     logger.info({ endpoint, id }, 'Fetching project from API')
 
-    const data = await fetcher(endpoint)
+    let data
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      // Fall back to unauthenticated fetcher
+      data = await fetcher(endpoint)
+    }
 
     if (!data) {
       logger.warn('Project not found', { id })
@@ -245,13 +286,21 @@ export async function getProjectById(id) {
   }
 }
 
-export async function getStandardHistory(projectId, standardId) {
+export async function getStandardHistory(projectId, standardId, request) {
   const logger = createLogger()
   try {
     const endpoint = `/projects/${projectId}/standards/${standardId}/history`
     logger.info({ projectId, standardId }, 'Fetching standard history from API')
 
-    const data = await fetcher(endpoint)
+    let data
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      // Fall back to unauthenticated fetcher
+      data = await fetcher(endpoint)
+    }
 
     if (!data) {
       logger.warn('No history found', { projectId, standardId })
@@ -278,13 +327,36 @@ export async function getStandardHistory(projectId, standardId) {
   }
 }
 
-export async function getProjectHistory(projectId) {
+export async function getProjectHistory(projectId, request) {
   const logger = createLogger()
   try {
     const endpoint = `/projects/${projectId}/history`
-    logger.info({ projectId }, 'Fetching project history from API')
+    let token = null
+    try {
+      if (request?.auth?.credentials?.token) {
+        token = request.auth.credentials.token
+        logger.info(
+          `[AUTH_CHECK] Token found directly in credentials, length: ${token.length}`
+        )
+      }
+    } catch (tokenError) {
+      logger.error(
+        { error: tokenError.message },
+        '[AUTH_CHECK] Error accessing token'
+      )
+    }
 
-    const data = await fetcher(endpoint)
+    let data
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      logger.info(`[API_CALL] Making authenticated request to ${endpoint}`)
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      // Fall back to unauthenticated fetcher
+      logger.info(`[API_CALL] Making unauthenticated request to ${endpoint}`)
+      data = await fetcher(endpoint)
+    }
 
     if (!data) {
       logger.warn('No history found', { projectId })
@@ -313,17 +385,27 @@ export async function getProjectHistory(projectId) {
 /**
  * Deletes a project by ID
  * @param {string} id - The project ID to delete
+ * @param {object} request - Hapi request object
  * @returns {Promise<boolean>} - True if deletion was successful
  */
-export async function deleteProject(id) {
+export async function deleteProject(id, request) {
   const logger = createLogger()
   try {
     const endpoint = `/projects/${id}`
     logger.info({ id }, 'Deleting project')
 
-    await fetcher(endpoint, {
-      method: 'DELETE'
-    })
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch(endpoint, {
+        method: 'DELETE'
+      })
+    } else {
+      // Fall back to unauthenticated fetcher
+      await fetcher(endpoint, {
+        method: 'DELETE'
+      })
+    }
 
     // A successful delete returns 204 No Content
     logger.info({ id }, 'Project deleted successfully')

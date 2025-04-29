@@ -1,11 +1,13 @@
 import { adminController } from './controller.js'
+import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
+import { defaultProjects } from '~/src/server/data/projects.js'
+import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import Boom from '@hapi/boom'
 
 const mockGetServiceStandards = jest.fn()
 const mockUpdateServiceStandard = jest.fn()
 const mockGetStandardHistory = jest.fn()
 const mockGetProjects = jest.fn()
-const mockFetch = jest.fn()
 
 // Mock the config.get function
 jest.mock('~/src/config/config.js', () => ({
@@ -28,18 +30,33 @@ jest.mock('~/src/server/services/projects.js', () => ({
   deleteProject: jest.fn()
 }))
 
-jest.mock('~/src/server/common/helpers/fetch/fetcher.js', () => ({
-  fetcher: (...args) => mockFetch(...args)
-}))
+jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
 
 describe('Admin controller', () => {
-  const mockH = {
-    view: jest.fn(),
-    redirect: jest.fn()
-  }
+  let mockRequest
+  let mockH
+  let mockFetch
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    mockRequest = {
+      logger: {
+        info: jest.fn(),
+        error: jest.fn()
+      },
+      auth: {
+        credentials: {
+          token: 'test-token'
+        }
+      }
+    }
+
+    mockH = {
+      view: jest.fn(),
+      redirect: jest.fn()
+    }
+
+    mockFetch = jest.fn()
+    authedFetchJsonDecorator.mockImplementation(() => mockFetch)
   })
 
   describe('get', () => {
@@ -132,25 +149,16 @@ describe('Admin controller', () => {
   describe('seedStandards', () => {
     test('should seed standards and redirect', async () => {
       // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
-      mockFetch.mockResolvedValue({ success: true })
+      mockFetch.mockResolvedValue({})
 
       // Act
       await adminController.seedStandards(mockRequest, mockH)
 
       // Assert
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/serviceStandards/seed',
-        expect.objectContaining({
-          method: 'POST'
-        }),
-        mockRequest
-      )
+      expect(mockFetch).toHaveBeenCalledWith('/serviceStandards/seed', {
+        method: 'POST',
+        body: JSON.stringify(defaultServiceStandards)
+      })
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Standards seeded successfully'
       )
@@ -158,87 +166,46 @@ describe('Admin controller', () => {
 
     test('should handle seeding error', async () => {
       // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
-      mockFetch.mockResolvedValue(null)
+      mockFetch.mockRejectedValue(new Error('API Error'))
 
-      // Act & Assert
-      await expect(
-        adminController.seedStandards(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: {
-          statusCode: 500
-        }
-      })
-      expect(mockRequest.logger.error).toHaveBeenCalled()
+      // Act
+      await adminController.seedStandards(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to seed standards'
+      )
     })
   })
 
   describe('deleteStandards', () => {
     test('should delete standards and redirect', async () => {
       // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
-      mockFetch.mockResolvedValue({ success: true })
+      mockFetch.mockResolvedValue({})
 
       // Act
       await adminController.deleteStandards(mockRequest, mockH)
 
       // Assert
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/serviceStandards/seed',
-        {
-          method: 'POST',
-          body: JSON.stringify([])
-        },
-        mockRequest
-      )
+      expect(mockFetch).toHaveBeenCalledWith('/serviceStandards/seed', {
+        method: 'POST',
+        body: JSON.stringify([])
+      })
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Standards deleted successfully'
       )
     })
 
-    test('should handle API error', async () => {
+    test('should handle deletion error', async () => {
       // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
       mockFetch.mockRejectedValue(new Error('API Error'))
 
-      // Act & Assert
+      // Act
       await adminController.deleteStandards(mockRequest, mockH)
-      expect(mockRequest.logger.error).toHaveBeenCalled()
+
+      // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Failed to delete standards'
-      )
-    })
-
-    test('should handle null response', async () => {
-      // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
-      mockFetch.mockResolvedValue(null)
-
-      // Act & Assert
-      await adminController.deleteStandards(mockRequest, mockH)
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Standards deleted successfully'
       )
     })
   })
@@ -246,13 +213,7 @@ describe('Admin controller', () => {
   describe('seedProjects', () => {
     test('should seed projects and redirect', async () => {
       // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
-      mockFetch.mockResolvedValue({ success: true })
+      mockFetch.mockResolvedValue({})
 
       // Act
       await adminController.seedProjects(mockRequest, mockH)
@@ -260,55 +221,26 @@ describe('Admin controller', () => {
       // Assert
       expect(mockFetch).toHaveBeenCalledWith(
         '/projects/seedData?clearExisting=false',
-        expect.objectContaining({
-          method: 'POST'
-        }),
-        mockRequest
+        {
+          method: 'POST',
+          body: JSON.stringify(defaultProjects)
+        }
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Projects seeded successfully'
       )
     })
 
-    test('should handle API error', async () => {
+    test('should handle seeding error', async () => {
       // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
       mockFetch.mockRejectedValue(new Error('API Error'))
 
-      // Act & Assert
-      await expect(
-        adminController.seedProjects(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: { statusCode: 500 }
-      })
-      expect(mockRequest.logger.error).toHaveBeenCalled()
-    })
+      // Act
+      await adminController.seedProjects(mockRequest, mockH)
 
-    test('should handle null response', async () => {
-      // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
-      mockFetch.mockResolvedValue(null)
-
-      // Act & Assert
-      await expect(
-        adminController.seedProjects(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: { statusCode: 500 }
-      })
-      expect(mockRequest.logger.error).toHaveBeenCalledWith(
-        'Failed to seed projects - no response from API'
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to seed projects'
       )
     })
   })
@@ -316,62 +248,30 @@ describe('Admin controller', () => {
   describe('deleteAllProjects', () => {
     test('should delete projects and redirect', async () => {
       // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
-      mockFetch.mockResolvedValue({ success: true })
+      mockFetch.mockResolvedValue({})
 
       // Act
       await adminController.deleteAllProjects(mockRequest, mockH)
 
       // Assert
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/projects/deleteAll',
-        {
-          method: 'POST'
-        },
-        mockRequest
-      )
+      expect(mockFetch).toHaveBeenCalledWith('/projects/deleteAll', {
+        method: 'POST'
+      })
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=All projects deleted successfully'
       )
     })
 
-    test('should handle API error', async () => {
+    test('should handle deletion error', async () => {
       // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
       mockFetch.mockRejectedValue(new Error('API Error'))
 
-      // Act & Assert
+      // Act
       await adminController.deleteAllProjects(mockRequest, mockH)
-      expect(mockRequest.logger.error).toHaveBeenCalled()
+
+      // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Failed to delete all projects'
-      )
-    })
-
-    test('should handle null response', async () => {
-      // Arrange
-      const mockRequest = {
-        logger: {
-          info: jest.fn(),
-          error: jest.fn()
-        }
-      }
-      mockFetch.mockResolvedValue(null)
-
-      // Act & Assert
-      await adminController.deleteAllProjects(mockRequest, mockH)
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=All projects deleted successfully'
       )
     })
   })

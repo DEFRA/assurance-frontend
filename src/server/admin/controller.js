@@ -5,7 +5,7 @@ import {
   deleteProject,
   getProjectById
 } from '~/src/server/services/projects.js'
-import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
+import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProjects } from '~/src/server/data/projects.js'
 import { config } from '~/src/config/config.js'
@@ -13,20 +13,18 @@ import { config } from '~/src/config/config.js'
 export const adminController = {
   get: async (request, h) => {
     try {
-      request.logger.info('Fetching admin dashboard data')
-
       let standards = []
       let projects = []
 
       try {
-        standards = (await getServiceStandards()) || []
+        standards = (await getServiceStandards(request)) || []
       } catch (error) {
         request.logger.error({ error }, 'Error fetching admin dashboard data')
         throw Boom.boomify(error, { statusCode: 500 })
       }
 
       try {
-        projects = (await getProjects()) || []
+        projects = (await getProjects(request)) || []
       } catch (error) {
         request.logger.error({ error }, 'Error fetching admin dashboard data')
         throw Boom.boomify(error, { statusCode: 500 })
@@ -54,27 +52,18 @@ export const adminController = {
 
   seedStandards: async (request, h) => {
     request.logger.info('Seeding service standards')
-
     try {
-      const result = await fetcher(
-        '/serviceStandards/seed',
-        {
-          method: 'POST',
-          body: JSON.stringify(defaultServiceStandards)
-        },
-        request
-      )
-
-      if (!result) {
-        request.logger.error('Failed to seed standards - no response from API')
-        throw new Error('Failed to seed standards')
-      }
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch('/serviceStandards/seed', {
+        method: 'POST',
+        body: JSON.stringify(defaultServiceStandards)
+      })
 
       request.logger.info('Service standards seeded successfully')
       return h.redirect('/admin?notification=Standards seeded successfully')
     } catch (error) {
-      request.logger.error(error)
-      throw Boom.boomify(error, { statusCode: 500 })
+      request.logger.error({ error }, 'Failed to seed standards')
+      return h.redirect('/admin?notification=Failed to seed standards')
     }
   },
 
@@ -82,14 +71,11 @@ export const adminController = {
     try {
       request.logger.info('Deleting all standards')
 
-      await fetcher(
-        '/serviceStandards/seed',
-        {
-          method: 'POST',
-          body: JSON.stringify([])
-        },
-        request
-      )
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch('/serviceStandards/seed', {
+        method: 'POST',
+        body: JSON.stringify([])
+      })
 
       request.logger.info('Standards deleted successfully')
       return h.redirect('/admin?notification=Standards deleted successfully')
@@ -103,25 +89,18 @@ export const adminController = {
     request.logger.info('Seeding projects data')
 
     try {
-      const result = await fetcher(
-        '/projects/seedData?clearExisting=false',
-        {
-          method: 'POST',
-          body: JSON.stringify(defaultProjects)
-        },
-        request
-      )
-
-      if (!result) {
-        request.logger.error('Failed to seed projects - no response from API')
-        throw new Error('Failed to seed projects')
-      }
+      // Use authedFetchJsonDecorator to ensure auth token is passed
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch('/projects/seedData?clearExisting=false', {
+        method: 'POST',
+        body: JSON.stringify(defaultProjects)
+      })
 
       request.logger.info('Projects seeded successfully')
       return h.redirect('/admin?notification=Projects seeded successfully')
     } catch (error) {
       request.logger.error(error)
-      throw Boom.boomify(error, { statusCode: 500 })
+      return h.redirect('/admin?notification=Failed to seed projects')
     }
   },
 
@@ -129,13 +108,10 @@ export const adminController = {
     try {
       request.logger.info('Deleting all projects')
 
-      await fetcher(
-        '/projects/deleteAll',
-        {
-          method: 'POST'
-        },
-        request
-      )
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch('/projects/deleteAll', {
+        method: 'POST'
+      })
 
       request.logger.info('All projects deleted successfully')
       return h.redirect('/admin?notification=All projects deleted successfully')
@@ -151,7 +127,7 @@ export const adminController = {
     try {
       request.logger.info({ id }, 'Deleting project')
 
-      const result = await deleteProject(id)
+      const result = await deleteProject(id, request)
 
       if (!result) {
         request.logger.warn({ id }, 'Project not found for deletion')
@@ -179,7 +155,7 @@ export const adminController = {
       let projectName = 'this project'
 
       try {
-        const project = await getProjectById(id)
+        const project = await getProjectById(id, request)
         if (project) {
           projectName = project.name
         }

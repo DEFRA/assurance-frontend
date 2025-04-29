@@ -40,14 +40,14 @@ function mapStandardsWithDetails(projectStandards, serviceStandards) {
 export const projectsController = {
   getAll: async (request, h) => {
     try {
-      const projects = await getProjects()
+      const projects = await getProjects(request)
       return h.view('projects/index', {
         pageTitle: 'Projects',
         heading: 'Projects',
         projects
       })
     } catch (error) {
-      request.logger.error({ error }, 'Error fetching projects')
+      request.logger.error('Error fetching projects')
       throw Boom.boomify(error, { statusCode: 500 })
     }
   },
@@ -56,7 +56,7 @@ export const projectsController = {
     const { id } = request.params
 
     try {
-      const project = await getProjectById(id)
+      const project = await getProjectById(id, request)
 
       if (!project) {
         return h
@@ -72,7 +72,7 @@ export const projectsController = {
         isTestEnvironment: config.get('env') === 'test'
       })
     } catch (error) {
-      request.logger.error({ error, id }, 'Error fetching project')
+      request.logger.error('Error fetching project')
       throw Boom.boomify(error, { statusCode: 500 })
     }
   },
@@ -81,23 +81,14 @@ export const projectsController = {
     const { id } = request.params
 
     try {
-      const project = await getProjectById(id)
+      const project = await getProjectById(id, request)
       if (!project) {
         return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       // Get service standards to merge with project standards
-      const standards = await getServiceStandards()
-      const projectHistory = await getProjectHistory(id)
-
-      // Log project history to check if we're getting data
-      request.logger.info(
-        {
-          historyExists: !!projectHistory,
-          historyLength: projectHistory?.length || 0
-        },
-        'Project history data check'
-      )
+      const standards = await getServiceStandards(request)
+      const projectHistory = await getProjectHistory(id, request)
 
       // Get standards with their current status
       const standardsStatus = project.standards.map((standard) => ({
@@ -120,7 +111,7 @@ export const projectsController = {
         standards: standardsStatus
       })
     } catch (error) {
-      request.logger.error(error)
+      request.logger.error('Error fetching project details')
       throw Boom.boomify(error, { statusCode: 500 })
     }
   },
@@ -129,13 +120,13 @@ export const projectsController = {
     const { id } = request.params
 
     try {
-      const project = await getProjectById(id)
+      const project = await getProjectById(id, request)
       if (!project) {
         return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       // Get service standards to enrich project data
-      const serviceStandards = await getServiceStandards()
+      const serviceStandards = await getServiceStandards(request)
 
       // Enrich standards with names and numbers
       const enrichedStandards = project.standards
@@ -218,15 +209,6 @@ export const projectsController = {
         })
       }
 
-      // Log the restructured data
-      request.logger.info(
-        {
-          originalPayload: payload,
-          parsedStandards
-        },
-        'Parsed form data'
-      )
-
       // Process tags - split by comma and trim whitespace
       const processedTags = tags
         ? tags
@@ -235,12 +217,16 @@ export const projectsController = {
             .filter(Boolean)
         : []
 
-      await updateProject(id, {
-        status,
-        commentary,
-        tags: processedTags,
-        standards: parsedStandards
-      })
+      await updateProject(
+        id,
+        {
+          status,
+          commentary,
+          tags: processedTags,
+          standards: parsedStandards
+        },
+        request
+      )
 
       return h.redirect(
         `/projects/${id}?notification=${NOTIFICATIONS.UPDATE_SUCCESS}`
@@ -256,8 +242,8 @@ export const projectsController = {
 
       try {
         // Get project data to re-render form with errors
-        const project = await getProjectById(id)
-        const standards = await getServiceStandards()
+        const project = await getProjectById(id, request)
+        const standards = await getServiceStandards(request)
 
         // Map standards to project assessments and ensure proper numeric sorting
         const standardsWithDetails = mapStandardsWithDetails(
@@ -288,7 +274,7 @@ export const projectsController = {
     const { id, standardId } = request.params
 
     try {
-      const project = await getProjectById(id)
+      const project = await getProjectById(id, request)
       if (!project) {
         return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
@@ -300,7 +286,7 @@ export const projectsController = {
         return h.redirect(`/projects/${id}?notification=Standard not found`)
       }
 
-      const history = await getStandardHistory(id, standardId)
+      const history = await getStandardHistory(id, standardId, request)
 
       return h.view('projects/detail/standard-history', {
         pageTitle: `Standard ${standardId} History | ${project.name}`,
@@ -319,12 +305,12 @@ export const projectsController = {
     const { id } = request.params
 
     try {
-      const project = await getProjectById(id)
+      const project = await getProjectById(id, request)
       if (!project) {
         return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
-      const history = await getProjectHistory(id)
+      const history = await getProjectHistory(id, request)
 
       return h.view('projects/detail/project-history', {
         pageTitle: `Project History | ${project.name}`,
@@ -342,13 +328,13 @@ export const projectsController = {
     const { id } = request.params
 
     try {
-      const project = await getProjectById(id)
+      const project = await getProjectById(id, request)
       if (!project) {
         return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       // Get service standards to merge with project standards
-      const standards = await getServiceStandards()
+      const standards = await getServiceStandards(request)
 
       // Map standards to project assessments and ensure proper numeric sorting
       const standardsWithDetails = mapStandardsWithDetails(
@@ -378,7 +364,7 @@ export const projectsController = {
       let standards = []
 
       if (!isNew) {
-        project = await getProjectById(id)
+        project = await getProjectById(id, request)
         if (!project) {
           return h
             .view('errors/not-found', {
@@ -389,7 +375,7 @@ export const projectsController = {
       }
 
       try {
-        standards = await getServiceStandards()
+        standards = await getServiceStandards(request)
       } catch (error) {
         request.logger.error({ error }, 'Error fetching service standards')
         throw Boom.boomify(error, { statusCode: 500 })
@@ -416,13 +402,13 @@ export const projectsController = {
 
     try {
       // Get the existing project
-      const existingProject = await getProjectById(id)
+      const existingProject = await getProjectById(id, request)
       if (!existingProject) {
         return h.redirect(`/?notification=Project not found`)
       }
 
       // Update the project with the new data
-      const result = await updateProject(id, payload)
+      const result = await updateProject(id, payload, request)
 
       if (!result) {
         return h.redirect(
@@ -435,6 +421,88 @@ export const projectsController = {
       )
     } catch (error) {
       request.logger.error({ error, id }, 'Error updating project')
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  getHistory: async (request, h) => {
+    try {
+      const { id } = request.params
+      // Force authentication for this route
+      if (!request.auth.isAuthenticated) {
+        return h.redirect(
+          '/auth/login?redirectTo=' +
+            encodeURIComponent(`/projects/${id}/history`)
+        )
+      }
+
+      if (request.auth.isAuthenticated) {
+        // Get token from session
+        let token = null
+        if (request.auth?.credentials?.token) {
+          token = request.auth.credentials.token
+        }
+
+        // Try to get from cache if not in session
+        if (!token && request.server?.app?.cache) {
+          try {
+            const cached = await request.server.app.cache.get(
+              request.auth.credentials.id
+            )
+            if (cached?.token) {
+              token = cached.token
+            }
+          } catch (error) {
+            request.logger.error('Error getting token from cache')
+          }
+        }
+
+        if (request.auth.credentials?.id) {
+          // Try getting from cache as well
+          try {
+            const cached = await request.server.app.cache.get(
+              request.auth.credentials.id
+            )
+            if (cached) {
+              if (cached.token) {
+                // Update credentials with token from cache if not already present
+                if (!request.auth.credentials.token) {
+                  request.auth.credentials.token = cached.token
+                }
+              }
+            }
+          } catch (cacheError) {
+            request.logger.error(
+              { error: cacheError.message },
+              `[HISTORY_DEBUG] Error accessing cache`
+            )
+          }
+        }
+      }
+
+      // Get project details first
+      const project = await getProjectById(id, request)
+
+      if (!project) {
+        request.logger.error(`Project not found with ID: ${id}`)
+        return h.view('errors/not-found', {
+          pageTitle: 'Project Not Found'
+        })
+      }
+
+      // Get project history
+      const history = await getProjectHistory(id, request)
+
+      return h.view('projects/detail/project-history', {
+        pageTitle: `Project History: ${project.name}`,
+        project,
+        history
+      })
+    } catch (error) {
+      request.logger.error(
+        { error: error.message },
+        'Error getting project history'
+      )
       throw Boom.boomify(error, { statusCode: 500 })
     }
   }

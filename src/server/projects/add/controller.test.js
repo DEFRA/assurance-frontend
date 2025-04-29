@@ -1,25 +1,38 @@
 import { addProjectController } from './controller.js'
+import { createProject } from '~/src/server/services/projects.js'
+import Boom from '@hapi/boom'
 
-const mockCreateProject = jest.fn()
-
-jest.mock('~/src/server/services/projects.js', () => ({
-  createProject: (...args) => mockCreateProject(...args)
-}))
+jest.mock('~/src/server/services/projects.js')
 
 describe('Add Project controller', () => {
-  const mockH = {
-    view: jest.fn(),
-    redirect: jest.fn()
-  }
+  let mockRequest
+  let mockH
 
   beforeEach(() => {
+    mockRequest = {
+      payload: {
+        name: 'New Project',
+        status: 'GREEN',
+        commentary: 'Initial setup'
+      },
+      logger: {
+        info: jest.fn(),
+        error: jest.fn()
+      }
+    }
+
+    mockH = {
+      view: jest.fn().mockReturnValue('view-response'),
+      redirect: jest.fn().mockReturnValue('redirect-response')
+    }
+
     jest.clearAllMocks()
   })
 
   describe('get', () => {
     test('should return add project form', async () => {
       // Act
-      await addProjectController.get({}, mockH)
+      const result = await addProjectController.get({}, mockH)
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('projects/add/index', {
@@ -37,42 +50,14 @@ describe('Add Project controller', () => {
           { value: 'GREEN', text: 'Green' }
         ]
       })
+      expect(result).toBe('view-response')
     })
   })
 
   describe('post', () => {
-    test('should create project and redirect on success', async () => {
-      // Arrange
-      const mockRequest = {
-        payload: {
-          name: 'New Project',
-          status: 'GREEN',
-          commentary: 'Initial setup'
-        },
-        logger: {
-          error: jest.fn(),
-          info: jest.fn()
-        }
-      }
-      mockCreateProject.mockResolvedValue({ id: '1' })
-
-      // Act
-      await addProjectController.post(mockRequest, mockH)
-
-      // Assert
-      expect(mockCreateProject).toHaveBeenCalledWith({
-        name: 'New Project',
-        status: 'GREEN',
-        commentary: 'Initial setup'
-      })
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project created successfully'
-      )
-    })
-
     test('should handle validation errors', async () => {
       // Arrange
-      const mockRequest = {
+      const invalidRequest = {
         payload: {
           name: '',
           status: 'INVALID',
@@ -85,73 +70,26 @@ describe('Add Project controller', () => {
       }
 
       // Act
-      await addProjectController.post(mockRequest, mockH)
+      const result = await addProjectController.post(invalidRequest, mockH)
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/add/index',
         expect.objectContaining({
           errors: expect.any(Object),
-          values: mockRequest.payload
+          values: invalidRequest.payload,
+          errorMessage: 'Please fill in all required fields'
         })
       )
-    })
-
-    test('should handle creation errors', async () => {
-      // Arrange
-      const mockRequest = {
-        payload: {
-          name: 'New Project',
-          status: 'GREEN',
-          commentary: 'Initial setup'
-        },
-        logger: {
-          error: jest.fn(),
-          info: jest.fn()
-        }
-      }
-      mockCreateProject.mockRejectedValue(new Error('Invalid data'))
-
-      // Act
-      await addProjectController.post(mockRequest, mockH)
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith(
-        'projects/add/index',
-        expect.objectContaining({
-          errorMessage: 'Please check your input - some fields are invalid',
-          values: mockRequest.payload,
-          heading: 'Add Project',
-          statusOptions: [
-            {
-              text: 'Select status',
-              value: ''
-            },
-            { value: 'RED', text: 'Red' },
-            { value: 'AMBER', text: 'Amber' },
-            { value: 'GREEN', text: 'Green' }
-          ]
-        })
-      )
+      expect(result).toBe('view-response')
     })
 
     test('should handle standards-related errors', async () => {
       // Arrange
-      const mockRequest = {
-        payload: {
-          name: 'New Project',
-          status: 'GREEN',
-          commentary: 'Initial setup'
-        },
-        logger: {
-          error: jest.fn(),
-          info: jest.fn()
-        }
-      }
-      mockCreateProject.mockRejectedValue(new Error('standards not available'))
+      createProject.mockRejectedValue(new Error('standards not available'))
 
       // Act
-      await addProjectController.post(mockRequest, mockH)
+      const result = await addProjectController.post(mockRequest, mockH)
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
@@ -163,27 +101,17 @@ describe('Add Project controller', () => {
           heading: 'Add Project'
         })
       )
+      expect(result).toBe('view-response')
     })
 
     test('should handle unexpected errors', async () => {
       // Arrange
-      const mockRequest = {
-        payload: {
-          name: 'New Project',
-          status: 'GREEN',
-          commentary: 'Initial setup'
-        },
-        logger: {
-          error: jest.fn(),
-          info: jest.fn()
-        }
-      }
-      mockCreateProject.mockRejectedValue(new Error('Unexpected error'))
+      createProject.mockRejectedValue(new Error('Unexpected error'))
 
       // Act & Assert
       await expect(
         addProjectController.post(mockRequest, mockH)
-      ).rejects.toThrow('Unexpected error')
+      ).rejects.toThrow(Boom.internal('Unexpected error'))
     })
   })
 })

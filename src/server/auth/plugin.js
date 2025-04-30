@@ -33,11 +33,6 @@ export const plugin = {
       appendNext: false,
       validate: async (request, session) => {
         try {
-          // Log the session object to debug
-          logger.info('Validating session', {
-            sessionId: session?.id
-          })
-
           // Check if session and session.id exist
           if (!session?.id) {
             logger.warn('Invalid session structure', {
@@ -46,25 +41,60 @@ export const plugin = {
             return { isValid: false }
           }
 
-          // Validate the session
+          // Get token directly from session if available - this is the most direct path
+          const token = session.token
+
+          // Validate the session from cache as backup
           const cached = await request.server.app.cache.get(session.id)
 
           if (!cached) {
-            logger.warn('No cached session found for ID', { id: session.id })
+            // If session has token but no cache, we can still be valid (this might happen if cache expired)
+            if (token) {
+              logger.warn(
+                'No cached session found for ID, but token exists in cookie',
+                {
+                  id: session.id,
+                  tokenLength: token.length
+                }
+              )
+
+              // Create minimal valid credentials
+              return {
+                isValid: true,
+                credentials: {
+                  token,
+                  id: session.id
+                }
+              }
+            }
+
+            logger.warn(
+              'No cached session found for ID and no token in cookie',
+              { id: session.id }
+            )
             return { isValid: false }
           }
-
-          logger.info('Session validated successfully', { id: session.id })
+          // Create credentials object with token explicitly included
+          const credentials = {
+            ...cached,
+            token, // Make sure token is directly in credentials
+            id: session.id // Keep the id for cache lookups
+          }
 
           return {
             isValid: true,
-            credentials: cached
+            credentials
           }
         } catch (error) {
           logger.error('Session validation error', {
             error: error.message,
             stack: error.stack,
-            session: JSON.stringify(session)
+            session: JSON.stringify(session, (key, value) => {
+              if (key === 'token' && typeof value === 'string') {
+                return `${value.substring(0, 10)}...`
+              }
+              return value
+            })
           })
           return { isValid: false }
         }

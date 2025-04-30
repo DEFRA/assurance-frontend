@@ -16,6 +16,7 @@ import Inert from '@hapi/inert'
 import Vision from '@hapi/vision'
 import { plugin as authPlugin } from './auth/plugin.js'
 import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
+import { plugin as requestExtensionsPlugin } from './plugins/request-extensions.js'
 
 const logger = createLogger()
 
@@ -73,6 +74,7 @@ export async function createServer() {
     authPlugin,
     sessionCache,
     nunjucksConfig,
+    requestExtensionsPlugin,
     router
   ])
 

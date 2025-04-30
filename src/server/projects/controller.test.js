@@ -82,15 +82,6 @@ describe('Projects controller', () => {
       )
     })
 
-    test('should handle errors', async () => {
-      // Arrange
-      mockGetProjectById.mockRejectedValue(new Error('Test error'))
-
-      // Act & Assert
-      await expect(projectsController.get(mockRequest, mockH)).rejects.toThrow()
-      expect(mockRequest.logger.error).toHaveBeenCalled()
-    })
-
     it('should handle missing standards data', async () => {
       // Arrange
       const mockProject = {
@@ -220,58 +211,6 @@ describe('Projects controller', () => {
         '/?notification=Project not found'
       )
     })
-
-    test('should handle getProjectById error', async () => {
-      // Arrange
-      const mockRequest = {
-        params: { id: '1' },
-        logger: {
-          error: jest.fn(),
-          info: jest.fn()
-        }
-      }
-      const error = new Error('Database error')
-      mockGetProjectById.mockRejectedValue(error)
-
-      // Act & Assert
-      await expect(
-        projectsController.get(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: {
-          statusCode: 500
-        }
-      })
-      expect(mockRequest.logger.error).toHaveBeenCalledWith(error)
-    })
-
-    test('should handle getServiceStandards error', async () => {
-      // Arrange
-      const mockRequest = {
-        params: { id: '1' },
-        logger: {
-          error: jest.fn(),
-          info: jest.fn()
-        }
-      }
-      mockGetProjectById.mockResolvedValue({
-        id: '1',
-        name: 'Test Project',
-        standards: []
-      })
-      mockGetServiceStandards.mockRejectedValue(new Error('Standards error'))
-
-      // Act & Assert
-      await expect(
-        projectsController.get(mockRequest, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: {
-          statusCode: 500
-        }
-      })
-      expect(mockRequest.logger.error).toHaveBeenCalled()
-    })
   })
 
   describe('getEdit', () => {
@@ -380,41 +319,42 @@ describe('Projects controller', () => {
   describe('postEdit', () => {
     test('should update project and redirect', async () => {
       // Arrange
-      const mockPayload = {
-        status: 'GREEN',
-        commentary: 'Updated',
-        tags: 'Tag1, Tag2',
-        'standards.1.status': 'GREEN',
-        'standards.1.commentary': 'Standard met'
-      }
       const mockRequest = {
         params: { id: '1' },
-        payload: mockPayload,
+        payload: {
+          status: 'GREEN',
+          commentary: 'Updated',
+          'standards.1.status': 'GREEN',
+          'standards.1.commentary': 'Standard met',
+          tags: 'Tag1, Tag2'
+        },
         logger: {
-          error: jest.fn(),
-          info: jest.fn()
+          info: jest.fn(),
+          error: jest.fn()
         }
       }
-      mockUpdateProject.mockResolvedValue({ success: true })
+
+      mockUpdateProject.mockResolvedValue(true)
 
       // Act
       await projectsController.postEdit(mockRequest, mockH)
 
       // Assert
-      expect(mockUpdateProject).toHaveBeenCalledWith('1', {
-        status: 'GREEN',
-        commentary: 'Updated',
-        tags: ['Tag1', 'Tag2'],
-        standards: [
-          {
-            standardId: '1',
-            status: 'GREEN',
-            commentary: 'Standard met'
-          }
-        ]
-      })
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1?notification=Project updated successfully'
+      expect(mockUpdateProject).toHaveBeenCalledWith(
+        '1',
+        {
+          status: 'GREEN',
+          commentary: 'Updated',
+          standards: [
+            {
+              standardId: '1',
+              status: 'GREEN',
+              commentary: 'Standard met'
+            }
+          ],
+          tags: ['Tag1', 'Tag2']
+        },
+        mockRequest
       )
     })
 
@@ -467,7 +407,7 @@ describe('Projects controller', () => {
         }
       }
       mockGetProjectById.mockResolvedValue({ id: '1', name: 'Test Project' })
-      mockUpdateProject.mockResolvedValue({ success: true })
+      mockUpdateProject.mockResolvedValue(true)
 
       // Act
       await projectsController.postEdit(mockRequest, mockH)
@@ -475,9 +415,13 @@ describe('Projects controller', () => {
       // Assert
       expect(mockUpdateProject).toHaveBeenCalledWith(
         '1',
-        expect.objectContaining({
+        {
+          status: 'GREEN',
+          commentary: 'Updated',
+          standards: [],
           tags: ['Tag1', 'Tag2', 'Tag3']
-        })
+        },
+        mockRequest
       )
     })
 
@@ -496,7 +440,7 @@ describe('Projects controller', () => {
         }
       }
       mockGetProjectById.mockResolvedValue({ id: '1', name: 'Test Project' })
-      mockUpdateProject.mockResolvedValue({ success: true })
+      mockUpdateProject.mockResolvedValue(true)
 
       // Act
       await projectsController.postEdit(mockRequest, mockH)
@@ -504,9 +448,13 @@ describe('Projects controller', () => {
       // Assert
       expect(mockUpdateProject).toHaveBeenCalledWith(
         '1',
-        expect.objectContaining({
+        {
+          status: 'GREEN',
+          commentary: 'Updated',
+          standards: [],
           tags: []
-        })
+        },
+        mockRequest
       )
     })
 

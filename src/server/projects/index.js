@@ -1,5 +1,6 @@
 import { projectsController } from './controller.js'
 import { addProjectController } from '~/src/server/projects/add/controller.js'
+import { requireAuth } from '~/src/server/auth/middleware.js'
 
 /**
  * Sets up the routes used in the home page.
@@ -17,13 +18,19 @@ export const projects = {
       server.route({
         method: 'GET',
         path: '/projects/add',
-        handler: addProjectController.get
+        handler: addProjectController.get,
+        options: {
+          pre: [{ method: requireAuth }]
+        }
       })
 
       server.route({
         method: 'POST',
         path: '/projects/add',
-        handler: addProjectController.post
+        handler: addProjectController.post,
+        options: {
+          pre: [{ method: requireAuth }]
+        }
       })
 
       // Then the project detail routes
@@ -41,22 +48,34 @@ export const projects = {
         {
           method: 'GET',
           path: '/projects/{id}/history',
-          handler: projectsController.getProjectHistory
+          handler: projectsController.getHistory,
+          options: {
+            pre: [{ method: requireAuth }]
+          }
         },
         {
           method: 'GET',
           path: '/projects/{id}/standards/{standardId}/history',
-          handler: projectsController.getStandardHistory
+          handler: projectsController.getStandardHistory,
+          options: {
+            pre: [{ method: requireAuth }]
+          }
         },
         {
           method: 'GET',
           path: '/projects/{id}/edit',
-          handler: projectsController.getEdit
+          handler: projectsController.getEdit,
+          options: {
+            pre: [{ method: requireAuth }]
+          }
         },
         {
           method: 'POST',
           path: '/projects/{id}/edit',
-          handler: projectsController.postEdit
+          handler: projectsController.postEdit,
+          options: {
+            pre: [{ method: requireAuth }]
+          }
         },
         {
           method: 'GET',

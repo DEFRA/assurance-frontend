@@ -1,13 +1,22 @@
 import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
+import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 
-export async function getServiceStandards() {
+export async function getServiceStandards(request) {
   const logger = createLogger()
   try {
     const endpoint = '/serviceStandards'
     logger.info({ endpoint }, 'Fetching service standards from API')
 
-    const data = await fetcher(endpoint)
+    let data
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      // Fall back to unauthenticated fetcher
+      data = await fetcher(endpoint)
+    }
 
     // Handle case where data is null, undefined, or not an array
     if (!data || !Array.isArray(data)) {

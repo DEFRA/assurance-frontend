@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
 
 /**
  * Safely sets a value in cookieAuth
@@ -23,14 +24,12 @@ export const requireAuth = (request, h) => {
   try {
     // Check if user is authenticated
     if (!request.auth.isAuthenticated) {
-      // Store the original URL to redirect back after login
       safeSetCookie(request, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
     }
 
     // Get user from session
     const user = request.auth.credentials.user
-
     if (!user) {
       safeSetCookie(request, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
@@ -39,7 +38,8 @@ export const requireAuth = (request, h) => {
     request.user = user
     return h.continue
   } catch (error) {
-    // Only store redirect URL if not already authenticated
+    const logger = createLogger()
+    logger.error('Authentication error')
     if (!request.auth.isAuthenticated) {
       safeSetCookie(request, 'redirect_to', request.url.pathname)
     }

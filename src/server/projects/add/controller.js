@@ -47,7 +47,7 @@ export const addProjectController = {
       }
 
       try {
-        await createProject({ name, status, commentary })
+        await createProject({ name, status, commentary }, request)
         request.logger.info(`Project "${name}" created successfully`)
         return h.redirect('/?notification=Project created successfully')
       } catch (error) {

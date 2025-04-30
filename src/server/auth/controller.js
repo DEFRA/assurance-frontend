@@ -96,8 +96,6 @@ export const auth = async (request, h) => {
     // If this is a callback from Azure AD
     if (request.query.code) {
       try {
-        logger.info('Received auth callback from Azure AD')
-
         // Get stored state and redirect URL
         const storedState =
           safeGetCookie(request, 'auth_state') || request.state.auth_state
@@ -107,15 +105,11 @@ export const auth = async (request, h) => {
           '/'
 
         if (!storedState) {
-          logger.info('State not found in session, using state from query')
           // If we can't find the state, we'll accept the state from the query parameter
           // This is less secure but allows authentication to work when cookies aren't properly set
         } else if (storedState !== request.query.state) {
           throw new Error('State mismatch')
         }
-
-        // Exchange the code for tokens
-        logger.info('Attempting to exchange code for tokens')
 
         // Get OAuth parameters from config
         const clientId = config.get('azure.clientId')
@@ -157,11 +151,8 @@ export const auth = async (request, h) => {
           { state: storedState || request.query.state }
         )
 
-        logger.info('Token exchange successful')
-
         // Get user info from the ID token
         const claims = tokenSet.claims()
-        logger.info('Successfully retrieved user info')
 
         // Create the session with user data
         const sessionData = {
@@ -170,60 +161,36 @@ export const auth = async (request, h) => {
             email: claims.email || claims.preferred_username,
             name: claims.name
           },
+          token: tokenSet.access_token,
           expires: Date.now() + (tokenSet.expires_in || 3600) * 1000 // Convert to milliseconds
         }
 
         // Store session in server cache
         const sid = crypto.randomBytes(16).toString('hex')
         try {
-          // Store with a longer TTL to ensure it's not expiring too quickly
-          // 0 means use the default TTL from config
           await request.server.app.cache.set(sid, sessionData, 0)
-          logger.info('Session stored in cache')
-
-          // For debugging, immediately try to get it back
-          const testGet = await request.server.app.cache.get(sid)
-          if (testGet) {
-            logger.info('Session cache test retrieval successful')
-          } else {
-            logger.warn('Session cache test retrieval FAILED')
-          }
         } catch (error) {
-          logger.error(
-            { error: error.message },
-            'Error storing session in cache'
-          )
+          logger.error('Error storing session in cache')
         }
 
-        // Set the session cookie with ONLY the ID as required by validate function
+        // Set the session cookie
         if (
           request.cookieAuth &&
           typeof request.cookieAuth.set === 'function'
         ) {
-          // The cookie should only contain the id field which validate() will use
-          request.cookieAuth.set({ id: sid })
-          logger.info('Session cookie set')
+          request.cookieAuth.set({
+            id: sid,
+            token: tokenSet.access_token
+          })
         }
 
         // Clear auth state after successful authentication
         safeClearCookie(request, 'auth_state')
         safeClearCookie(request, 'redirect_to')
 
-        // Create the redirect response
-        const response = h.redirect(redirectTo || '/')
-
-        // Log authentication success
-        logger.info('Authentication successful, redirecting user')
-
-        return response
+        return h.redirect(redirectTo || '/')
       } catch (error) {
-        logger.error(
-          {
-            message: error.message
-          },
-          'Authentication error'
-        )
-
+        logger.error('Authentication error:', error.message)
         return h.view('common/templates/error', {
           title: 'Authentication Error',
           message: `There was a problem signing you in: ${error.message}`
@@ -233,14 +200,11 @@ export const auth = async (request, h) => {
 
     // If this is not a callback, generate state and redirect to Azure AD
     const state = crypto.randomBytes(32).toString('hex')
-    safeSetCookie(request, 'auth_state', state)
 
-    // Also set regular cookie as fallback
+    // Create response first
     const response = h.response()
-    setCookie(response, 'auth_state', state)
 
-    // Store current path as redirect target if available
-    // Prefer query parameter, then referer header, then current path
+    // Store current path as redirect target
     let redirectPath = request.query.redirectTo
     if (!redirectPath) {
       redirectPath = request.headers.referer
@@ -253,23 +217,32 @@ export const auth = async (request, h) => {
       redirectPath = '/'
     }
 
-    logger.info('Starting authentication flow')
-    safeSetCookie(request, 'redirect_to', redirectPath)
+    // Set cookies on the response
+    setCookie(response, 'auth_state', state)
     setCookie(response, 'redirect_to', redirectPath)
+
+    // Set cookies in session if available
+    safeSetCookie(request, 'auth_state', state)
+    safeSetCookie(request, 'redirect_to', redirectPath)
 
     const authUrl = new URL('https://login.microsoftonline.com')
     authUrl.pathname = `/${config.get('azure.tenantId')}/oauth2/v2.0/authorize`
     authUrl.searchParams.append('client_id', config.get('azure.clientId'))
     authUrl.searchParams.append('response_type', 'code')
     authUrl.searchParams.append('redirect_uri', config.get('azure.callbackUrl'))
-    authUrl.searchParams.append('scope', 'openid profile email')
+
+    // Add API scope along with standard OpenID scopes
+    const apiClientId = config.get('azure.clientId')
+    authUrl.searchParams.append(
+      'scope',
+      `openid profile email api://${apiClientId}/access_as_user`
+    )
+
     authUrl.searchParams.append('state', state)
 
-    response.redirect(authUrl.toString())
-    return response
+    return response.redirect(authUrl.toString())
   } catch (error) {
-    logger.error({ error: error.message }, 'Unexpected error in auth flow')
-
+    logger.error('Unexpected error in auth flow:', error.message)
     return h.view('common/templates/error', {
       title: 'Authentication Error',
       message: 'An unexpected error occurred during authentication.'
@@ -284,35 +257,31 @@ export const auth = async (request, h) => {
  */
 export const logout = (request, h) => {
   const logger = createLogger()
-  logger.info('Logout initiated')
 
   try {
-    // 1. First clear any server-side cache if we have the session ID
+    // Clear server-side cache if we have the session ID
     if (request.auth?.credentials?.id || request.auth?.artifacts?.sid) {
       const sid = request.auth?.artifacts?.sid || request.auth?.credentials?.id
       if (sid && request.server.app.cache) {
-        logger.info('Clearing session from cache')
         request.server.app.cache.drop(sid).catch((error) => {
-          // Properly handle the error by logging its message
-          logger.error({ message: error.message }, 'Error dropping cache')
+          logger.error('Error dropping cache:', error.message)
         })
       }
     }
 
-    // 2. Clear the auth state from the current request
+    // Clear the auth state
     request.auth.credentials = null
     request.auth.isAuthenticated = false
 
-    // 3. Clear the session cookie using cookieAuth API
+    // Clear the session cookie
     if (request.cookieAuth) {
-      logger.info('Clearing cookieAuth session')
       request.cookieAuth.clear()
     }
 
-    // 4. Create redirect response
+    // Create redirect response
     const response = h.redirect('/')
 
-    // 5. Explicitly clear all auth-related cookies with stronger settings
+    // Clear all auth-related cookies
     const cookieOptions = {
       path: '/',
       isSecure: config.get('session.cookie.secure'),
@@ -320,25 +289,17 @@ export const logout = (request, h) => {
       isSameSite: 'Strict'
     }
 
-    // Unset all auth cookies
     response.unstate('sid', cookieOptions)
     response.unstate('auth_state', cookieOptions)
     response.unstate('redirect_to', cookieOptions)
 
-    logger.info('Logout completed')
-
     return response
   } catch (error) {
-    logger.error({ error: error.message }, 'Error during logout')
-
-    // Even if there was an error, try to clear cookies in the response
+    logger.error('Error during logout:', error.message)
     const response = h.redirect('/')
-
-    // Clear other cookies
     response.unstate('sid')
     response.unstate('auth_state')
     response.unstate('redirect_to')
-
     return response
   }
 }

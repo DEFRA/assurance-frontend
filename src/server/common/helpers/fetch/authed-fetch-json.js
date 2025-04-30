@@ -23,7 +23,10 @@ async function authedFetchJson(url, token, options = {}) {
   // Add auth token if provided
   if (token) {
     // Remove any existing "Bearer " prefix
-    const cleanToken = token.replace(/^Bearer\s+/i, '').trim()
+    const cleanToken =
+      typeof token === 'string'
+        ? token.replace(/^Bearer\s+/i, '').trim()
+        : token
     headers.Authorization = `Bearer ${cleanToken}`
   }
 
@@ -72,7 +75,7 @@ function authedFetchJsonDecorator(request) {
     let token = null
 
     try {
-      token = getBearerToken(request)
+      token = await getBearerToken(request)
     } catch (error) {
       logger.error('Failed to get bearer token')
     }

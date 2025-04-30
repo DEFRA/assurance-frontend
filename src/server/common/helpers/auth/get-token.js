@@ -51,7 +51,7 @@ const extractTokenFromCookie = (request) => {
 /**
  * Gets a properly formatted bearer token from request credentials
  * @param {import('@hapi/hapi').Request} request - Hapi request object
- * @returns {string|null} Bearer token or null if not found
+ * @returns {Promise<string|null>} Bearer token or null if not found
  */
 export const getBearerToken = async (request) => {
   const logger = createLogger()
@@ -100,7 +100,7 @@ export const getBearerToken = async (request) => {
     }
 
     // Clean up token if found
-    if (token) {
+    if (token && typeof token === 'string') {
       // Remove any existing "Bearer " prefix
       return token.replace(/^Bearer\s+/i, '').trim()
     }

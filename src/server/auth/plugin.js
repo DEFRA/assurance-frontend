@@ -1,6 +1,7 @@
 import { getAuthConfig } from '~/src/server/auth/config.js'
 import { auth, logout } from '~/src/server/auth/controller.js'
 import Cookie from '@hapi/cookie'
+import { validateSession } from '~/src/server/common/helpers/session-manager.js'
 import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
 
 const logger = createLogger()
@@ -28,80 +29,28 @@ export const plugin = {
         ignoreErrors: true,
         isSameSite: 'Lax'
       },
-      keepAlive: true,
+      keepAlive: false,
       redirectTo: false,
       appendNext: false,
       validate: async (request, session) => {
+        // Skip validation for logout route and public assets
+        if (
+          request.path === '/auth/logout' ||
+          request.path.startsWith('/public/')
+        ) {
+          return { isValid: false }
+        }
+
         try {
-          // Check if session and session.id exist
-          if (!session?.id) {
-            logger.warn('Invalid session structure', {
-              session: JSON.stringify(session)
-            })
-            return { isValid: false }
-          }
-
-          // Get token directly from session if available - this is the most direct path
-          const token = session.token
-
-          // Validate the session from cache as backup
-          const cached = await request.server.app.cache.get(session.id)
-
-          if (!cached) {
-            // If session has token but no cache, we can still be valid (this might happen if cache expired)
-            if (token) {
-              logger.warn(
-                'No cached session found for ID, but token exists in cookie',
-                {
-                  id: session.id,
-                  tokenLength: token.length
-                }
-              )
-
-              // Create minimal valid credentials
-              return {
-                isValid: true,
-                credentials: {
-                  token,
-                  id: session.id
-                }
-              }
-            }
-
-            logger.warn(
-              'No cached session found for ID and no token in cookie',
-              { id: session.id }
-            )
-            return { isValid: false }
-          }
-          // Create credentials object with token explicitly included
-          const credentials = {
-            ...cached,
-            token, // Make sure token is directly in credentials
-            id: session.id // Keep the id for cache lookups
-          }
-
-          return {
-            isValid: true,
-            credentials
-          }
+          return await validateSession(request, session)
         } catch (error) {
-          logger.error('Session validation error', {
-            error: error.message,
-            stack: error.stack,
-            session: JSON.stringify(session, (key, value) => {
-              if (key === 'token' && typeof value === 'string') {
-                return `${value.substring(0, 10)}...`
-              }
-              return value
-            })
-          })
+          logger.error('Session validation error:', { error: error.message })
           return { isValid: false }
         }
       }
     })
 
-    // Set default auth strategy
+    // Set default auth strategy to 'try' for public routes
     server.auth.default({
       strategy: 'session',
       mode: 'try'
@@ -113,24 +62,23 @@ export const plugin = {
         method: 'GET',
         path: '/auth/login',
         handler: auth,
-        options: {
-          auth: { mode: 'try' }
-        }
+        options: { auth: false }
       },
       {
         method: 'GET',
         path: '/auth',
         handler: auth,
-        options: {
-          auth: { mode: 'try' }
-        }
+        options: { auth: false }
       },
       {
         method: 'GET',
         path: '/auth/logout',
         handler: logout,
         options: {
-          auth: { mode: 'try' }
+          auth: {
+            strategy: 'session',
+            mode: 'try'
+          }
         }
       }
     ])

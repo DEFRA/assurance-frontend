@@ -25,9 +25,6 @@ export async function createServer() {
   const server = hapi.server({
     port: config.get('port'),
     routes: {
-      auth: {
-        mode: 'try'
-      },
       validate: {
         options: {
           abortEarly: false

@@ -20,7 +20,10 @@ export const projects = {
         path: '/projects/add',
         handler: addProjectController.get,
         options: {
-          pre: [{ method: requireAuth }]
+          auth: {
+            strategy: 'session',
+            mode: 'required'
+          }
         }
       })
 
@@ -29,7 +32,10 @@ export const projects = {
         path: '/projects/add',
         handler: addProjectController.post,
         options: {
-          pre: [{ method: requireAuth }]
+          auth: {
+            strategy: 'session',
+            mode: 'required'
+          }
         }
       })
 
@@ -74,7 +80,10 @@ export const projects = {
           path: '/projects/{id}/edit',
           handler: projectsController.postEdit,
           options: {
-            pre: [{ method: requireAuth }]
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            }
           }
         },
         {

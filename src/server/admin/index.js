@@ -1,4 +1,5 @@
 import { adminController } from './controller.js'
+import { requireRole } from '~/src/server/auth/middleware.js'
 
 export const admin = {
   plugin: {
@@ -10,7 +11,11 @@ export const admin = {
           path: '/admin',
           handler: adminController.get,
           options: {
-            auth: 'session'
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -18,7 +23,11 @@ export const admin = {
           path: '/admin/standards/seed',
           handler: adminController.seedStandards,
           options: {
-            auth: 'session'
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -26,7 +35,11 @@ export const admin = {
           path: '/admin/standards/delete',
           handler: adminController.deleteStandards,
           options: {
-            auth: 'session'
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -34,7 +47,11 @@ export const admin = {
           path: '/admin/standards/delete/confirm',
           handler: adminController.confirmDeleteAllStandards,
           options: {
-            auth: 'session'
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -42,7 +59,11 @@ export const admin = {
           path: '/admin/projects/seed',
           handler: adminController.seedProjects,
           options: {
-            auth: 'session'
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -50,7 +71,11 @@ export const admin = {
           path: '/admin/projects/delete',
           handler: adminController.deleteAllProjects,
           options: {
-            auth: 'session'
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -58,7 +83,11 @@ export const admin = {
           path: '/admin/projects/delete/confirm',
           handler: adminController.confirmDeleteAllProjects,
           options: {
-            auth: 'session'
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -66,7 +95,11 @@ export const admin = {
           path: '/admin/projects/{id}/delete',
           handler: adminController.deleteProject,
           options: {
-            auth: 'session'
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -74,7 +107,11 @@ export const admin = {
           path: '/admin/projects/{id}/delete/confirm',
           handler: adminController.confirmDeleteProject,
           options: {
-            auth: 'session'
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         }
       ])

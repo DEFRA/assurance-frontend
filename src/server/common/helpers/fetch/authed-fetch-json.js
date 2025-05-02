@@ -22,12 +22,26 @@ async function authedFetchJson(url, token, options = {}) {
 
   // Add auth token if provided
   if (token) {
-    // Remove any existing "Bearer " prefix
+    // Remove any existing "Bearer " prefix and ensure it's properly formatted
     const cleanToken =
       typeof token === 'string'
         ? token.replace(/^Bearer\s+/i, '').trim()
         : token
+
+    if (cleanToken !== token) {
+      logger.info('Token was cleaned up before sending to API', {
+        originalLength: token.length,
+        cleanedLength: cleanToken.length
+      })
+    }
+
     headers.Authorization = `Bearer ${cleanToken}`
+    logger.info('Added authorization header to request', {
+      url: fullUrl,
+      tokenLength: cleanToken.length
+    })
+  } else {
+    logger.warn('No token provided for authenticated request', { url: fullUrl })
   }
 
   // Merge our headers with options
@@ -45,7 +59,11 @@ async function authedFetchJson(url, token, options = {}) {
 
       // Special handling for 401/403 responses
       if (response.status === 401 || response.status === 403) {
-        logger.error('Authentication error - Token may be invalid or expired')
+        logger.error('Authentication error - Token may be invalid or expired', {
+          status: response.status,
+          error: errorText,
+          url: fullUrl
+        })
       }
 
       throw new Error(`API Error: ${response.status} ${errorText}`)
@@ -58,7 +76,10 @@ async function authedFetchJson(url, token, options = {}) {
 
     return response.text()
   } catch (error) {
-    logger.error(`Error fetching data from API: ${error.message}`)
+    logger.error(`Error fetching data from API: ${error.message}`, {
+      url: fullUrl,
+      error: error.message
+    })
     throw error
   }
 }

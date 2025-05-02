@@ -1,19 +1,8 @@
 import Boom from '@hapi/boom'
 import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
+import { setCookie } from '~/src/server/common/helpers/cookie-manager.js'
 
-/**
- * Safely sets a value in cookieAuth
- * @param {import('@hapi/hapi').Request} request
- * @param {string} key
- * @param {any} value
- */
-const safeSetCookie = (request, key, value) => {
-  if (request.cookieAuth && typeof request.cookieAuth.set === 'function') {
-    request.cookieAuth.set(key, value)
-    return true
-  }
-  return false
-}
+const logger = createLogger()
 
 /**
  * Middleware to ensure user is authenticated
@@ -24,24 +13,23 @@ export const requireAuth = (request, h) => {
   try {
     // Check if user is authenticated
     if (!request.auth.isAuthenticated) {
-      safeSetCookie(request, 'redirect_to', request.url.pathname)
+      setCookie(request, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
     }
 
     // Get user from session
     const user = request.auth.credentials.user
     if (!user) {
-      safeSetCookie(request, 'redirect_to', request.url.pathname)
+      setCookie(request, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
     }
 
     request.user = user
     return h.continue
   } catch (error) {
-    const logger = createLogger()
     logger.error('Authentication error')
     if (!request.auth.isAuthenticated) {
-      safeSetCookie(request, 'redirect_to', request.url.pathname)
+      setCookie(request, 'redirect_to', request.url.pathname)
     }
     return h.redirect('/auth/login')
   }
@@ -58,13 +46,13 @@ export const requireRole = (requiredRoles) => {
   return (request, h) => {
     try {
       if (!request.auth.isAuthenticated) {
-        safeSetCookie(request, 'redirect_to', request.url.pathname)
+        setCookie(request, 'redirect_to', request.url.pathname)
         return h.redirect('/auth/login')
       }
 
       const user = request.auth.credentials.user
       if (!user) {
-        safeSetCookie(request, 'redirect_to', request.url.pathname)
+        setCookie(request, 'redirect_to', request.url.pathname)
         return h.redirect('/auth/login')
       }
 
@@ -79,7 +67,7 @@ export const requireRole = (requiredRoles) => {
       if (error.isBoom) {
         throw error
       }
-      safeSetCookie(request, 'redirect_to', request.url.pathname)
+      setCookie(request, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
     }
   }

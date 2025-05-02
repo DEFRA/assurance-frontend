@@ -30,14 +30,14 @@
             {% endif %}
           </h3>
           <strong class="govuk-tag govuk-tag--grey govuk-!-margin-bottom-2" style="white-space: nowrap; font-size: 10px; line-height: 1; padding: 3px 6px;">
-            {% if change.changedBy === "system" %}
+            {% if change.changedBy === 'system' %}
               {% set professions = [
-                "DELIVERY MANAGEMENT",
-                "PRODUCT MANAGEMENT",
-                "USER CENTRED DESIGN",
-                "ARCHITECTURE",
-                "SOFTWARE DEVELOPMENT",
-                "BUSINESS ANALYSIS"
+                'DELIVERY MANAGEMENT',
+                'PRODUCT MANAGEMENT',
+                'USER CENTRED DESIGN',
+                'ARCHITECTURE',
+                'SOFTWARE DEVELOPMENT',
+                'BUSINESS ANALYSIS'
               ] %}
               {{ professions | random }}
             {% else %}
@@ -134,13 +134,15 @@
         ]
       }) }}
 
-      <div class="govuk-button-group">
-        {{ govukButton({
-          text: "Edit Project",
-          href: "/projects/" + project.id + "/edit",
-          classes: "govuk-button--secondary"
-        }) }}
-      </div>
+      {% if isAuthenticated %}
+        <div class="govuk-button-group">
+          {{ govukButton({
+            text: "Edit Project",
+            href: "/projects/" + project.id + "/edit",
+            classes: "govuk-button--secondary"
+          }) }}
+        </div>
+      {% endif %}
     </div>
   </div>
 {% endblock %}

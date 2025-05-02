@@ -59,13 +59,16 @@ export const getBearerToken = async (request) => {
 
   try {
     if (!request?.auth?.isAuthenticated) {
-      // Try emergency direct cookie extraction anyway
+      logger.warn(
+        'Request is not authenticated, attempting emergency token extraction'
+      )
       return extractTokenFromCookie(request)
     }
 
     // Method 1: Direct from credentials
     if (request.auth.credentials?.token) {
       token = request.auth.credentials.token
+      logger.info('Token found in credentials', { tokenLength: token?.length })
     }
 
     // Method 2: From cached session
@@ -76,9 +79,12 @@ export const getBearerToken = async (request) => {
         )
         if (cached?.token) {
           token = cached.token
+          logger.info('Token found in cache', { tokenLength: token?.length })
         }
       } catch (cacheError) {
-        logger.error('Error accessing token from cache')
+        logger.error('Error accessing token from cache', {
+          error: cacheError.message
+        })
       }
     }
 
@@ -88,26 +94,42 @@ export const getBearerToken = async (request) => {
         const session = await request.getUserSession()
         if (session?.token) {
           token = session.token
+          logger.info('Token found in user session', {
+            tokenLength: token?.length
+          })
         }
       } catch (sessionError) {
-        logger.error('Error getting token from user session')
+        logger.error('Error getting token from user session', {
+          error: sessionError.message
+        })
       }
     }
 
     // Method 4: Last resort - direct cookie extraction
     if (!token) {
       token = extractTokenFromCookie(request)
+      if (token) {
+        logger.info('Token found in cookies', { tokenLength: token?.length })
+      }
     }
 
     // Clean up token if found
     if (token && typeof token === 'string') {
-      // Remove any existing "Bearer " prefix
-      return token.replace(/^Bearer\s+/i, '').trim()
+      // Remove any existing "Bearer " prefix and ensure it's properly formatted
+      const cleanToken = token.replace(/^Bearer\s+/i, '').trim()
+      if (cleanToken !== token) {
+        logger.info('Token was cleaned up', {
+          originalLength: token.length,
+          cleanedLength: cleanToken.length
+        })
+      }
+      return cleanToken
     }
 
+    logger.warn('No valid token found in any source')
     return null
   } catch (error) {
-    logger.error('Error extracting bearer token')
+    logger.error('Error extracting bearer token', { error: error.message })
     return null
   }
 }

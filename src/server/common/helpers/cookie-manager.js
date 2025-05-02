@@ -24,7 +24,7 @@ export const setCookie = (request, key, value) => {
       request.cookieAuth.set(key, value)
       return true
     } catch (error) {
-      logger.error({ key, error: error.message }, 'Error setting cookie value')
+      logger.error('Error setting cookie value', { key, error: error.message })
       return false
     }
   }
@@ -42,7 +42,7 @@ export const getCookie = (request, key) => {
     try {
       return request.cookieAuth.get(key)
     } catch (error) {
-      logger.error({ key, error: error.message }, 'Error getting cookie value')
+      logger.error('Error getting cookie value', { key, error: error.message })
       return undefined
     }
   }
@@ -64,7 +64,7 @@ export const clearCookie = (request, key) => {
       }
       return true
     } catch (error) {
-      logger.error({ key, error: error.message }, 'Error clearing cookie')
+      logger.error('Error clearing cookie', { key, error: error.message })
       return false
     }
   }
@@ -80,10 +80,9 @@ export const clearCookie = (request, key) => {
  */
 export const setResponseCookie = (h, name, value, options = {}) => {
   try {
-    logger.info('Setting response cookie:', { name, value, options })
     h.state(name, value, { ...defaultCookieOptions, ...options })
   } catch (error) {
-    logger.error('Error setting response cookie:', {
+    logger.error('Error setting response cookie', {
       name,
       error: error.message
     })
@@ -98,10 +97,9 @@ export const setResponseCookie = (h, name, value, options = {}) => {
  */
 export const clearResponseCookie = (h, name, options = {}) => {
   try {
-    logger.info('Clearing response cookie:', { name, options })
     h.unstate(name, { ...defaultCookieOptions, ...options })
   } catch (error) {
-    logger.error('Error clearing response cookie:', {
+    logger.error('Error clearing response cookie', {
       name,
       error: error.message
     })

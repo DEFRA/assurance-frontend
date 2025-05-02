@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
 import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
-import { setCookie } from '~/src/server/common/helpers/cookie-manager.js'
+import { setResponseCookie } from '~/src/server/common/helpers/cookie-manager.js'
 
 const logger = createLogger()
 
@@ -13,14 +13,14 @@ export const requireAuth = (request, h) => {
   try {
     // Check if user is authenticated
     if (!request.auth.isAuthenticated) {
-      setCookie(request, 'redirect_to', request.url.pathname)
+      setResponseCookie(h, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
     }
 
     // Get user from session
     const user = request.auth.credentials.user
     if (!user) {
-      setCookie(request, 'redirect_to', request.url.pathname)
+      setResponseCookie(h, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
     }
 
@@ -29,7 +29,7 @@ export const requireAuth = (request, h) => {
   } catch (error) {
     logger.error('Authentication error')
     if (!request.auth.isAuthenticated) {
-      setCookie(request, 'redirect_to', request.url.pathname)
+      setResponseCookie(h, 'redirect_to', request.url.pathname)
     }
     return h.redirect('/auth/login')
   }
@@ -46,13 +46,13 @@ export const requireRole = (requiredRoles) => {
   return (request, h) => {
     try {
       if (!request.auth.isAuthenticated) {
-        setCookie(request, 'redirect_to', request.url.pathname)
+        setResponseCookie(h, 'redirect_to', request.url.pathname)
         return h.redirect('/auth/login')
       }
 
       const user = request.auth.credentials.user
       if (!user) {
-        setCookie(request, 'redirect_to', request.url.pathname)
+        setResponseCookie(h, 'redirect_to', request.url.pathname)
         return h.redirect('/auth/login')
       }
 
@@ -67,7 +67,7 @@ export const requireRole = (requiredRoles) => {
       if (error.isBoom) {
         throw error
       }
-      setCookie(request, 'redirect_to', request.url.pathname)
+      setResponseCookie(h, 'redirect_to', request.url.pathname)
       return h.redirect('/auth/login')
     }
   }

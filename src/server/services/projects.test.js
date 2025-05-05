@@ -16,15 +16,22 @@ jest.mock('~/src/server/services/service-standards.js', () => ({
   getServiceStandards: jest.fn()
 }))
 
-const mockLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn()
-}
+// Define the mock logger module first
+jest.mock('~/src/server/common/helpers/logging/logger.js', () => {
+  return {
+    createLogger: jest.fn().mockReturnValue({
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    })
+  }
+})
 
-jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
-  createLogger: () => mockLogger
-}))
+// Then initialize the mock logger
+const mockLogger = jest
+  .requireMock('~/src/server/common/helpers/logging/logger.js')
+  .createLogger()
 
 // Then get references to the mocks
 const { fetcher: mockFetch } = jest.requireMock(

@@ -7,7 +7,10 @@ import { loggerOptions } from '~/src/server/common/helpers/logging/logger-option
  */
 export const requestLogger = {
   plugin: hapiPino,
-  options: loggerOptions
+  options: {
+    ...loggerOptions,
+    level: loggerOptions.level || 'info' // Ensure level is explicitly set
+  }
 }
 
 /**

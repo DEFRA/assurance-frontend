@@ -1,6 +1,5 @@
 import Boom from '@hapi/boom'
 import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
-import { setResponseCookie } from '~/src/server/common/helpers/cookie-manager.js'
 
 const logger = createLogger()
 
@@ -13,25 +12,21 @@ export const requireAuth = (request, h) => {
   try {
     // Check if user is authenticated
     if (!request.auth.isAuthenticated) {
-      setResponseCookie(h, 'redirect_to', request.url.pathname)
-      return h.redirect('/auth/login')
+      return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
     }
 
     // Get user from session
     const user = request.auth.credentials.user
     if (!user) {
-      setResponseCookie(h, 'redirect_to', request.url.pathname)
-      return h.redirect('/auth/login')
+      return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
     }
 
+    // Add user to request for easy access
     request.user = user
     return h.continue
   } catch (error) {
-    logger.error('Authentication error')
-    if (!request.auth.isAuthenticated) {
-      setResponseCookie(h, 'redirect_to', request.url.pathname)
-    }
-    return h.redirect('/auth/login')
+    logger.error('Authentication error', error)
+    return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
   }
 }
 
@@ -45,30 +40,40 @@ export const requireRole = (requiredRoles) => {
 
   return (request, h) => {
     try {
+      // Check if user is authenticated
       if (!request.auth.isAuthenticated) {
-        setResponseCookie(h, 'redirect_to', request.url.pathname)
-        return h.redirect('/auth/login')
+        return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
       }
 
+      // Get user from session
       const user = request.auth.credentials.user
       if (!user) {
-        setResponseCookie(h, 'redirect_to', request.url.pathname)
-        return h.redirect('/auth/login')
+        return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
       }
 
+      // Check if user has required role
       const hasRole = roles.some((role) => user.roles?.includes(role))
+      logger.debug('Role check', {
+        requiredRoles: roles,
+        userRoles: user.roles || [],
+        hasRequiredRole: hasRole,
+        userId: user.id,
+        path: request.url.pathname
+      })
+
       if (!hasRole) {
         throw Boom.forbidden('Insufficient permissions')
       }
 
+      // Add user to request for easy access
       request.user = user
       return h.continue
     } catch (error) {
       if (error.isBoom) {
         throw error
       }
-      setResponseCookie(h, 'redirect_to', request.url.pathname)
-      return h.redirect('/auth/login')
+      logger.error('Authorization error', error)
+      return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
     }
   }
 }

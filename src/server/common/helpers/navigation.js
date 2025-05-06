@@ -12,11 +12,6 @@ export const navigation = (auth, currentPath = '') => {
         text: 'Home',
         url: '/',
         isActive: currentPath === '/'
-      },
-      {
-        text: 'Programmes',
-        url: '/programmes',
-        isActive: currentPath.startsWith('/programmes')
       }
     ]
   }

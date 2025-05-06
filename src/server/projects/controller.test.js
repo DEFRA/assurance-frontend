@@ -302,7 +302,8 @@ describe('Projects controller', () => {
           { value: 'RED', text: 'Red' },
           { value: 'AMBER', text: 'Amber' },
           { value: 'GREEN', text: 'Green' }
-        ]
+        ],
+        deliveryHistory: expect.any(Array)
       })
     })
 

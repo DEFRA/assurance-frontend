@@ -571,16 +571,22 @@ describe('createProject', () => {
   test('should handle missing service standards', async () => {
     // Arrange
     mockGetServiceStandards.mockResolvedValue([])
+    const mockProjectData = {
+      name: 'Test Project',
+      status: 'GREEN',
+      commentary: 'Initial setup'
+    }
+    const mockResponse = { id: '123', ...mockProjectData }
+    mockFetch.mockResolvedValue(mockResponse)
 
-    // Act & Assert
-    await expect(
-      createProject({
-        name: 'Test Project',
-        status: 'GREEN'
-      })
-    ).rejects.toThrow(
-      'Failed to create project: No service standards available'
-    )
+    // Act
+    const result = await createProject(mockProjectData)
+
+    // Assert
+    expect(result).toEqual(mockResponse)
+    // Verify standards array is empty when no standards available
+    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(requestBody.standards).toEqual([])
   })
 
   test('should handle API validation errors', async () => {

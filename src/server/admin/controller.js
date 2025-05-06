@@ -248,15 +248,15 @@ export const adminController = {
     request.logger.info('Seeding professions from data file')
 
     try {
-      // Use the authed fetch to get the admin API
+      // Use the authed fetch to call the correct backend API endpoint
       const result = await authedFetchJsonDecorator(request)(
-        '/api/admin/seed-professions',
+        '/professions/seed',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ seedData: defaultProfessions })
+          body: JSON.stringify(defaultProfessions)
         }
       )
 
@@ -289,11 +289,11 @@ export const adminController = {
     request.logger.info('Deleting all professions')
 
     try {
-      // Use the authed fetch to get the admin API
+      // Use the correct endpoint and HTTP method for the backend API
       const result = await authedFetchJsonDecorator(request)(
-        '/api/admin/delete-professions',
+        '/professions/deleteAll',
         {
-          method: 'DELETE'
+          method: 'POST'
         }
       )
 

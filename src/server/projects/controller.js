@@ -14,6 +14,7 @@ import {
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
 import { config } from '~/src/config/config.js'
+import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 
 export const NOTIFICATIONS = {
   NOT_FOUND: 'Project not found',
@@ -90,10 +91,13 @@ export const projectsController = {
   getAll: async (request, h) => {
     try {
       const projects = await getProjects(request)
+      const isAuthenticated = request.auth.isAuthenticated
+
       return h.view('projects/index', {
         pageTitle: 'Projects',
         heading: 'Projects',
-        projects
+        projects,
+        isAuthenticated
       })
     } catch (error) {
       request.logger.error('Error fetching projects')
@@ -177,17 +181,88 @@ export const projectsController = {
       // Get project history for the timeline
       let projectHistory = []
       try {
-        const historyResponse = await fetch(`/api/projects/${id}/history`, {
-          method: 'GET',
-          headers: {
-            Accept: 'application/json'
-          }
-        })
+        // Get basic project history
+        const historyEntries = await getProjectHistory(id, request)
 
-        if (historyResponse.ok) {
-          const data = await historyResponse.json()
-          projectHistory = data.history || []
+        // Start building the combined timeline
+        let combinedHistory = []
+
+        // Add project delivery updates to the timeline
+        if (historyEntries && historyEntries.length > 0) {
+          // Filter for status and commentary changes
+          const deliveryUpdates = historyEntries.filter((entry) => {
+            return (
+              (entry.changes?.status?.from !== entry.changes?.status?.to &&
+                entry.changes?.status?.to) ||
+              entry.changes?.commentary?.to
+            )
+          })
+
+          combinedHistory = combinedHistory.concat(
+            deliveryUpdates.map((entry) => {
+              return {
+                ...entry,
+                changedBy: '', // Remove default changedBy for project updates
+                type: 'project',
+                historyType: 'delivery'
+              }
+            })
+          )
         }
+
+        // Get profession history for each profession in the project
+        if (project.professions && project.professions.length > 0) {
+          for (const profession of project.professions) {
+            try {
+              const professionHistory = await getProfessionHistory(
+                id,
+                profession.professionId,
+                request
+              )
+
+              if (professionHistory && professionHistory.length > 0) {
+                // Get the profession name using our helper
+                const professionName = getProfessionName(
+                  profession,
+                  professions,
+                  project
+                )
+
+                // For profession history, we only want to show commentary changes for external users
+                // We don't show RAG status changes for professions in the timeline
+                const commentaryUpdates = professionHistory.filter((entry) => {
+                  return entry.changes?.commentary?.to
+                })
+
+                // Add profession commentary updates to the timeline
+                combinedHistory = combinedHistory.concat(
+                  commentaryUpdates.map((entry) => {
+                    return {
+                      timestamp: entry.timestamp,
+                      changedBy: professionName,
+                      message: `${professionName} comment: ${entry.changes.commentary.to}`,
+                      professionName,
+                      type: 'profession',
+                      historyType: 'comment',
+                      changes: entry.changes
+                    }
+                  })
+                )
+              }
+            } catch (err) {
+              request.logger.error(
+                `Error fetching history for profession ${profession.professionId}:`,
+                err
+              )
+              // Continue with other professions if one fails
+            }
+          }
+        }
+
+        // Sort the timeline by timestamp, most recent first
+        projectHistory = combinedHistory.sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        )
       } catch (error) {
         request.logger.error({ error }, 'Error fetching project history')
         // Continue with empty history if fetch fails
@@ -219,6 +294,35 @@ export const projectsController = {
       const project = await getProjectById(id, request)
       if (!project) {
         return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+      }
+
+      // Get project history for recent delivery updates
+      let deliveryHistory = []
+      try {
+        const projectHistory = await getProjectHistory(id, request)
+        if (projectHistory && projectHistory.length > 0) {
+          // Filter for status and commentary changes
+          const deliveryUpdates = projectHistory.filter((entry) => {
+            return (
+              (entry.changes?.status?.from !== entry.changes?.status?.to &&
+                entry.changes?.status?.to) ||
+              entry.changes?.commentary?.to
+            )
+          })
+
+          // Sort by timestamp (newest first) and take top 3
+          deliveryHistory = deliveryUpdates
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 3)
+            .map((entry) => ({
+              ...entry,
+              type: 'project',
+              historyType: 'delivery'
+            }))
+        }
+      } catch (error) {
+        request.logger.error({ error }, 'Error fetching project history')
+        // Continue with empty history if fetch fails
       }
 
       // Get professions with proper error handling
@@ -268,23 +372,23 @@ export const projectsController = {
       // Prepare profession options for the dropdown - do this in JavaScript instead of in the template
       const professionOptions = [{ value: '', text: 'Select a profession' }]
 
-      // Only show professions that haven't been added to the project yet
+      // Show ALL professions in the dropdown - any profession can make an update
       if (Array.isArray(professions)) {
-        professions.forEach((profession) => {
-          if (!profession?.id) return
+        professions.forEach((profession, index) => {
+          // Use profession name as ID if no ID exists
+          const professionId = profession?.id || `profession-${index}`
+          const professionName = profession?.name || 'Unknown Profession'
 
-          // Check if this profession is already in the project
-          const isAlreadyAdded =
-            Array.isArray(project.professions) &&
-            project.professions.some((p) => p.professionId === profession.id)
-
-          // If not already added, add to options
-          if (!isAlreadyAdded) {
-            professionOptions.push({
-              value: profession.id,
-              text: profession.name || 'Unknown Profession'
-            })
+          // Build an ID-to-name map for all professions
+          if (professionId) {
+            professionNames[professionId] = professionName
           }
+
+          // Add ALL professions to options
+          professionOptions.push({
+            value: professionId,
+            text: professionName
+          })
         })
       }
 
@@ -299,7 +403,8 @@ export const projectsController = {
           { value: 'RED', text: 'Red' },
           { value: 'AMBER', text: 'Amber' },
           { value: 'GREEN', text: 'Green' }
-        ]
+        ],
+        deliveryHistory
       })
     } catch (error) {
       request.logger.error(error)
@@ -359,8 +464,30 @@ export const projectsController = {
         if (profession && professionStatus) {
           request.logger.info(
             { profession, professionStatus, professionCommentary },
-            'Updating profession assessment'
+            'Updating profession update'
           )
+
+          // Get the profession name - handle both catalog professions and dynamic professions
+          let professionName = ''
+          try {
+            const allProfessions = (await getProfessions(request)) || []
+            // Look for the profession by ID
+            const professionData = allProfessions.find(
+              (p) => p.id === profession || p.name === profession
+            )
+
+            if (professionData) {
+              professionName = professionData.name || ''
+            } else if (profession.startsWith('profession-')) {
+              // This is a dynamically assigned ID - Extract index and find by index
+              const index = parseInt(profession.replace('profession-', ''), 10)
+              if (!isNaN(index) && index < allProfessions.length) {
+                professionName = allProfessions[index].name || ''
+              }
+            }
+          } catch (error) {
+            request.logger.error('Error fetching profession details', { error })
+          }
 
           // Get existing professions
           const existingProfessions = currentProject.professions || []
@@ -375,6 +502,7 @@ export const projectsController = {
             ...otherProfessions,
             {
               professionId: profession,
+              name: professionName,
               status: professionStatus,
               commentary: professionCommentary || ''
             }
@@ -518,6 +646,7 @@ export const projectsController = {
           deliveryUpdates.map((entry) => {
             return {
               ...entry,
+              changedBy: '', // Remove default changedBy for project updates
               type: 'project',
               historyType: 'delivery'
             }
@@ -730,6 +859,7 @@ export const projectsController = {
           deliveryUpdates.map((entry) => {
             return {
               ...entry,
+              changedBy: '', // Remove default changedBy for project updates
               type: 'project',
               historyType: 'delivery'
             }
@@ -1041,7 +1171,7 @@ export const projectsController = {
       )
 
       return h.redirect(
-        `/projects/${id}?tab=professions&notification=Profession assessment removed`
+        `/projects/${id}?tab=professions&notification=Profession update removed`
       )
     } catch (error) {
       request.logger.error(
@@ -1055,6 +1185,275 @@ export const projectsController = {
 
       return h.redirect(
         `/projects/${id}/delete/profession/${professionId}?notification=${NOTIFICATIONS.GENERAL_ERROR}`
+      )
+    }
+  },
+
+  getEditDelivery: async (request, h) => {
+    const { id, historyId } = request.params
+
+    try {
+      const project = await getProjectById(id, request)
+      if (!project) {
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+      }
+
+      // Get project history
+      const projectHistory = await getProjectHistory(id, request)
+      if (!projectHistory || projectHistory.length === 0) {
+        return h.redirect(
+          `/projects/${id}?notification=No history found for this project`
+        )
+      }
+
+      // Find the specific history entry
+      const historyEntry = projectHistory.find(
+        (entry) => entry.id === historyId
+      )
+      if (!historyEntry) {
+        return h.redirect(
+          `/projects/${id}?notification=History entry not found`
+        )
+      }
+
+      // Create the update object
+      const update = {
+        id: historyEntry.id,
+        status: historyEntry.changes?.status?.to || project.status,
+        commentary: historyEntry.changes?.commentary?.to || '',
+        timestamp: historyEntry.timestamp
+      }
+
+      return h.view('projects/detail/edit-delivery', {
+        pageTitle: `Edit Delivery Update | ${project.name}`,
+        heading: 'Edit Delivery Update',
+        project,
+        update,
+        statusOptions: [
+          { value: 'RED', text: 'Red' },
+          { value: 'AMBER', text: 'Amber' },
+          { value: 'GREEN', text: 'Green' }
+        ]
+      })
+    } catch (error) {
+      request.logger.error(error)
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  postEditDelivery: async (request, h) => {
+    const { id, historyId } = request.params
+    const { status, commentary } = request.payload
+
+    try {
+      // Get current project to modify
+      const currentProject = await getProjectById(id, request)
+      if (!currentProject) {
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+      }
+
+      // Get project history
+      const projectHistory = await getProjectHistory(id, request)
+      if (!projectHistory || projectHistory.length === 0) {
+        return h.redirect(
+          `/projects/${id}?notification=No history found for this project`
+        )
+      }
+
+      // Find the specific history entry
+      const historyEntry = projectHistory.find(
+        (entry) => entry.id === historyId
+      )
+      if (!historyEntry) {
+        return h.redirect(
+          `/projects/${id}?notification=History entry not found`
+        )
+      }
+
+      // Prepare data for API call to update history
+      const updatedEntry = {
+        ...historyEntry,
+        changes: {
+          ...historyEntry.changes,
+          status: {
+            from: historyEntry.changes?.status?.from || '',
+            to: status
+          },
+          commentary: {
+            from: historyEntry.changes?.commentary?.from || '',
+            to: commentary || ''
+          }
+        }
+      }
+
+      // Call API to update history entry
+      try {
+        // Use project update API to handle history updates
+        // Note: This may need to be adjusted based on your actual API structure
+        const authedFetch = authedFetchJsonDecorator(request)
+        await authedFetch(`/projects/${id}/history/${historyId}`, {
+          method: 'PUT',
+          body: JSON.stringify(updatedEntry)
+        })
+
+        request.logger.info(
+          {
+            projectId: id,
+            historyId,
+            status
+          },
+          'Delivery update history entry updated'
+        )
+
+        return h.redirect(
+          `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS.UPDATE_SUCCESS}`
+        )
+      } catch (error) {
+        // If API update fails, fall back to updating the project current status/commentary
+        request.logger.warn(
+          {
+            error,
+            projectId: id,
+            historyId
+          },
+          'Failed to update history entry directly. Updating project instead.'
+        )
+
+        // Update project with new status/commentary
+        const result = await updateProject(
+          id,
+          {
+            status,
+            commentary: commentary || currentProject.commentary
+          },
+          request
+        )
+
+        if (!result) {
+          throw new Error('Failed to update project')
+        }
+
+        return h.redirect(
+          `/projects/${id}/edit?tab=delivery&notification=History entry could not be updated directly. Project status has been updated instead.`
+        )
+      }
+    } catch (error) {
+      request.logger.error(
+        {
+          error,
+          payload: request.payload
+        },
+        'Failed to update delivery status'
+      )
+
+      return h.redirect(
+        `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS.GENERAL_ERROR}`
+      )
+    }
+  },
+
+  getDeleteDelivery: async (request, h) => {
+    const { id, historyId } = request.params
+
+    try {
+      const project = await getProjectById(id, request)
+      if (!project) {
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+      }
+
+      // Get project history
+      const projectHistory = await getProjectHistory(id, request)
+      if (!projectHistory || projectHistory.length === 0) {
+        return h.redirect(
+          `/projects/${id}?notification=No history found for this project`
+        )
+      }
+
+      // Find the specific history entry
+      const historyEntry = projectHistory.find(
+        (entry) => entry.id === historyId
+      )
+      if (!historyEntry) {
+        return h.redirect(
+          `/projects/${id}?notification=History entry not found`
+        )
+      }
+
+      // Create the update object
+      const update = {
+        id: historyEntry.id,
+        status: historyEntry.changes?.status?.to || '',
+        commentary: historyEntry.changes?.commentary?.to || '',
+        timestamp: historyEntry.timestamp
+      }
+
+      return h.view('projects/detail/delete-delivery', {
+        pageTitle: `Delete Delivery Update | ${project.name}`,
+        heading: 'Delete Delivery Update',
+        project,
+        update
+      })
+    } catch (error) {
+      request.logger.error(error)
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  postDeleteDelivery: async (request, h) => {
+    const { id, historyId } = request.params
+
+    try {
+      // Get current project to verify
+      const currentProject = await getProjectById(id, request)
+      if (!currentProject) {
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+      }
+
+      // Call API to delete history entry
+      try {
+        // Use project API to handle history deletion
+        const authedFetch = authedFetchJsonDecorator(request)
+        await authedFetch(`/projects/${id}/history/${historyId}`, {
+          method: 'DELETE'
+        })
+
+        request.logger.info(
+          {
+            projectId: id,
+            historyId
+          },
+          'Delivery update history entry deleted'
+        )
+
+        return h.redirect(
+          `/projects/${id}/edit?tab=delivery&notification=Delivery update successfully removed`
+        )
+      } catch (error) {
+        request.logger.error(
+          {
+            error,
+            projectId: id,
+            historyId
+          },
+          'Failed to delete history entry'
+        )
+
+        return h.redirect(
+          `/projects/${id}/edit?tab=delivery&notification=Failed to remove delivery update`
+        )
+      }
+    } catch (error) {
+      request.logger.error(
+        {
+          error,
+          id,
+          historyId
+        },
+        'Failed to delete delivery update'
+      )
+
+      return h.redirect(
+        `/projects/${id}/delete/delivery/${historyId}?notification=${NOTIFICATIONS.GENERAL_ERROR}`
       )
     }
   }

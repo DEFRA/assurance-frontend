@@ -5,7 +5,6 @@ import { serveStaticFiles } from '~/src/server/common/helpers/serve-static-files
 import { about } from '~/src/server/about/index.js'
 import { admin } from '~/src/server/admin/index.js'
 import { projects } from '~/src/server/projects/index.js'
-import { programmes } from './programmes/index.js'
 import { professions } from '~/src/server/professions/index.js'
 /**
  * @satisfies {ServerRegisterPluginObject<void>}
@@ -20,14 +19,7 @@ export const router = {
       await server.register([health])
 
       // Application specific routes, add your own routes here
-      await server.register([
-        home,
-        about,
-        admin,
-        projects,
-        programmes,
-        professions
-      ])
+      await server.register([home, about, admin, projects, professions])
 
       // Static assets
       await server.register([serveStaticFiles])

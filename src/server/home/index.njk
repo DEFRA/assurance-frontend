@@ -31,11 +31,13 @@
         {% endif %}
       </form>
 
+      {% if isAuthenticated %}
       {{ govukButton({
         text: "Add new project",
         href: "/projects/add",
         classes: "govuk-button--secondary govuk-!-margin-bottom-6"
       }) }}
+      {% endif %}
 
       <p class="govuk-body">{{ description }}</p>
 

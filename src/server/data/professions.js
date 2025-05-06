@@ -1,26 +1,26 @@
 export const defaultProfessions = [
   {
-    name: 'DELIVERY MANAGEMENT',
+    name: 'Delivery Management',
     description: 'Managing the delivery of digital projects and products'
   },
   {
-    name: 'PRODUCT MANAGEMENT',
+    name: 'Product Management',
     description: 'Managing the lifecycle of digital products'
   },
   {
-    name: 'USER CENTRED DESIGN',
+    name: 'User Centred Design',
     description: 'Designing services based on user needs and research'
   },
   {
-    name: 'ARCHITECTURE',
+    name: 'Architecture',
     description: 'Designing the technical architecture of digital systems'
   },
   {
-    name: 'SOFTWARE DEVELOPMENT',
+    name: 'Software Development',
     description: 'Building and maintaining software applications'
   },
   {
-    name: 'BUSINESS ANALYSIS',
-    description: 'Analyzing business processes and requirements'
+    name: 'Quality Assurance',
+    description: 'Ensuring digital services meet quality standards'
   }
 ]

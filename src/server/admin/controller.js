@@ -274,13 +274,6 @@ export const adminController = {
         'Error seeding professions'
       )
 
-      // If the API is not implemented (404), show a notification
-      if (error.message?.includes('404')) {
-        return h.redirect(
-          '/admin?notification=Professions API not yet available - backend needs updating'
-        )
-      }
-
       return h.redirect('/admin?notification=Failed to seed professions')
     }
   },
@@ -310,13 +303,6 @@ export const adminController = {
         },
         'Error deleting professions'
       )
-
-      // If the API is not implemented (404), show a notification
-      if (error.message?.includes('404')) {
-        return h.redirect(
-          '/admin?notification=Professions API not yet available - backend needs updating'
-        )
-      }
 
       return h.redirect('/admin?notification=Failed to delete professions')
     }

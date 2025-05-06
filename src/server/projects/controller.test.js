@@ -114,7 +114,9 @@ describe('Projects controller', () => {
       await projectsController.get(mockRequest, mockH)
 
       // Assert
-      expect(mockH.response).toHaveBeenCalledWith('Project not found')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/?notification=Project not found'
+      )
     })
 
     it('should handle missing standards data', async () => {
@@ -243,7 +245,9 @@ describe('Projects controller', () => {
       await projectsController.get(mockRequest, mockH)
 
       // Assert
-      expect(mockH.response).toHaveBeenCalledWith('Project not found')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/?notification=Project not found'
+      )
     })
   })
 

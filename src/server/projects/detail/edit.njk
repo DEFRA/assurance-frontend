@@ -5,6 +5,8 @@
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
 
 {% block content %}
   {% if errorMessage %}
@@ -18,81 +20,239 @@
     }) }}
   {% endif %}
 
-  <form method="POST" novalidate>
-    <h2 class="govuk-heading-m">Overall Assessment</h2>
+  {% set deliveryHtml %}
+    <form method="POST" action="/projects/{{ project.id }}/edit?type=delivery" novalidate>
+      <h2 class="govuk-heading-m">Project Delivery Status</h2>
+      
+      {{ govukSelect({
+        id: "status",
+        name: "status",
+        label: {
+          text: "Overall Project Status",
+          classes: "govuk-label--s"
+        },
+        items: statusOptions,
+        value: project.status
+      }) }}
+
+      {{ govukTextarea({
+        name: "commentary",
+        id: "commentary",
+        label: {
+          text: "Overall Project Commentary",
+          classes: "govuk-label--m"
+        },
+        value: project.commentary
+      }) }}
+
+      {{ govukInput({
+        id: "tags",
+        name: "tags",
+        label: {
+          text: "Project Tags",
+          classes: "govuk-label--s"
+        },
+        hint: {
+          text: "Separate multiple tags with commas (e.g. Portfolio1, Supplier1, Team2)"
+        },
+        value: project.tags | join(", ")
+      }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({
+          text: "Save Delivery Status"
+        }) }}
+
+        {{ govukButton({
+          text: "Cancel",
+          href: "/projects/" + project.id,
+          classes: "govuk-button--secondary"
+        }) }}
+      </div>
+    </form>
+  {% endset %}
+
+  {% set professionsHtml %}
+    <h2 class="govuk-heading-m">Current Profession Assessments</h2>
     
-    {{ govukSelect({
-      id: "status",
-      name: "status",
-      label: {
-        text: "Project Status",
-        classes: "govuk-label--s"
-      },
-      items: statusOptions,
-      value: project.status
-    }) }}
+    {% if project.professions and project.professions.length > 0 %}
+      <table class="govuk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header">Profession</th>
+            <th scope="col" class="govuk-table__header">Status</th>
+            <th scope="col" class="govuk-table__header">Commentary</th>
+            <th scope="col" class="govuk-table__header">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for profession in project.professions %}
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell">{{ profession.name }}</td>
+              <td class="govuk-table__cell">
+                {% if profession.status == "RED" %}
+                  <strong class="govuk-tag govuk-tag--red">{{ profession.status }}</strong>
+                {% elif profession.status == "AMBER" %}
+                  <strong class="govuk-tag govuk-tag--yellow">{{ profession.status }}</strong>
+                {% elif profession.status == "GREEN" %}
+                  <strong class="govuk-tag govuk-tag--green">{{ profession.status }}</strong>
+                {% else %}
+                  <strong class="govuk-tag">{{ profession.status }}</strong>
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                {% if profession.commentary %}
+                  {{ profession.commentary | truncate(50) }}
+                {% else %}
+                  <em>No commentary</em>
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                <a href="/projects/{{ project.id }}/edit/profession/{{ profession.professionId }}" class="govuk-link">Edit</a> | 
+                <a href="/projects/{{ project.id }}/delete/profession/{{ profession.professionId }}" class="govuk-link govuk-link--no-visited-state">Remove</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="govuk-body">No profession assessments have been added to this project yet.</p>
+    {% endif %}
 
-    {{ govukTextarea({
-      name: "commentary",
-      id: "commentary",
-      label: {
-        text: "Project Commentary",
-        classes: "govuk-label--m"
-      },
-      value: project.commentary
-    }) }}
-
-    {{ govukInput({
-      id: "tags",
-      name: "tags",
-      label: {
-        text: "Project Tags",
-        classes: "govuk-label--s"
-      },
-      hint: {
-        text: "Separate multiple tags with commas (e.g. Portfolio1, Supplier1, Team2)"
-      },
-      value: project.tags | join(", ")
-    }) }}
-
-    <h2 class="govuk-heading-m">Service Standards Assessment</h2>
-
-    {% for standard in project.standards %}
+    <h2 class="govuk-heading-m">Add New Profession Assessment</h2>
+    
+    <form method="POST" action="/projects/{{ project.id }}/edit?type=profession" novalidate>
       <div class="govuk-form-group">
-        <h3 class="govuk-heading-s">Standard {{ standard.standardId }}: {{ standard.name }}</h3>
-        
         {{ govukSelect({
-          id: "standards[" + standard.standardId + "][status]",
-          name: "standards." + standard.standardId + ".status",
+          id: "profession",
+          name: "profession",
           label: {
-            text: "Status",
+            text: "Profession",
             classes: "govuk-label--s"
           },
-          items: statusOptions,
-          value: standard.status
+          items: professionOptions
+        }) }}
+        
+        {{ govukSelect({
+          id: "profession-status",
+          name: "profession-status",
+          label: {
+            text: "Assessment",
+            classes: "govuk-label--s"
+          },
+          items: statusOptions
         }) }}
 
         {{ govukTextarea({
-          name: "standards." + standard.standardId + ".commentary",
-          id: "standards[" + standard.standardId + "][commentary]",
+          name: "profession-commentary",
+          id: "profession-commentary",
           label: {
             text: "Commentary",
             classes: "govuk-label--s"
           },
-          value: standard.commentary
+          value: ""
         }) }}
       </div>
-      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
-    {% endfor %}
 
-    {{ govukButton({
-      text: "Save changes"
-    }) }}
+      <div class="govuk-button-group">
+        {{ govukButton({
+          text: "Add Profession Assessment"
+        }) }}
+        
+        {{ govukButton({
+          text: "Cancel",
+          href: "/projects/" + project.id,
+          classes: "govuk-button--secondary"
+        }) }}
+      </div>
+    </form>
+  {% endset %}
 
-    {{ govukButton({
-      text: "Cancel",
-      href: "/projects/" + project.id,
-      classes: "govuk-button--secondary"
-    }) }}
-  </form>
+  {{ govukTabs({
+    items: [
+      {
+        id: "delivery",
+        label: "Delivery Status",
+        panel: {
+          html: deliveryHtml
+        }
+      },
+      {
+        id: "professions",
+        label: "Profession Assessments",
+        panel: {
+          html: professionsHtml
+        }
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block bodyEnd %}
+  {{ super() }}
+  <script nonce="{{ nonce }}">
+    // Simple tab selection function
+    function selectTabWithId(tabId) {
+      try {
+        const tabElements = document.querySelectorAll('[role="tab"]');
+        if (!tabElements || tabElements.length === 0) {
+          console.warn('No tab elements found');
+          return;
+        }
+        
+        // Find the tab with the matching id or containing the id
+        let targetTab = null;
+        for (let i = 0; i < tabElements.length; i++) {
+          if (tabElements[i].id === tabId || tabElements[i].id.includes(tabId)) {
+            targetTab = tabElements[i];
+            break;
+          }
+        }
+        
+        // Click the tab if found
+        if (targetTab) {
+          targetTab.click();
+        } else {
+          console.warn('Tab with id containing "' + tabId + '" not found');
+        }
+      } catch (err) {
+        console.error('Error selecting tab:', err);
+      }
+    }
+    
+    // Set up event handlers when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      try {
+        // Set up profession form behavior
+        const professionSelect = document.getElementById('profession');
+        const statusSelect = document.getElementById('profession-status');
+        const commentaryInput = document.getElementById('profession-commentary');
+        
+        if (professionSelect) {
+          professionSelect.addEventListener('change', function() {
+            const professionId = professionSelect.value;
+            if (!professionId) {
+              // Reset fields if "Select a profession" is chosen
+              if (statusSelect) statusSelect.value = '';
+              if (commentaryInput) commentaryInput.value = '';
+              return;
+            }
+            
+            // Set default value for new profession
+            if (statusSelect) statusSelect.value = 'AMBER'; // Set a default value
+            if (commentaryInput) commentaryInput.value = '';
+          });
+        }
+
+        // Handle tab selection from query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam === 'professions') {
+          selectTabWithId('professions');
+        }
+      } catch (e) {
+        console.error('Error in DOM setup:', e);
+      }
+    });
+  </script>
 {% endblock %} 

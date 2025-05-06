@@ -1,0 +1,127 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% block beforeContent %}
+  {{ govukBackLink({
+    text: "Back to all professions",
+    href: "/professions"
+  }) }}
+{% endblock %}
+
+{% block content %}
+  {{ appHeading({
+    text: heading
+  }) }}
+
+  {% if profession.description %}
+    <div class="govuk-grid-row">
+      <div class="govuk-grid-column-two-thirds">
+        <p class="govuk-body">{{ profession.description }}</p>
+      </div>
+    </div>
+  {% endif %}
+  
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <div class="govuk-summary-card">
+        <div class="govuk-summary-card__title-wrapper">
+          <h2 class="govuk-summary-card__title">Summary</h2>
+        </div>
+        <div class="govuk-summary-card__content">
+          <dl class="govuk-summary-list">
+            <div class="govuk-summary-list__row">
+              <dt class="govuk-summary-list__key">Total projects</dt>
+              <dd class="govuk-summary-list__value">{{ summary.total }}</dd>
+            </div>
+            <div class="govuk-summary-list__row">
+              <dt class="govuk-summary-list__key">Red status</dt>
+              <dd class="govuk-summary-list__value">
+                <strong class="govuk-tag govuk-tag--red">{{ summary.red }}</strong>
+              </dd>
+            </div>
+            <div class="govuk-summary-list__row">
+              <dt class="govuk-summary-list__key">Amber status</dt>
+              <dd class="govuk-summary-list__value">
+                <strong class="govuk-tag govuk-tag--yellow">{{ summary.amber }}</strong>
+              </dd>
+            </div>
+            <div class="govuk-summary-list__row">
+              <dt class="govuk-summary-list__key">Green status</dt>
+              <dd class="govuk-summary-list__value">
+                <strong class="govuk-tag govuk-tag--green">{{ summary.green }}</strong>
+              </dd>
+            </div>
+            <div class="govuk-summary-list__row">
+              <dt class="govuk-summary-list__key">Not assessed</dt>
+              <dd class="govuk-summary-list__value">{{ summary.notAssessed }}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+      
+      <h2 class="govuk-heading-m">Projects</h2>
+      
+      {% if projects and projects.length > 0 %}
+        <table class="govuk-table">
+          <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+              <th scope="col" class="govuk-table__header">Project</th>
+              <th scope="col" class="govuk-table__header">Project Status</th>
+              <th scope="col" class="govuk-table__header">{{ profession.displayName }} assessment</th>
+              <th scope="col" class="govuk-table__header">Commentary</th>
+              <th scope="col" class="govuk-table__header">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body">
+            {% for project in projects %}
+              <tr class="govuk-table__row">
+                <td class="govuk-table__cell">
+                  <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
+                </td>
+                <td class="govuk-table__cell">
+                  {% if project.status == "RED" %}
+                    <strong class="govuk-tag govuk-tag--red">{{ project.status }}</strong>
+                  {% elif project.status == "AMBER" %}
+                    <strong class="govuk-tag govuk-tag--yellow">{{ project.status }}</strong>
+                  {% elif project.status == "GREEN" %}
+                    <strong class="govuk-tag govuk-tag--green">{{ project.status }}</strong>
+                  {% else %}
+                    <strong class="govuk-tag">{{ project.status }}</strong>
+                  {% endif %}
+                </td>
+                <td class="govuk-table__cell">
+                  {% if project.professionAssessment.status == "RED" %}
+                    <strong class="govuk-tag govuk-tag--red">{{ project.professionAssessment.status }}</strong>
+                  {% elif project.professionAssessment.status == "AMBER" %}
+                    <strong class="govuk-tag govuk-tag--yellow">{{ project.professionAssessment.status }}</strong>
+                  {% elif project.professionAssessment.status == "GREEN" %}
+                    <strong class="govuk-tag govuk-tag--green">{{ project.professionAssessment.status }}</strong>
+                  {% else %}
+                    <strong class="govuk-tag govuk-tag--grey">{{ project.professionAssessment.status }}</strong>
+                  {% endif %}
+                </td>
+                <td class="govuk-table__cell">
+                  {% if project.professionAssessment.commentary %}
+                    {{ project.professionAssessment.commentary | truncate(100) }}
+                  {% else %}
+                    <em>No commentary</em>
+                  {% endif %}
+                </td>
+                <td class="govuk-table__cell">
+                  <a href="/projects/{{ project.id }}/edit?tab=professions" class="govuk-link">Add assessment</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="govuk-body">No projects found with this profession assessment.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %} 

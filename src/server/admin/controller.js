@@ -5,9 +5,11 @@ import {
   deleteProject,
   getProjectById
 } from '~/src/server/services/projects.js'
+import { getProfessions } from '~/src/server/services/professions.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProjects } from '~/src/server/data/projects.js'
+import { defaultProfessions } from '~/src/server/data/professions.js'
 import { config } from '~/src/config/config.js'
 
 export const adminController = {
@@ -15,6 +17,7 @@ export const adminController = {
     try {
       let standards = []
       let projects = []
+      let professions = []
 
       try {
         standards = (await getServiceStandards(request)) || []
@@ -30,6 +33,13 @@ export const adminController = {
         throw Boom.boomify(error, { statusCode: 500 })
       }
 
+      try {
+        professions = (await getProfessions(request)) || []
+      } catch (error) {
+        request.logger.error({ error }, 'Error fetching admin dashboard data')
+        throw Boom.boomify(error, { statusCode: 500 })
+      }
+
       // Get environment from config or use a default for testing
       const isTestEnvironment = config.get
         ? config.get('env') === 'test'
@@ -40,6 +50,7 @@ export const adminController = {
         heading: 'Data Management',
         standardsCount: standards?.length || 0,
         projectsCount: projects?.length || 0,
+        professionsCount: professions?.length || 0,
         projects,
         notification: request.query.notification,
         isTestEnvironment
@@ -222,6 +233,109 @@ export const adminController = {
         message:
           'Are you sure you want to delete ALL service standards? This will remove all standard definitions from the system.',
         confirmUrl: '/admin/standards/delete',
+        cancelUrl: '/admin',
+        backLink: '/admin'
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to show delete confirmation')
+      return h.redirect(
+        '/admin?notification=Failed to show delete confirmation'
+      )
+    }
+  },
+
+  seedProfessions: async (request, h) => {
+    request.logger.info('Seeding professions from data file')
+
+    try {
+      // Use the authed fetch to get the admin API
+      const result = await authedFetchJsonDecorator(request)(
+        '/api/admin/seed-professions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ seedData: defaultProfessions })
+        }
+      )
+
+      request.logger.info(
+        { result: result || 'no response data' },
+        'Seed professions result'
+      )
+
+      return h.redirect('/admin?notification=Professions seeded successfully')
+    } catch (error) {
+      request.logger.warn(
+        {
+          error: error.message
+        },
+        'Error seeding professions'
+      )
+
+      // If the API is not implemented (404), show a notification
+      if (error.message?.includes('404')) {
+        return h.redirect(
+          '/admin?notification=Professions API not yet available - backend needs updating'
+        )
+      }
+
+      return h.redirect('/admin?notification=Failed to seed professions')
+    }
+  },
+
+  deleteProfessions: async (request, h) => {
+    request.logger.info('Deleting all professions')
+
+    try {
+      // Use the authed fetch to get the admin API
+      const result = await authedFetchJsonDecorator(request)(
+        '/api/admin/delete-professions',
+        {
+          method: 'DELETE'
+        }
+      )
+
+      request.logger.info(
+        { result: result || 'no response data' },
+        'Delete professions result'
+      )
+
+      return h.redirect('/admin?notification=Professions deleted successfully')
+    } catch (error) {
+      request.logger.warn(
+        {
+          error: error.message
+        },
+        'Error deleting professions'
+      )
+
+      // If the API is not implemented (404), show a notification
+      if (error.message?.includes('404')) {
+        return h.redirect(
+          '/admin?notification=Professions API not yet available - backend needs updating'
+        )
+      }
+
+      return h.redirect('/admin?notification=Failed to delete professions')
+    }
+  },
+
+  confirmDeleteAllProfessions: async (request, h) => {
+    try {
+      // If this is a POST with confirmed=true, proceed with deletion
+      if (request.method === 'post' && request.payload.confirmed === 'true') {
+        return await adminController.deleteProfessions(request, h)
+      }
+
+      // Otherwise show confirmation page
+      return h.view('admin/confirm-delete', {
+        pageTitle: 'Confirm Delete All Professions',
+        heading: 'Delete All Professions',
+        message:
+          'Are you sure you want to delete ALL professions? This will remove all profession definitions from the system.',
+        confirmUrl: '/admin/professions/delete',
         cancelUrl: '/admin',
         backLink: '/admin'
       })

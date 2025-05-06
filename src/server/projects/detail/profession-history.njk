@@ -1,0 +1,75 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% block content %}
+  {{ appHeading({
+    text: heading,
+    caption: project.name
+  }) }}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h2 class="govuk-heading-m">{{ profession.name }}</h2>
+      <p class="govuk-body">{{ profession.description }}</p>
+      
+      <p class="govuk-body">
+        Current status: 
+        {% if profession.status === 'RED' %}
+          {{ govukTag({ text: profession.status, classes: "govuk-tag--red" }) }}
+        {% elif profession.status === 'AMBER' %}
+          {{ govukTag({ text: profession.status, classes: "govuk-tag--yellow" }) }}
+        {% elif profession.status === 'GREEN' %}
+          {{ govukTag({ text: profession.status, classes: "govuk-tag--green" }) }}
+        {% else %}
+          {{ govukTag({ text: profession.status, classes: "govuk-tag--grey" }) }}
+        {% endif %}
+      </p>
+      
+      <p class="govuk-body">{{ profession.commentary }}</p>
+
+      <h3 class="govuk-heading-s">History</h3>
+      
+      {% if history and history.length > 0 %}
+        <div class="timeline">
+          {% for change in history %}
+            <div class="timeline__event">
+              <h4 class="timeline__event-title govuk-heading-s">
+                {% if change.changes.status and change.changes.status.from !== change.changes.status.to %}
+                  Status update:
+                  <strong class="govuk-tag 
+                    {% if change.changes.status.to === 'RED' %}govuk-tag--red
+                    {% elif change.changes.status.to === 'AMBER' %}govuk-tag--yellow
+                    {% elif change.changes.status.to === 'GREEN' %}govuk-tag--green
+                    {% endif %}">
+                    {{ change.changes.status.to }}
+                  </strong>
+                {% else %}
+                  Comment:
+                {% endif %}
+              </h4>
+              <strong class="govuk-tag govuk-tag--grey govuk-!-margin-bottom-2" style="white-space: nowrap; font-size: 12px; line-height: 1; padding: 3px 6px;">
+                {{ change.changedBy | upper }}
+              </strong>
+              {% if change.changes.commentary %}
+                <p class="govuk-body">{{ change.changes.commentary.to }}</p>
+              {% endif %}
+              <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-margin-top-2">
+                {{ change.timestamp | formatDate }}
+              </p>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="govuk-body">No history found for this profession assessment.</p>
+      {% endif %}
+
+      {{ govukButton({
+        text: "Back to project",
+        href: "/projects/" + project.id,
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
+  </div>
+{% endblock %} 

@@ -8,6 +8,9 @@ const mockGetServiceStandards = jest.fn()
 const mockUpdateServiceStandard = jest.fn()
 const mockGetStandardHistory = jest.fn()
 const mockGetProjects = jest.fn()
+const mockGetProfessions = jest.fn()
+const mockSeedProfessions = jest.fn()
+const mockDeleteProfessions = jest.fn()
 
 // Mock the config.get function
 jest.mock('~/src/config/config.js', () => ({
@@ -30,6 +33,12 @@ jest.mock('~/src/server/services/projects.js', () => ({
   deleteProject: jest.fn()
 }))
 
+jest.mock('~/src/server/services/professions.js', () => ({
+  getProfessions: (...args) => mockGetProfessions(...args),
+  seedProfessions: (...args) => mockSeedProfessions(...args),
+  deleteProfessions: (...args) => mockDeleteProfessions(...args)
+}))
+
 jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
 
 describe('Admin controller', () => {
@@ -41,7 +50,8 @@ describe('Admin controller', () => {
     mockRequest = {
       logger: {
         info: jest.fn(),
-        error: jest.fn()
+        error: jest.fn(),
+        warn: jest.fn()
       },
       auth: {
         credentials: {
@@ -57,6 +67,7 @@ describe('Admin controller', () => {
 
     mockFetch = jest.fn()
     authedFetchJsonDecorator.mockImplementation(() => mockFetch)
+    mockGetProfessions.mockResolvedValue([])
   })
 
   describe('get', () => {
@@ -78,9 +89,11 @@ describe('Admin controller', () => {
 
       const mockStandards = [{}, {}, {}]
       const mockProjects = [{}, {}]
+      const mockProfessions = [{}, {}]
 
       mockGetServiceStandards.mockResolvedValue(mockStandards)
       mockGetProjects.mockResolvedValue(mockProjects)
+      mockGetProfessions.mockResolvedValue(mockProfessions)
 
       // Act
       const result = await adminController.get(mockRequest, mockH)
@@ -91,9 +104,10 @@ describe('Admin controller', () => {
         heading: 'Data Management',
         standardsCount: 3,
         projectsCount: 2,
+        professionsCount: 2,
         projects: mockProjects,
         notification: 'Test notification',
-        isTestEnvironment: expect.any(Boolean)
+        isTestEnvironment: true
       })
       expect(result).toBe('view result')
     })
@@ -115,6 +129,7 @@ describe('Admin controller', () => {
       const mockError = new Error('API Error')
       mockGetServiceStandards.mockRejectedValue(mockError)
       mockGetProjects.mockResolvedValue([])
+      mockGetProfessions.mockResolvedValue([])
 
       // Act & Assert
       await expect(adminController.get(mockRequest, mockH)).rejects.toThrow(
@@ -137,12 +152,151 @@ describe('Admin controller', () => {
       }
       mockGetServiceStandards.mockResolvedValue([])
       mockGetProjects.mockRejectedValue(new Error('API Error'))
+      mockGetProfessions.mockResolvedValue([])
 
       // Act & Assert
       await expect(adminController.get(mockRequest, mockH)).rejects.toThrow(
         Boom.Boom
       )
       expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+
+    test('should handle professions fetch error', async () => {
+      // Arrange
+      const mockRequest = {
+        query: {},
+        logger: {
+          info: jest.fn(),
+          error: jest.fn()
+        }
+      }
+      mockGetServiceStandards.mockResolvedValue([])
+      mockGetProjects.mockResolvedValue([])
+      mockGetProfessions.mockRejectedValue(new Error('API Error'))
+
+      // Act & Assert
+      await expect(adminController.get(mockRequest, mockH)).rejects.toThrow(
+        Boom.Boom
+      )
+      expect(mockRequest.logger.error).toHaveBeenCalled()
+    })
+  })
+
+  describe('seedProfessions', () => {
+    test('should seed professions and redirect', async () => {
+      // Arrange
+      const mockRequest = {
+        logger: { info: jest.fn() }
+      }
+      mockSeedProfessions.mockResolvedValue(true)
+
+      // Act
+      await adminController.seedProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Professions seeded successfully'
+      )
+    })
+
+    test('should handle API not implemented error', async () => {
+      // Arrange
+      const mockRequest = {
+        logger: {
+          error: jest.fn(),
+          warn: jest.fn(),
+          info: jest.fn()
+        }
+      }
+
+      // Create an error that includes a 404 message to trigger the API not implemented branch
+      const error = new Error('API Error: 404')
+      error.message = 'API Error: 404'
+
+      // Create a custom mock for authedFetchJsonDecorator
+      const mockCustomFetch = jest.fn().mockRejectedValue(error)
+      authedFetchJsonDecorator.mockImplementationOnce(() => mockCustomFetch)
+
+      // Act
+      await adminController.seedProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Professions API not yet available - backend needs updating'
+      )
+      expect(mockRequest.logger.warn).toHaveBeenCalled()
+    })
+
+    test('should handle other errors', async () => {
+      // Arrange
+      mockFetch.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.seedProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to seed professions'
+      )
+    })
+  })
+
+  describe('deleteProfessions', () => {
+    test('should delete professions and redirect', async () => {
+      // Arrange
+      const mockRequest = {
+        logger: { info: jest.fn() }
+      }
+      mockDeleteProfessions.mockResolvedValue(true)
+
+      // Act
+      await adminController.deleteProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Professions deleted successfully'
+      )
+    })
+
+    test('should handle API not implemented error', async () => {
+      // Arrange
+      const mockRequest = {
+        logger: {
+          error: jest.fn(),
+          warn: jest.fn(),
+          info: jest.fn()
+        }
+      }
+
+      // Create an error that includes a 404 message to trigger the API not implemented branch
+      const error = new Error('API Error: 404')
+      error.message = 'API Error: 404'
+
+      // Create a custom mock for authedFetchJsonDecorator
+      const mockCustomFetch = jest.fn().mockRejectedValue(error)
+      authedFetchJsonDecorator.mockImplementationOnce(() => mockCustomFetch)
+
+      // Act
+      await adminController.deleteProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Professions API not yet available - backend needs updating'
+      )
+      expect(mockRequest.logger.warn).toHaveBeenCalled()
+    })
+
+    test('should handle other errors', async () => {
+      // Arrange
+      mockFetch.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.deleteProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to delete professions'
+      )
     })
   })
 

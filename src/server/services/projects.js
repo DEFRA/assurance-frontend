@@ -182,6 +182,11 @@ export async function updateProject(id, projectData, request) {
       })
     }
 
+    // If we're updating tags, replace the entire array
+    if (projectData.tags) {
+      updatedProject.tags = projectData.tags
+    }
+
     // If we're updating standards, merge them with existing standards
     if (projectData.standards) {
       updatedProject.standards = currentProject.standards.map((standard) => {
@@ -197,6 +202,20 @@ export async function updateProject(id, projectData, request) {
         }
         return standard
       })
+    }
+
+    // If we're updating professions, replace the entire array
+    if (projectData.professions) {
+      // Initialize professions array if it doesn't exist
+      if (!updatedProject.professions) {
+        updatedProject.professions = []
+      }
+
+      updatedProject.professions = projectData.professions
+      logger.info(
+        { professions: updatedProject.professions },
+        'Updating project professions'
+      )
     }
 
     let result
@@ -327,6 +346,53 @@ export async function getStandardHistory(projectId, standardId, request) {
   }
 }
 
+/**
+ * Normalize history data to ensure consistent structure
+ * @param {object} entry - The history entry to normalize
+ * @param {string} entryType - The type of history entry ('project' or 'profession')
+ * @returns {object} - Normalized history entry
+ */
+function normalizeHistoryEntry(entry, entryType = 'project') {
+  // Create a new object to avoid mutating the original
+  const normalizedEntry = { ...entry }
+
+  // Ensure timestamp is present
+  normalizedEntry.timestamp =
+    entry.timestamp || entry.changeDate || new Date().toISOString()
+
+  // Add type property if not present
+  normalizedEntry.type = entry.type || entryType
+
+  // Ensure changes object exists
+  if (!normalizedEntry.changes) {
+    normalizedEntry.changes = {}
+  }
+
+  // Handle status changes
+  if (entry.status && !normalizedEntry.changes.status) {
+    normalizedEntry.changes.status = {
+      from: '',
+      to: entry.status
+    }
+  } else if (typeof normalizedEntry.changes.status === 'string') {
+    // Convert string status to proper object
+    normalizedEntry.changes.status = {
+      from: '',
+      to: normalizedEntry.changes.status
+    }
+  }
+
+  // Ensure commentary changes have proper structure
+  if (entry.commentary && !normalizedEntry.changes.commentary) {
+    normalizedEntry.changes.commentary = {
+      from: '',
+      to: entry.commentary
+    }
+  }
+
+  return normalizedEntry
+}
+
 export async function getProjectHistory(projectId, request) {
   const logger = createLogger()
   try {
@@ -363,11 +429,16 @@ export async function getProjectHistory(projectId, request) {
       return []
     }
 
+    // Normalize all history entries
+    const normalizedData = data.map((entry) =>
+      normalizeHistoryEntry(entry, 'project')
+    )
+
     logger.info(
-      { historyCount: data.length },
+      { historyCount: normalizedData.length },
       'Project history retrieved successfully'
     )
-    return data
+    return normalizedData
   } catch (error) {
     logger.error(
       {
@@ -419,6 +490,62 @@ export async function deleteProject(id, request) {
         id
       },
       'Failed to delete project'
+    )
+    throw error
+  }
+}
+
+/**
+ * Get history for a specific profession on a project
+ * @param {string} projectId - The project ID
+ * @param {string} professionId - The profession ID
+ * @param {object} request - Hapi request object
+ * @returns {Promise<Array>} - Array of profession history items
+ */
+export async function getProfessionHistory(projectId, professionId, request) {
+  const logger = createLogger()
+  try {
+    const endpoint = `/projects/${projectId}/professions/${professionId}/history`
+    logger.info(
+      { projectId, professionId },
+      'Fetching profession history from API'
+    )
+
+    let data
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      // Fall back to unauthenticated fetcher
+      data = await fetcher(endpoint)
+    }
+
+    if (!data) {
+      logger.warn('No history found', { projectId, professionId })
+      return []
+    }
+
+    // Normalize all profession history entries
+    const normalizedData = data.map((entry) =>
+      normalizeHistoryEntry(entry, 'profession')
+    )
+
+    logger.info(
+      { historyCount: normalizedData.length },
+      'Profession history retrieved successfully'
+    )
+    return normalizedData
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        projectId,
+        professionId
+      },
+      'Failed to fetch profession history'
     )
     throw error
   }

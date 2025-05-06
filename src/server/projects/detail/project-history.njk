@@ -16,7 +16,11 @@
           {% for change in history %}
             <div class="timeline__event">
               <h3 class="timeline__event-title govuk-heading-s">
-                {% if change.changes.status and change.changes.status.from !== change.changes.status.to %}
+                {% if change.type === 'profession' %}
+                  {# Profession comment #}
+                  Comment:
+                {% elif change.changes.status and change.changes.status.from !== change.changes.status.to %}
+                  {# Project overall status update #}
                   Delivery status update:
                   <strong class="govuk-tag 
                     {% if change.changes.status.to === 'RED' %}govuk-tag--red
@@ -27,24 +31,14 @@
                   </strong>
                 {% elif change.changes.name %}
                   Project name updated
+                {% elif change.changes.commentary and change.type === 'project' %}
+                  Project commentary updated
                 {% else %}
-                  Comment:
+                  General update
                 {% endif %}
               </h3>
               <strong class="govuk-tag govuk-tag--grey govuk-!-margin-bottom-2" style="white-space: nowrap; font-size: 10px; line-height: 1; padding: 3px 6px;">
-                {% if change.changedBy === 'system' %}
-                  {% set professions = [
-                    'DELIVERY MANAGEMENT',
-                    'PRODUCT MANAGEMENT',
-                    'USER CENTRED DESIGN',
-                    'ARCHITECTURE',
-                    'SOFTWARE DEVELOPMENT',
-                    'BUSINESS ANALYSIS'
-                  ] %}
-                  {{ professions | random }}
-                {% else %}
-                  {{ change.changedBy | upper }}
-                {% endif %}
+                {{ change.changedBy | upper }}
               </strong>
               {% if change.changes.commentary %}
                 <p class="govuk-body">{{ change.changes.commentary.to }}</p>

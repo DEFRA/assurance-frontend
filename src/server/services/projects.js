@@ -66,19 +66,6 @@ export async function createProject(projectData, request) {
     const endpoint = '/projects'
     logger.info({ projectData }, 'Creating new project')
 
-    // Get all service standards
-    const standards = await getServiceStandards(request)
-
-    if (!standards || standards.length === 0) {
-      logger.error('No service standards available')
-      throw new Error(
-        'Failed to create project: No service standards available'
-      )
-    }
-
-    // Sort standards by number first
-    const sortedStandards = [...standards].sort((a, b) => a.number - b.number)
-
     // Format date as UK readable string
     const now = new Date()
     const formattedDate = now.toLocaleDateString('en-GB', {
@@ -87,21 +74,50 @@ export async function createProject(projectData, request) {
       year: 'numeric'
     })
 
-    // Create project data with standards
-    const projectWithStandards = {
+    // Create base project data
+    const projectToCreate = {
       id: '', // API will generate this
       name: projectData.name,
       status: projectData.status,
       commentary: projectData.commentary,
       lastUpdated: formattedDate,
-      standards: sortedStandards.map((standard) => ({
-        standardId: standard.number.toString(), // Keep as string for API
-        status: 'GREEN',
-        commentary: `Initial assessment for Standard ${standard.number}: ${standard.name}`
-      }))
+      standards: [] // Default to empty array
     }
 
-    logger.info({ projectWithStandards }, 'Creating project with standards')
+    // Try to get service standards, but proceed even if they're not available
+    try {
+      const standards = await getServiceStandards(request)
+
+      if (standards && standards.length > 0) {
+        // Sort standards by number first
+        const sortedStandards = [...standards].sort(
+          (a, b) => a.number - b.number
+        )
+
+        // Add standards to the project
+        projectToCreate.standards = sortedStandards.map((standard) => ({
+          standardId: standard.number.toString(), // Keep as string for API
+          status: 'GREEN',
+          commentary: `Initial assessment for Standard ${standard.number}: ${standard.name}`
+        }))
+
+        logger.info(
+          { standardsCount: projectToCreate.standards.length },
+          'Added standards to new project'
+        )
+      } else {
+        logger.warn(
+          'No service standards available, creating project without standards'
+        )
+      }
+    } catch (standardsError) {
+      logger.warn(
+        { error: standardsError.message },
+        'Error fetching service standards, creating project without standards'
+      )
+    }
+
+    logger.info({ projectToCreate }, 'Creating project')
 
     let result
     if (request) {
@@ -109,13 +125,13 @@ export async function createProject(projectData, request) {
       const authedFetch = authedFetchJsonDecorator(request)
       result = await authedFetch(endpoint, {
         method: 'POST',
-        body: JSON.stringify(projectWithStandards)
+        body: JSON.stringify(projectToCreate)
       })
     } else {
       // Fall back to unauthenticated fetcher
       result = await fetcher(endpoint, {
         method: 'POST',
-        body: JSON.stringify(projectWithStandards)
+        body: JSON.stringify(projectToCreate)
       })
     }
 
@@ -139,9 +155,9 @@ export async function createProject(projectData, request) {
     logger.info(
       {
         projectId: result.id,
-        standardsCount: projectWithStandards.standards.length
+        standardsCount: projectToCreate.standards.length
       },
-      'Project created successfully with standards'
+      'Project created successfully'
     )
     return result
   } catch (error) {

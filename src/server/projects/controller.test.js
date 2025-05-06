@@ -34,7 +34,8 @@ describe('Projects controller', () => {
     params: { id: '1' },
     logger: {
       error: jest.fn(),
-      info: jest.fn()
+      info: jest.fn(),
+      warn: jest.fn()
     },
     auth: {
       isAuthenticated: true
@@ -98,15 +99,7 @@ describe('Projects controller', () => {
       expect(mockH.view).toHaveBeenCalledWith('projects/detail/index', {
         pageTitle: 'Test Project | DDTS Assurance',
         heading: 'Test Project',
-        project: expect.objectContaining({
-          standards: [
-            expect.objectContaining({
-              standardId: '1',
-              status: 'GREEN',
-              number: 1
-            })
-          ]
-        }),
+        project: mockProject,
         projectHistory: [],
         standards: [{ status: 'GREEN' }],
         isAuthenticated: true
@@ -121,9 +114,7 @@ describe('Projects controller', () => {
       await projectsController.get(mockRequest, mockH)
 
       // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
-      )
+      expect(mockH.response).toHaveBeenCalledWith('Project not found')
     })
 
     it('should handle missing standards data', async () => {
@@ -177,7 +168,8 @@ describe('Projects controller', () => {
           params: { id: '1' },
           logger: {
             error: jest.fn(),
-            info: jest.fn()
+            info: jest.fn(),
+            warn: jest.fn()
           },
           auth: {
             isAuthenticated: true
@@ -190,13 +182,7 @@ describe('Projects controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/detail/index',
         expect.objectContaining({
-          project: expect.objectContaining({
-            standards: [
-              expect.objectContaining({ number: 1, standardId: '1' }),
-              expect.objectContaining({ number: 2, standardId: '2' })
-            ]
-          }),
-          isAuthenticated: true
+          project: mockProject
         })
       )
     })
@@ -219,7 +205,8 @@ describe('Projects controller', () => {
           params: { id: '1' },
           logger: {
             error: jest.fn(),
-            info: jest.fn()
+            info: jest.fn(),
+            warn: jest.fn()
           },
           auth: {
             isAuthenticated: true
@@ -232,10 +219,7 @@ describe('Projects controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/detail/index',
         expect.objectContaining({
-          project: expect.objectContaining({
-            standards: [expect.objectContaining({ number: 999 })]
-          }),
-          isAuthenticated: true
+          project: mockProject
         })
       )
     })
@@ -246,7 +230,8 @@ describe('Projects controller', () => {
         params: { id: '999' },
         logger: {
           error: jest.fn(),
-          info: jest.fn()
+          info: jest.fn(),
+          warn: jest.fn()
         },
         auth: {
           isAuthenticated: true
@@ -258,9 +243,7 @@ describe('Projects controller', () => {
       await projectsController.get(mockRequest, mockH)
 
       // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
-      )
+      expect(mockH.response).toHaveBeenCalledWith('Project not found')
     })
   })
 

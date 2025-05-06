@@ -128,66 +128,44 @@ export const projectsController = {
 
   get: async (request, h) => {
     const { id } = request.params
-    const isAuthenticated = request.auth.isAuthenticated
 
     try {
-      // Get the project details
+      // Determine if the user is authenticated
+      const isAuthenticated = request.auth.isAuthenticated
+
+      // Fetch the project
       const project = await getProjectById(id, request)
-
       if (!project) {
-        request.logger.error('Project not found', { id })
-        return h.redirect('/?notification=Project not found')
+        request.logger.warn({ id }, 'Project not found')
+        return h.response('Project not found').code(404)
       }
 
-      request.logger.info({ id }, 'Project retrieved')
-
-      let standards = []
-      const professions = await getProfessions(request)
-
-      // Get service standards for reference
+      // Get service standards to ensure the data is up to date
       try {
-        standards = await getServiceStandards(request)
+        await getServiceStandards(request)
       } catch (error) {
-        request.logger.error({ error }, 'Error fetching service standards')
-        // Continue with empty standards list if fetch fails
+        request.logger.error(
+          { error },
+          'Error fetching service standards for project view'
+        )
+        // Continue without service standards if fetch fails
       }
 
-      // Map standards to project assessments and ensure proper numeric sorting
-      if (project.standards?.length > 0) {
-        project.standards = mapStandardsWithDetails(
-          project.standards,
-          standards
-        ).sort((a, b) => a.number - b.number)
+      // Get professions to ensure the data is up to date
+      try {
+        await getProfessions(request)
+      } catch (error) {
+        request.logger.error(
+          { error },
+          'Error fetching professions for project view'
+        )
+        // Continue without professions if fetch fails
       }
 
-      // Enhance profession data with name
-      if (project.professions?.length > 0) {
-        project.professions = project.professions.map((profession) => {
-          const professionData = professions.find(
-            (p) => p.id === profession.professionId
-          )
-          return {
-            ...profession,
-            name:
-              professionData?.name || `Profession ${profession.professionId}`
-          }
-        })
-      }
-
-      // Get project history for the timeline
+      // Get project history using the service function
       let projectHistory = []
       try {
-        const historyResponse = await fetch(`/api/projects/${id}/history`, {
-          method: 'GET',
-          headers: {
-            Accept: 'application/json'
-          }
-        })
-
-        if (historyResponse.ok) {
-          const data = await historyResponse.json()
-          projectHistory = data.history || []
-        }
+        projectHistory = await getProjectHistory(id, request)
       } catch (error) {
         request.logger.error({ error }, 'Error fetching project history')
         // Continue with empty history if fetch fails

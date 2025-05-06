@@ -104,6 +104,34 @@
       
       <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
       
+      <h2 class="govuk-heading-m">Professions</h2>
+      <p class="govuk-body">Currently {{ professionsCount }} professions loaded</p>
+      
+      <div class="govuk-inset-text">
+        Note: The professions API endpoints may not be fully implemented in the backend yet. 
+        The UI will show default profession data until the backend is ready.
+      </div>
+      
+      <div class="govuk-button-group">
+        <form method="POST" action="/admin/professions/seed" class="govuk-!-display-inline govuk-!-margin-right-2">
+          <button class="govuk-button" data-module="govuk-button">
+            Add Professions
+          </button>
+        </form>
+        
+        {% if not isTestEnvironment %}
+        <div class="govuk-!-display-inline">
+          {{ govukButton({
+            text: "Delete All Professions",
+            href: "/admin/professions/delete/confirm",
+            classes: "govuk-button--warning"
+          }) }}
+        </div>
+        {% endif %}
+      </div>
+      
+      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+      
       <h2 class="govuk-heading-m">System Management</h2>
       
       <h3 class="govuk-heading-s">Reset Data</h3>
@@ -114,6 +142,7 @@
       <ol class="govuk-list govuk-list--number">
         <li>Delete all existing data</li>
         <li>Seed service standards</li>
+        <li>Seed professions</li>
         <li>Seed sample projects</li>
       </ol>
       
@@ -147,6 +176,16 @@
         (response.ok ? 'Projects deleted successfully' : 'Failed to delete projects');
     } catch (error) {
       window.location.href = '/admin?notification=Failed to delete projects';
+    }
+  }
+  
+  async function deleteProfessions() {
+    try {
+      const response = await fetch('/admin/professions/delete', { method: 'DELETE' });
+      window.location.href = '/admin?notification=' + 
+        (response.ok ? 'Professions deleted successfully' : 'Failed to delete professions');
+    } catch (error) {
+      window.location.href = '/admin?notification=Failed to delete professions';
     }
   }
 </script>

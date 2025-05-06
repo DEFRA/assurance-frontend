@@ -29,17 +29,36 @@ export function createProjectHistoryChart(container, history) {
     GREEN: 3
   }
 
-  // Process history data
+  // Process history data to handle different formats
   const data = history
+    .filter((entry) => {
+      // Only include entries with status information
+      return (
+        entry?.changes?.status?.to || entry?.changes?.status || entry.status
+      )
+    })
     .map((entry) => {
-      const status = entry.changes.status?.to ?? entry.changes.status
+      // Handle different status formats
+      let status
+      if (entry.changes?.status?.to) {
+        status = entry.changes.status.to
+      } else if (typeof entry.changes?.status === 'string') {
+        status = entry.changes.status
+      } else if (entry.status) {
+        status = entry.status
+      } else {
+        // No usable status found
+        return null
+      }
+
       return {
         x: new Date(entry.timestamp),
-        y: statusToValue[status],
+        y: statusToValue[status] || 2, // Default to AMBER if invalid status
         status
       }
     })
-    .sort((a, b) => a.x - b.x)
+    .filter(Boolean) // Remove null entries
+    .sort((a, b) => a.x - b.x) // Sort by date ascending
 
   // Create chart
   const chart = new Chart(container.getContext('2d'), {
@@ -80,7 +99,8 @@ export function createProjectHistoryChart(container, history) {
                 return '#505a5f' // Darker grey for hover
             }
           }),
-          tension: 0
+          tension: 0, // Use straight lines between points
+          spanGaps: false // Don't span gaps in the data
         }
       ]
     },

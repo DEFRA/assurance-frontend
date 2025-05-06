@@ -113,6 +113,42 @@ export const admin = {
             },
             pre: [{ method: requireRole('admin') }]
           }
+        },
+        {
+          method: 'POST',
+          path: '/admin/professions/seed',
+          handler: adminController.seedProfessions,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/professions/delete',
+          handler: adminController.deleteProfessions,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: ['GET', 'POST'],
+          path: '/admin/professions/delete/confirm',
+          handler: adminController.confirmDeleteAllProfessions,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
         }
       ])
     }

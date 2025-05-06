@@ -69,6 +69,14 @@ export const projects = {
         },
         {
           method: 'GET',
+          path: '/projects/{id}/professions/{professionId}/history',
+          handler: projectsController.getProfessionHistory,
+          options: {
+            pre: [{ method: requireAuth }]
+          }
+        },
+        {
+          method: 'GET',
           path: '/projects/{id}/edit',
           handler: projectsController.getEdit,
           options: {
@@ -79,6 +87,44 @@ export const projects = {
           method: 'POST',
           path: '/projects/{id}/edit',
           handler: projectsController.postEdit,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            }
+          }
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/edit/profession/{professionId}',
+          handler: projectsController.getEditProfession,
+          options: {
+            pre: [{ method: requireAuth }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/edit/profession/{professionId}',
+          handler: projectsController.postEditProfession,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            }
+          }
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/delete/profession/{professionId}',
+          handler: projectsController.getDeleteProfession,
+          options: {
+            pre: [{ method: requireAuth }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/delete/profession/{professionId}',
+          handler: projectsController.postDeleteProfession,
           options: {
             auth: {
               strategy: 'session',

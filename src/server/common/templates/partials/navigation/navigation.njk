@@ -20,6 +20,13 @@
               Admin
             </a>
           </li>
+          <li class="app-navigation__list-item">
+            <a class="app-navigation__link{% if currentPath and currentPath.startsWith('/professions') %} app-navigation__link--active{% endif %}"
+               href="/professions"
+               data-testid="nav-professions">
+              Professions
+            </a>
+          </li>
         {% endif %}
       </ul>
       

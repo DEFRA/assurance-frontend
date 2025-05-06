@@ -484,7 +484,19 @@ describe('Projects service', () => {
         {
           date: '2024-02-15',
           status: 'GREEN',
-          commentary: 'Project updated'
+          commentary: 'Project updated',
+          timestamp: '2025-05-06T13:05:50.032Z',
+          type: 'project',
+          changes: {
+            status: {
+              from: '',
+              to: 'GREEN'
+            },
+            commentary: {
+              from: '',
+              to: 'Project updated'
+            }
+          }
         }
       ]
       mockFetch.mockResolvedValue(mockHistory)

@@ -31,7 +31,10 @@ describe('Home controller', () => {
   }
 
   const mockRequest = {
-    query: {}
+    query: {},
+    auth: {
+      isAuthenticated: false
+    }
   }
 
   beforeEach(() => {
@@ -69,7 +72,8 @@ describe('Home controller', () => {
           ...project,
           actions: 'View details'
         })),
-        currentTag: undefined
+        currentTag: undefined,
+        isAuthenticated: false
       })
     })
 
@@ -106,7 +110,8 @@ describe('Home controller', () => {
             actions: 'View details'
           }
         ],
-        currentTag: 'Future Farming'
+        currentTag: 'Future Farming',
+        isAuthenticated: false
       })
     })
 
@@ -137,7 +142,8 @@ describe('Home controller', () => {
             actions: 'View details'
           }
         ],
-        currentTag: 'future farming'
+        currentTag: 'future farming',
+        isAuthenticated: false
       })
     })
 
@@ -163,7 +169,8 @@ describe('Home controller', () => {
       expect(mockH.view).toHaveBeenCalledWith('home/index', {
         pageTitle: 'Projects | DDTS Assurance',
         projects: [],
-        currentTag: 'non-existent-tag'
+        currentTag: 'non-existent-tag',
+        isAuthenticated: false
       })
     })
 
@@ -181,7 +188,8 @@ describe('Home controller', () => {
         projects: [],
         currentTag: undefined,
         description:
-          'Unable to load projects at this time. Please try again later.'
+          'Unable to load projects at this time. Please try again later.',
+        isAuthenticated: false
       })
 
       // Check that the error was logged

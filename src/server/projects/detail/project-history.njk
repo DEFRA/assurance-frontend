@@ -37,9 +37,11 @@
                   General update
                 {% endif %}
               </h3>
+              {% if change.type === 'profession' %}
               <strong class="govuk-tag govuk-tag--grey govuk-!-margin-bottom-2" style="white-space: nowrap; font-size: 10px; line-height: 1; padding: 3px 6px;">
                 {{ change.changedBy | upper }}
               </strong>
+              {% endif %}
               {% if change.changes.commentary %}
                 <p class="govuk-body">{{ change.changes.commentary.to }}</p>
               {% endif %}

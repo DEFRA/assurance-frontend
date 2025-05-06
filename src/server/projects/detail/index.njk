@@ -8,7 +8,7 @@
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
 
 {# Create a macro for the project engagement timeline #}
-{% macro projectEngagementTimeline(history) %}
+{% macro projectEngagementTimeline(history, project, isAuthenticated) %}
   {% if history and history.length > 0 %}
     <div class="timeline">
       {% for change in history %}
@@ -35,15 +35,21 @@
               General update
             {% endif %}
           </h3>
+          {% if change.type === 'profession' %}
           <strong class="govuk-tag govuk-tag--grey govuk-!-margin-bottom-2" style="white-space: nowrap; font-size: 10px; line-height: 1; padding: 3px 6px;">
             {{ change.changedBy | upper }}
           </strong>
+          {% endif %}
           {% if change.changes.commentary %}
             <p class="govuk-body">{{ change.changes.commentary.to }}</p>
           {% endif %}
-          <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-margin-top-2 govuk-!-font-size-16">
-            Last updated: {{ change.timestamp | formatDate }}
-          </p>
+          <div class="govuk-body govuk-!-margin-bottom-0 govuk-!-margin-top-2 govuk-!-font-size-16">
+            <div class="govuk-grid-row">
+              <div class="govuk-grid-column-full">
+                Last updated: {{ change.timestamp | formatDate }}
+              </div>
+            </div>
+          </div>
         </div>
       {% endfor %}
     </div>
@@ -106,11 +112,11 @@
 
       {% set engagementHtml %}
         <h2 class="govuk-heading-m">Project Engagement History</h2>
-        {{ projectEngagementTimeline(projectHistory) }}
+        {{ projectEngagementTimeline(projectHistory, project, isAuthenticated) }}
       {% endset %}
 
       {% set professionsHtml %}
-        <h2 class="govuk-heading-m">Profession Assessments</h2>
+        <h2 class="govuk-heading-m">Profession Updates</h2>
         {% if project.professions and project.professions.length > 0 %}
           <div class="govuk-grid-row">
             {% for profession in project.professions %}
@@ -140,18 +146,11 @@
             {% endfor %}
           </div>
         {% else %}
-          <p class="govuk-body">No profession assessments have been added to this project.</p>
+          <p class="govuk-body">No profession updates have been added to this project.</p>
         {% endif %}
       {% endset %}
 
       {% set tabItems = [
-        {
-          id: "overview",
-          label: "Overview",
-          panel: {
-            html: overviewHtml
-          }
-        },
         {
           id: "project-engagement",
           label: "Project engagement",
@@ -165,7 +164,7 @@
         {% set tabItems = tabItems.concat([
           {
             id: "professions",
-            label: "Profession assessments",
+            label: "Profession updates",
             panel: {
               html: professionsHtml
             }

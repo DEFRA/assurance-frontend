@@ -12,10 +12,6 @@ jest.mock('~/src/server/common/helpers/fetch/fetcher.js', () => ({
   fetcher: jest.fn()
 }))
 
-jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js', () => ({
-  authedFetchJsonDecorator: jest.fn()
-}))
-
 jest.mock('~/src/server/services/service-standards.js', () => ({
   getServiceStandards: jest.fn()
 }))
@@ -37,20 +33,6 @@ const mockLogger = jest
   .requireMock('~/src/server/common/helpers/logging/logger.js')
   .createLogger()
 
-// Define mock request object for authenticated API calls
-const mockRequest = {
-  auth: {
-    credentials: {
-      token: 'mock-token'
-    }
-  },
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn()
-  }
-}
-
 // Then get references to the mocks
 const { fetcher: mockFetch } = jest.requireMock(
   '~/src/server/common/helpers/fetch/fetcher.js'
@@ -58,8 +40,6 @@ const { fetcher: mockFetch } = jest.requireMock(
 const { getServiceStandards: mockGetServiceStandards } = jest.requireMock(
   '~/src/server/services/service-standards.js'
 )
-const { authedFetchJsonDecorator: mockAuthedFetchJsonDecorator } =
-  jest.requireMock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
 
 describe('Projects service', () => {
   beforeEach(() => {
@@ -591,36 +571,22 @@ describe('createProject', () => {
   test('should handle missing service standards', async () => {
     // Arrange
     mockGetServiceStandards.mockResolvedValue([])
-    const mockResponse = {
-      id: '123',
+    const mockProjectData = {
       name: 'Test Project',
       status: 'GREEN',
       commentary: 'Initial setup'
     }
-
-    // Mock the authed fetch behavior
-    const mockAuthedFetch = jest.fn().mockResolvedValue(mockResponse)
-    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+    const mockResponse = { id: '123', ...mockProjectData }
+    mockFetch.mockResolvedValue(mockResponse)
 
     // Act
-    const result = await createProject(
-      {
-        name: 'Test Project',
-        status: 'GREEN',
-        commentary: 'Initial setup'
-      },
-      mockRequest
-    )
+    const result = await createProject(mockProjectData)
 
     // Assert
     expect(result).toEqual(mockResponse)
-    expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects',
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"standards":[]')
-      })
-    )
+    // Verify standards array is empty when no standards available
+    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(requestBody.standards).toEqual([])
   })
 
   test('should handle API validation errors', async () => {

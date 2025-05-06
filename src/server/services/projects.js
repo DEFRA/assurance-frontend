@@ -66,6 +66,22 @@ export async function createProject(projectData, request) {
     const endpoint = '/projects'
     logger.info({ projectData }, 'Creating new project')
 
+    // Get service standards if available, but don't require them
+    let standards = []
+    try {
+      standards = (await getServiceStandards(request)) || []
+      logger.info(
+        { standardsCount: standards.length },
+        'Service standards retrieved'
+      )
+    } catch (error) {
+      logger.warn(
+        { error: error.message },
+        'Service standards not available, continuing without them'
+      )
+      // Continue without standards if fetch fails
+    }
+
     // Format date as UK readable string
     const now = new Date()
     const formattedDate = now.toLocaleDateString('en-GB', {
@@ -74,50 +90,30 @@ export async function createProject(projectData, request) {
       year: 'numeric'
     })
 
-    // Create base project data
-    const projectToCreate = {
+    // Prepare standards array if standards are available
+    let projectStandards = []
+    if (standards.length > 0) {
+      // Sort standards by number first
+      const sortedStandards = [...standards].sort((a, b) => a.number - b.number)
+
+      projectStandards = sortedStandards.map((standard) => ({
+        standardId: standard.number.toString(), // Keep as string for API
+        status: 'GREEN',
+        commentary: `Initial assessment for Standard ${standard.number}: ${standard.name}`
+      }))
+    }
+
+    // Create project data with optional standards
+    const projectWithStandards = {
       id: '', // API will generate this
       name: projectData.name,
       status: projectData.status,
       commentary: projectData.commentary,
       lastUpdated: formattedDate,
-      standards: [] // Default to empty array
+      standards: projectStandards
     }
 
-    // Try to get service standards, but proceed even if they're not available
-    try {
-      const standards = await getServiceStandards(request)
-
-      if (standards && standards.length > 0) {
-        // Sort standards by number first
-        const sortedStandards = [...standards].sort(
-          (a, b) => a.number - b.number
-        )
-
-        // Add standards to the project
-        projectToCreate.standards = sortedStandards.map((standard) => ({
-          standardId: standard.number.toString(), // Keep as string for API
-          status: 'GREEN',
-          commentary: `Initial assessment for Standard ${standard.number}: ${standard.name}`
-        }))
-
-        logger.info(
-          { standardsCount: projectToCreate.standards.length },
-          'Added standards to new project'
-        )
-      } else {
-        logger.warn(
-          'No service standards available, creating project without standards'
-        )
-      }
-    } catch (standardsError) {
-      logger.warn(
-        { error: standardsError.message },
-        'Error fetching service standards, creating project without standards'
-      )
-    }
-
-    logger.info({ projectToCreate }, 'Creating project')
+    logger.info({ projectWithStandards }, 'Creating project with standards')
 
     let result
     if (request) {
@@ -125,13 +121,13 @@ export async function createProject(projectData, request) {
       const authedFetch = authedFetchJsonDecorator(request)
       result = await authedFetch(endpoint, {
         method: 'POST',
-        body: JSON.stringify(projectToCreate)
+        body: JSON.stringify(projectWithStandards)
       })
     } else {
       // Fall back to unauthenticated fetcher
       result = await fetcher(endpoint, {
         method: 'POST',
-        body: JSON.stringify(projectToCreate)
+        body: JSON.stringify(projectWithStandards)
       })
     }
 
@@ -155,9 +151,9 @@ export async function createProject(projectData, request) {
     logger.info(
       {
         projectId: result.id,
-        standardsCount: projectToCreate.standards.length
+        standardsCount: projectWithStandards.standards.length
       },
-      'Project created successfully'
+      'Project created successfully with standards'
     )
     return result
   } catch (error) {

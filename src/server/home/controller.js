@@ -13,6 +13,7 @@ export const homeController = {
   handler: async (request, h) => {
     const { tag } = request.query
     const logger = createLogger()
+    const isAuthenticated = request.auth?.isAuthenticated || false
 
     try {
       logger.info('Home page - fetching projects')
@@ -33,7 +34,8 @@ export const homeController = {
           ...project,
           actions: 'View details'
         })),
-        currentTag: tag
+        currentTag: tag,
+        isAuthenticated
       })
     } catch (error) {
       logger.error(
@@ -50,7 +52,8 @@ export const homeController = {
         projects: [],
         currentTag: tag,
         description:
-          'Unable to load projects at this time. Please try again later.'
+          'Unable to load projects at this time. Please try again later.',
+        isAuthenticated
       })
     }
   }

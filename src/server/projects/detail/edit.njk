@@ -21,9 +21,9 @@
   {% endif %}
 
   {% set deliveryHtml %}
+    <h2 class="govuk-heading-m">Update Project Delivery Status</h2>
+    
     <form method="POST" action="/projects/{{ project.id }}/edit?type=delivery" novalidate>
-      <h2 class="govuk-heading-m">Project Delivery Status</h2>
-      
       {{ govukSelect({
         id: "status",
         name: "status",
@@ -45,19 +45,6 @@
         value: project.commentary
       }) }}
 
-      {{ govukInput({
-        id: "tags",
-        name: "tags",
-        label: {
-          text: "Project Tags",
-          classes: "govuk-label--s"
-        },
-        hint: {
-          text: "Separate multiple tags with commas (e.g. Portfolio1, Supplier1, Team2)"
-        },
-        value: project.tags | join(", ")
-      }) }}
-
       <div class="govuk-button-group">
         {{ govukButton({
           text: "Save Delivery Status"
@@ -70,10 +57,111 @@
         }) }}
       </div>
     </form>
+
+    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+    <h2 class="govuk-heading-m">Recent Delivery Updates</h2>
+    
+    {% if deliveryHistory and deliveryHistory.length > 0 %}
+      <table class="govuk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header">Date</th>
+            <th scope="col" class="govuk-table__header">Status</th>
+            <th scope="col" class="govuk-table__header">Commentary</th>
+            <th scope="col" class="govuk-table__header">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for update in deliveryHistory %}
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell">{{ update.timestamp | formatDate }}</td>
+              <td class="govuk-table__cell">
+                {% if update.changes.status.to == "RED" %}
+                  <strong class="govuk-tag govuk-tag--red">{{ update.changes.status.to }}</strong>
+                {% elif update.changes.status.to == "AMBER" %}
+                  <strong class="govuk-tag govuk-tag--yellow">{{ update.changes.status.to }}</strong>
+                {% elif update.changes.status.to == "GREEN" %}
+                  <strong class="govuk-tag govuk-tag--green">{{ update.changes.status.to }}</strong>
+                {% else %}
+                  <strong class="govuk-tag">{{ update.changes.status.to }}</strong>
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                {% if update.changes.commentary.to %}
+                  {{ update.changes.commentary.to | truncate(50) }}
+                {% else %}
+                  <em>No commentary</em>
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                <a href="/projects/{{ project.id }}/edit/delivery/{{ update.id }}" class="govuk-link">Edit</a> | 
+                <a href="/projects/{{ project.id }}/delete/delivery/{{ update.id }}" class="govuk-link govuk-link--no-visited-state">Remove</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="govuk-body-s">
+        <a href="/projects/{{ project.id }}/history" class="govuk-link">View all history</a>
+      </p>
+    {% else %}
+      <p class="govuk-body">No previous delivery updates found.</p>
+    {% endif %}
   {% endset %}
 
   {% set professionsHtml %}
-    <h2 class="govuk-heading-m">Current Profession Assessments</h2>
+    <h2 class="govuk-heading-m">Add New Profession Update</h2>
+    
+    <form method="POST" action="/projects/{{ project.id }}/edit?type=profession" novalidate>
+      <div class="govuk-form-group">
+        {{ govukSelect({
+          id: "profession",
+          name: "profession",
+          label: {
+            text: "Profession",
+            classes: "govuk-label--s"
+          },
+          items: professionOptions
+        }) }}
+        
+        {{ govukSelect({
+          id: "profession-status",
+          name: "profession-status",
+          label: {
+            text: "Status",
+            classes: "govuk-label--s"
+          },
+          items: statusOptions
+        }) }}
+
+        {{ govukTextarea({
+          name: "profession-commentary",
+          id: "profession-commentary",
+          label: {
+            text: "Commentary",
+            classes: "govuk-label--s"
+          },
+          value: ""
+        }) }}
+      </div>
+
+      <div class="govuk-button-group">
+        {{ govukButton({
+          text: "Add Profession Update"
+        }) }}
+        
+        {{ govukButton({
+          text: "Cancel",
+          href: "/projects/" + project.id,
+          classes: "govuk-button--secondary"
+        }) }}
+      </div>
+    </form>
+
+    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+    <h2 class="govuk-heading-m">Current Profession Updates</h2>
     
     {% if project.professions and project.professions.length > 0 %}
       <table class="govuk-table">
@@ -116,56 +204,8 @@
         </tbody>
       </table>
     {% else %}
-      <p class="govuk-body">No profession assessments have been added to this project yet.</p>
+      <p class="govuk-body">No profession updates have been added to this project yet.</p>
     {% endif %}
-
-    <h2 class="govuk-heading-m">Add New Profession Assessment</h2>
-    
-    <form method="POST" action="/projects/{{ project.id }}/edit?type=profession" novalidate>
-      <div class="govuk-form-group">
-        {{ govukSelect({
-          id: "profession",
-          name: "profession",
-          label: {
-            text: "Profession",
-            classes: "govuk-label--s"
-          },
-          items: professionOptions
-        }) }}
-        
-        {{ govukSelect({
-          id: "profession-status",
-          name: "profession-status",
-          label: {
-            text: "Assessment",
-            classes: "govuk-label--s"
-          },
-          items: statusOptions
-        }) }}
-
-        {{ govukTextarea({
-          name: "profession-commentary",
-          id: "profession-commentary",
-          label: {
-            text: "Commentary",
-            classes: "govuk-label--s"
-          },
-          value: ""
-        }) }}
-      </div>
-
-      <div class="govuk-button-group">
-        {{ govukButton({
-          text: "Add Profession Assessment"
-        }) }}
-        
-        {{ govukButton({
-          text: "Cancel",
-          href: "/projects/" + project.id,
-          classes: "govuk-button--secondary"
-        }) }}
-      </div>
-    </form>
   {% endset %}
 
   {{ govukTabs({
@@ -179,7 +219,7 @@
       },
       {
         id: "professions",
-        label: "Profession Assessments",
+        label: "Profession Updates",
         panel: {
           html: professionsHtml
         }
@@ -249,6 +289,8 @@
         const tabParam = urlParams.get('tab');
         if (tabParam === 'professions') {
           selectTabWithId('professions');
+        } else if (tabParam === 'delivery') {
+          selectTabWithId('delivery');
         }
       } catch (e) {
         console.error('Error in DOM setup:', e);

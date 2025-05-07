@@ -46,7 +46,7 @@ describe('Home controller', () => {
   })
 
   describe('handler', () => {
-    test('should return view with all projects when no tag filter', async () => {
+    test('should return view with all projects when no search query', async () => {
       // Arrange
       const mockProjects = [
         {
@@ -68,16 +68,14 @@ describe('Home controller', () => {
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('home/index', {
         pageTitle: 'Projects | DDTS Assurance',
-        projects: mockProjects.map((project) => ({
-          ...project,
-          actions: 'View details'
-        })),
-        currentTag: undefined,
+        projects: mockProjects,
+        searchTerm: undefined,
+        projectNames: ['Project 1', 'Project 2'],
         isAuthenticated: false
       })
     })
 
-    test('should filter projects by tag when tag query parameter is provided', async () => {
+    test('should filter projects by name when search query parameter is provided', async () => {
       // Arrange
       const mockProjects = [
         {
@@ -93,29 +91,25 @@ describe('Home controller', () => {
       ]
       mockGetProjects.mockResolvedValue(mockProjects)
 
-      const requestWithTag = {
+      const requestWithSearch = {
         ...mockRequest,
-        query: { tag: 'Future Farming' }
+        query: { search: 'Project 1' }
       }
 
       // Act
-      await homeController.handler(requestWithTag, mockH)
+      await homeController.handler(requestWithSearch, mockH)
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('home/index', {
         pageTitle: 'Projects | DDTS Assurance',
-        projects: [
-          {
-            ...mockProjects[0],
-            actions: 'View details'
-          }
-        ],
-        currentTag: 'Future Farming',
+        projects: [mockProjects[0]],
+        searchTerm: 'Project 1',
+        projectNames: ['Project 1', 'Project 2'],
         isAuthenticated: false
       })
     })
 
-    test('should handle case-insensitive tag filtering', async () => {
+    test('should handle case-insensitive name filtering', async () => {
       // Arrange
       const mockProjects = [
         {
@@ -125,24 +119,20 @@ describe('Home controller', () => {
       ]
       mockGetProjects.mockResolvedValue(mockProjects)
 
-      const requestWithTag = {
+      const requestWithSearch = {
         ...mockRequest,
-        query: { tag: 'future farming' }
+        query: { search: 'project' }
       }
 
       // Act
-      await homeController.handler(requestWithTag, mockH)
+      await homeController.handler(requestWithSearch, mockH)
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('home/index', {
         pageTitle: 'Projects | DDTS Assurance',
-        projects: [
-          {
-            ...mockProjects[0],
-            actions: 'View details'
-          }
-        ],
-        currentTag: 'future farming',
+        projects: mockProjects,
+        searchTerm: 'project',
+        projectNames: ['Project 1'],
         isAuthenticated: false
       })
     })
@@ -157,19 +147,20 @@ describe('Home controller', () => {
       ]
       mockGetProjects.mockResolvedValue(mockProjects)
 
-      const requestWithTag = {
+      const requestWithSearch = {
         ...mockRequest,
-        query: { tag: 'non-existent-tag' }
+        query: { search: 'non-existent-project' }
       }
 
       // Act
-      await homeController.handler(requestWithTag, mockH)
+      await homeController.handler(requestWithSearch, mockH)
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('home/index', {
         pageTitle: 'Projects | DDTS Assurance',
         projects: [],
-        currentTag: 'non-existent-tag',
+        searchTerm: 'non-existent-project',
+        projectNames: ['Project 1'],
         isAuthenticated: false
       })
     })
@@ -186,7 +177,8 @@ describe('Home controller', () => {
       expect(mockH.view).toHaveBeenCalledWith('home/index', {
         pageTitle: 'Projects | DDTS Assurance',
         projects: [],
-        currentTag: undefined,
+        searchTerm: undefined,
+        projectNames: [],
         description:
           'Unable to load projects at this time. Please try again later.',
         isAuthenticated: false

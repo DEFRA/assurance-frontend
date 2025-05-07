@@ -2,7 +2,6 @@
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
-{% from "govuk/components/input/macro.njk" import govukInput %}
 
 {% block content %}
   {{ appHeading({
@@ -12,23 +11,27 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
       <form method="GET" class="govuk-!-margin-bottom-6">
-        {{ govukInput({
-          id: "tag",
-          name: "tag",
-          label: {
-            text: "Filter by tag",
-            classes: "govuk-label--s"
-          },
-          value: currentTag
-        }) }}
-        
-        {{ govukButton({
-          text: "Apply filter"
-        }) }}
-        
-        {% if currentTag %}
-          <a href="/" class="govuk-link govuk-!-margin-left-3">Clear filter</a>
-        {% endif %}
+        <div class="govuk-grid-row">
+          <div class="govuk-grid-column-two-thirds">
+            <div class="govuk-form-group">
+              <label class="govuk-label govuk-label--s" for="search">
+                Search
+              </label>
+              <div id="search-container" class="autocomplete-container"></div>
+            </div>
+          </div>
+          <div class="govuk-grid-column-one-third">
+            <div class="govuk-form-group" style="margin-top: 30px;">
+              {{ govukButton({
+                text: "Search"
+              }) }}
+              
+              {% if searchTerm %}
+                <a href="/" class="govuk-link govuk-!-margin-left-3">Clear search</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
       </form>
 
       {% if isAuthenticated %}
@@ -55,16 +58,13 @@
 
           {% set row = [
             {
-              text: project.name
+              html: "<a href='/projects/" + project.id + "' class='govuk-link'>" + project.name + "</a>"
             },
             {
               html: "<strong class='govuk-tag " + statusClass + "'>" + project.status + "</strong>"
             },
             {
               text: project.lastUpdated
-            },
-            {
-              html: "<a href='/projects/" + project.id + "' class='govuk-link'>" + project.actions + "</a>"
             }
           ] %}
           {% set tableRows = (tableRows.push(row), tableRows) %}
@@ -80,9 +80,6 @@
             },
             {
               text: "Last updated"
-            },
-            {
-              text: "Actions"
             }
           ],
           rows: tableRows
@@ -92,5 +89,174 @@
       {% endif %}
     </div>
   </div>
+{% endblock %}
 
+{% block pageStyles %}
+<style>
+  .autocomplete-container {
+    position: relative;
+    z-index: 10;
+  }
+  
+  /* Force GDS styling on the input */
+  #search, 
+  .autocomplete__input {
+    width: 100%;
+    height: 40px;
+    padding: 5px;
+    font-family: "GDS Transport", arial, sans-serif !important;
+    font-size: 19px !important;
+    font-weight: 400 !important;
+    border: 2px solid #0b0c0c;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Force GDS styling on the menu */
+  .autocomplete__menu,
+  .autocomplete__menu--overlay {
+    width: 100%;
+    border: 2px solid #0b0c0c;
+    border-top: 0;
+    max-height: 342px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    font-family: "GDS Transport", arial, sans-serif !important;
+    font-weight: 400 !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+  }
+  
+  /* Super specific targeting for list items */
+  .autocomplete__menu li,
+  .autocomplete__menu--overlay li,
+  li.autocomplete__option,
+  ul[role="listbox"] li,
+  #search__listbox li,
+  .autocomplete__option {
+    font-family: "GDS Transport", arial, sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 400 !important;
+    line-height: 1.25 !important;
+    padding: 10px !important;
+    border-bottom: 1px solid #b1b4b6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0 !important;
+  }
+  
+  /* Super specific targeting for hover/focus styles */
+  .autocomplete__menu li:hover,
+  .autocomplete__menu--overlay li:hover,
+  li.autocomplete__option:hover,
+  li.autocomplete__option--focused,
+  li.autocomplete__option[aria-selected="true"],
+  ul[role="listbox"] li:hover,
+  ul[role="listbox"] li[aria-selected="true"],
+  #search__listbox li:hover,
+  #search__listbox li[aria-selected="true"] {
+    background-color: #1d70b8 !important;
+    border-color: #1d70b8 !important;
+    color: white !important;
+    cursor: pointer;
+    outline: none;
+  }
+  
+  /* Ensure hint text has correct font */
+  .autocomplete__hint {
+    font-family: "GDS Transport", arial, sans-serif !important;
+    color: #505a5f;
+  }
+  
+  /* Add @font-face rule to ensure GDS Transport is available */
+  @font-face {
+    font-family: "GDS Transport";
+    src: url("/fonts/light-94a07e06a1-v2.woff2") format("woff2");
+    font-weight: normal;
+    font-style: normal;
+    font-display: fallback;
+  }
+  
+  @font-face {
+    font-family: "GDS Transport";
+    src: url("/fonts/bold-b542beb274-v2.woff2") format("woff2");
+    font-weight: bold;
+    font-style: normal;
+    font-display: fallback;
+  }
+</style>
+{% endblock %}
+
+{% block pageScripts %}
+  <script>
+    // Initialize autocomplete for project search
+    accessibleAutocomplete({
+      element: document.querySelector('#search-container'),
+      id: 'search',
+      name: 'search',
+      defaultValue: '{{ searchTerm }}',
+      placeholder: 'Search by project',
+      source: {{ projectNames | dump | safe }},
+      onConfirm: function(selected) {
+        if (selected) {
+          // Set the input value to exactly match the selected item
+          const input = document.querySelector('#search');
+          if (input) {
+            input.value = selected;
+          }
+          // Submit the form when an option is selected
+          document.querySelector('form').submit();
+        }
+      },
+      minLength: 2,
+      confirmOnBlur: true,
+      displayMenu: 'overlay',
+      tNoResults: function() { return 'No projects found'; },
+      showNoOptionsFound: true,
+      autoselect: true,
+      cssNamespace: 'autocomplete',
+      dropdownArrow: () => '',
+      enhanceSelectElement: false
+    });
+    
+    // Force GDS Transport font on all autocomplete elements
+    function applyGdsStyles() {
+      // Wait for the items to be generated by the autocomplete library
+      setTimeout(function() {
+        // Get all autocomplete options and apply GDS styling
+        const items = document.querySelectorAll('.autocomplete__option');
+        if (items && items.length > 0) {
+          items.forEach(item => {
+            item.style.fontFamily = '"GDS Transport", arial, sans-serif';
+            item.style.fontSize = '16px';
+            item.style.fontWeight = '400';
+            item.style.lineHeight = '1.25';
+            item.style.WebkitFontSmoothing = 'antialiased';
+            item.style.MozOsxFontSmoothing = 'grayscale';
+          });
+        }
+        
+        // Also directly apply to the listbox
+        const listbox = document.getElementById('search__listbox');
+        if (listbox) {
+          listbox.style.fontFamily = '"GDS Transport", arial, sans-serif';
+        }
+      }, 200);
+    }
+    
+    // Apply styles on page load
+    document.addEventListener('DOMContentLoaded', applyGdsStyles);
+    
+    // Also apply styles whenever the input changes
+    document.addEventListener('DOMContentLoaded', function() {
+      const input = document.querySelector('.autocomplete__input');
+      if (input) {
+        input.addEventListener('input', applyGdsStyles);
+        input.addEventListener('focus', applyGdsStyles);
+        input.addEventListener('click', applyGdsStyles);
+      }
+    });
+  </script>
 {% endblock %}

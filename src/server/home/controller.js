@@ -11,7 +11,7 @@ export const homeController = {
    * @param {import('@hapi/hapi').ResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { tag } = request.query
+    const { search } = request.query
     const logger = createLogger()
     const isAuthenticated = request.auth?.isAuthenticated || false
 
@@ -19,22 +19,21 @@ export const homeController = {
       logger.info('Home page - fetching projects')
       const projects = await getProjects()
 
-      // Filter projects if tag is provided
-      const filteredProjects = tag
+      // Get all project names for autocomplete
+      const projectNames = projects.map((project) => project.name)
+
+      // Filter projects if search term is provided
+      const filteredProjects = search
         ? projects.filter((project) =>
-            project.tags?.some((t) =>
-              t.toLowerCase().includes(tag.toLowerCase())
-            )
+            project.name.toLowerCase().includes(search.toLowerCase())
           )
         : projects
 
       return h.view('home/index', {
         pageTitle: 'Projects | DDTS Assurance',
-        projects: filteredProjects.map((project) => ({
-          ...project,
-          actions: 'View details'
-        })),
-        currentTag: tag,
+        projects: filteredProjects,
+        searchTerm: search,
+        projectNames,
         isAuthenticated
       })
     } catch (error) {
@@ -50,7 +49,8 @@ export const homeController = {
       return h.view('home/index', {
         pageTitle: 'Projects | DDTS Assurance',
         projects: [],
-        currentTag: tag,
+        searchTerm: search,
+        projectNames: [],
         description:
           'Unable to load projects at this time. Please try again later.',
         isAuthenticated

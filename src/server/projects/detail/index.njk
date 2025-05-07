@@ -14,41 +14,35 @@
       {% for change in history %}
         <div class="timeline__event">
           <h3 class="timeline__event-title govuk-heading-s">
+            {{ change.timestamp | formatDate }}
+          </h3>
+          <div class="govuk-body">
             {% if change.type === 'profession' %}
               {# Profession comment #}
-              Comment:
+              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">{{ change.changedBy }} update</p>
             {% elif change.changes.status and change.changes.status.from !== change.changes.status.to %}
               {# Project overall status update #}
-              Delivery status update:
-              <strong class="govuk-tag 
-                {% if change.changes.status.to === "RED" %}govuk-tag--red
-                {% elif change.changes.status.to === "AMBER" %}govuk-tag--yellow
-                {% elif change.changes.status.to === "GREEN" %}govuk-tag--green
-                {% endif %}">
-                {{ change.changes.status.to }}
-              </strong>
+              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">
+                Delivery status update:
+                <span class="govuk-tag 
+                  {% if change.changes.status.to === "RED" %}govuk-tag--red
+                  {% elif change.changes.status.to === "AMBER" %}govuk-tag--yellow
+                  {% elif change.changes.status.to === "GREEN" %}govuk-tag--green
+                  {% endif %}">
+                  {{ change.changes.status.to }}
+                </span>
+              </p>
             {% elif change.changes.name %}
-              Project name updated
+              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">Project name updated</p>
             {% elif change.changes.commentary and change.type === 'project' %}
-              Project commentary updated
+              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">Project commentary updated</p>
             {% else %}
-              General update
+              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">General update</p>
             {% endif %}
-          </h3>
-          {% if change.type === 'profession' %}
-          <strong class="govuk-tag govuk-tag--grey govuk-!-margin-bottom-2" style="white-space: nowrap; font-size: 10px; line-height: 1; padding: 3px 6px;">
-            {{ change.changedBy | upper }}
-          </strong>
-          {% endif %}
-          {% if change.changes.commentary %}
-            <p class="govuk-body">{{ change.changes.commentary.to }}</p>
-          {% endif %}
-          <div class="govuk-body govuk-!-margin-bottom-0 govuk-!-margin-top-2 govuk-!-font-size-16">
-            <div class="govuk-grid-row">
-              <div class="govuk-grid-column-full">
-                Last updated: {{ change.timestamp | formatDate }}
-              </div>
-            </div>
+            
+            {% if change.changes.commentary %}
+              <p>{{ change.changes.commentary.to }}</p>
+            {% endif %}
           </div>
         </div>
       {% endfor %}
@@ -111,7 +105,7 @@
       {% endset %}
 
       {% set engagementHtml %}
-        <h2 class="govuk-heading-m">Project Engagement History</h2>
+        <h2 class="govuk-heading-m">Project Update Timeline</h2>
         {{ projectEngagementTimeline(projectHistory, project, isAuthenticated) }}
       {% endset %}
 
@@ -153,7 +147,7 @@
       {% set tabItems = [
         {
           id: "project-engagement",
-          label: "Project engagement",
+          label: "Project timeline",
           panel: {
             html: engagementHtml
           }

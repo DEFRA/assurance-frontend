@@ -89,15 +89,15 @@ export const professionsController = {
             status: project.status, // Overall project status
             lastUpdated: project.lastUpdated,
             professionAssessment: {
-              status: professionAssessment?.status || 'NOT_ASSESSED',
+              status: professionAssessment?.status || 'NOT_UPDATED',
               commentary:
-                professionAssessment?.commentary || 'No assessment provided'
+                professionAssessment?.commentary || 'No update provided'
             }
           }
         })
         // Sort by status (RED first, then AMBER, then GREEN)
         .sort((a, b) => {
-          const statusOrder = { RED: 0, AMBER: 1, GREEN: 2, NOT_ASSESSED: 3 }
+          const statusOrder = { RED: 0, AMBER: 1, GREEN: 2, NOT_UPDATED: 3 }
           const statusA = statusOrder[a.professionAssessment.status] || 3
           const statusB = statusOrder[b.professionAssessment.status] || 3
           return statusA - statusB
@@ -119,8 +119,8 @@ export const professionsController = {
           green: projectsWithProfession.filter(
             (p) => p.professionAssessment.status === 'GREEN'
           ).length,
-          notAssessed: projectsWithProfession.filter(
-            (p) => p.professionAssessment.status === 'NOT_ASSESSED'
+          notUpdated: projectsWithProfession.filter(
+            (p) => p.professionAssessment.status === 'NOT_UPDATED'
           ).length
         }
       })

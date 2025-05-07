@@ -57,8 +57,8 @@
               </dd>
             </div>
             <div class="govuk-summary-list__row">
-              <dt class="govuk-summary-list__key">Not assessed</dt>
-              <dd class="govuk-summary-list__value">{{ summary.notAssessed }}</dd>
+              <dt class="govuk-summary-list__key">Not updated</dt>
+              <dd class="govuk-summary-list__value">{{ summary.notUpdated }}</dd>
             </div>
           </dl>
         </div>
@@ -72,7 +72,7 @@
             <tr class="govuk-table__row">
               <th scope="col" class="govuk-table__header">Project</th>
               <th scope="col" class="govuk-table__header">Project Status</th>
-              <th scope="col" class="govuk-table__header">{{ profession.displayName }} assessment</th>
+              <th scope="col" class="govuk-table__header">{{ profession.displayName }} update</th>
               <th scope="col" class="govuk-table__header">Commentary</th>
               <th scope="col" class="govuk-table__header">Actions</th>
             </tr>
@@ -113,14 +113,14 @@
                   {% endif %}
                 </td>
                 <td class="govuk-table__cell">
-                  <a href="/projects/{{ project.id }}/edit?tab=professions" class="govuk-link">Add assessment</a>
+                  <a href="/projects/{{ project.id }}/edit?tab=professions" class="govuk-link">Add update</a>
                 </td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       {% else %}
-        <p class="govuk-body">No projects found with this profession assessment.</p>
+        <p class="govuk-body">No projects found with this profession update.</p>
       {% endif %}
     </div>
   </div>

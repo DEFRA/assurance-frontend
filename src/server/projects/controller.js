@@ -965,8 +965,8 @@ export const projectsController = {
       )
 
       return h.view('projects/detail/profession-history', {
-        pageTitle: `${professionName} History | ${project.name}`,
-        heading: `${professionName} Assessment History`,
+        pageTitle: `${professionName} Update History | ${project.name}`,
+        heading: `${professionName} Update History`,
         project,
         profession: {
           ...profession,
@@ -1005,8 +1005,8 @@ export const projectsController = {
         professionInfo?.name || `Profession ${professionId}`
 
       return h.view('projects/detail/edit-profession', {
-        pageTitle: `Edit ${professionName} Assessment | ${project.name}`,
-        heading: `Edit ${professionName} Assessment`,
+        pageTitle: `Edit ${professionName} Update | ${project.name}`,
+        heading: `Edit ${professionName} Update`,
         project,
         profession: {
           ...profession,
@@ -1114,8 +1114,8 @@ export const projectsController = {
         professionInfo?.name || `Profession ${professionId}`
 
       return h.view('projects/detail/delete-profession', {
-        pageTitle: `Remove ${professionName} Assessment | ${project.name}`,
-        heading: `Remove ${professionName} Assessment`,
+        pageTitle: `Remove ${professionName} Update | ${project.name}`,
+        heading: `Remove ${professionName} Update`,
         project,
         profession: {
           ...profession,

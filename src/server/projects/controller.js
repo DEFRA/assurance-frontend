@@ -24,6 +24,15 @@ export const NOTIFICATIONS = {
   GENERAL_ERROR: 'Failed to update project. Please try again.'
 }
 
+// Constants for repeated literals
+const UNKNOWN_PROFESSION = 'Unknown Profession'
+const STATUS_OPTIONS = [
+  { value: 'RED', text: 'Red' },
+  { value: 'AMBER', text: 'Amber' },
+  { value: 'GREEN', text: 'Green' }
+]
+const PROJECT_NOT_FOUND_VIEW = 'errors/not-found'
+
 // Helper to get profession name from either the professions array or project data
 function getProfessionName(profession, professions, project) {
   // Input validation
@@ -113,7 +122,7 @@ export const projectsController = {
 
       if (!project) {
         return h
-          .view('errors/not-found', {
+          .view(PROJECT_NOT_FOUND_VIEW, {
             pageTitle: 'Project Not Found'
           })
           .code(404)
@@ -340,7 +349,7 @@ export const projectsController = {
         professions.forEach((profession) => {
           if (profession?.id) {
             professionNames[profession.id] =
-              profession.name || 'Unknown Profession'
+              profession.name || UNKNOWN_PROFESSION
           }
         })
       }
@@ -348,20 +357,21 @@ export const projectsController = {
       // Add names to project professions with explicit null checks
       if (Array.isArray(project.professions)) {
         project.professions = project.professions.map((prof) => {
-          if (!prof)
+          if (!prof) {
             return {
               professionId: 'unknown',
-              name: 'Unknown Profession',
+              name: UNKNOWN_PROFESSION,
               status: '',
               commentary: ''
             }
-
-          return {
-            ...prof,
-            name:
-              prof.professionId && professionNames[prof.professionId]
-                ? professionNames[prof.professionId]
-                : 'Unknown Profession'
+          } else {
+            return {
+              ...prof,
+              name:
+                prof.professionId && professionNames[prof.professionId]
+                  ? professionNames[prof.professionId]
+                  : UNKNOWN_PROFESSION
+            }
           }
         })
       } else {
@@ -377,7 +387,7 @@ export const projectsController = {
         professions.forEach((profession, index) => {
           // Use profession name as ID if no ID exists
           const professionId = profession?.id || `profession-${index}`
-          const professionName = profession?.name || 'Unknown Profession'
+          const professionName = profession?.name || UNKNOWN_PROFESSION
 
           // Build an ID-to-name map for all professions
           if (professionId) {
@@ -399,11 +409,7 @@ export const projectsController = {
         professions: professions || [],
         professionNames,
         professionOptions,
-        statusOptions: [
-          { value: 'RED', text: 'Red' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'GREEN', text: 'Green' }
-        ],
+        statusOptions: STATUS_OPTIONS,
         deliveryHistory
       })
     } catch (error) {
@@ -483,7 +489,15 @@ export const projectsController = {
               const index = parseInt(profession.replace('profession-', ''), 10)
               if (!isNaN(index) && index < allProfessions.length) {
                 professionName = allProfessions[index].name || ''
+              } else {
+                request.logger.debug(
+                  'Could not parse profession index or index out of range'
+                )
               }
+            } else {
+              request.logger.debug(
+                'Unknown profession format, using default name'
+              )
             }
           } catch (error) {
             request.logger.error('Error fetching profession details', { error })
@@ -756,7 +770,7 @@ export const projectsController = {
         project = await getProjectById(id, request)
         if (!project) {
           return h
-            .view('errors/not-found', {
+            .view(PROJECT_NOT_FOUND_VIEW, {
               pageTitle: 'Project Not Found'
             })
             .code(404)
@@ -830,7 +844,7 @@ export const projectsController = {
 
       if (!project) {
         request.logger.error(`Project not found with ID: ${id}`)
-        return h.view('errors/not-found', {
+        return h.view(PROJECT_NOT_FOUND_VIEW, {
           pageTitle: 'Project Not Found'
         })
       }
@@ -1012,11 +1026,7 @@ export const projectsController = {
           ...profession,
           name: professionName
         },
-        statusOptions: [
-          { value: 'RED', text: 'Red' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'GREEN', text: 'Green' }
-        ]
+        statusOptions: STATUS_OPTIONS
       })
     } catch (error) {
       request.logger.error(error)
@@ -1229,11 +1239,7 @@ export const projectsController = {
         heading: 'Edit Delivery Update',
         project,
         update,
-        statusOptions: [
-          { value: 'RED', text: 'Red' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'GREEN', text: 'Green' }
-        ]
+        statusOptions: STATUS_OPTIONS
       })
     } catch (error) {
       request.logger.error(error)

@@ -13,6 +13,11 @@ const AUTH_ERROR_TITLE = 'Authentication Error'
 const OIDC_CONFIG_ERROR = 'OIDC client is not properly configured'
 const ADMIN_ROLE = 'admin'
 const AUTH_SESSION_COOKIE_NAME = 'assurance-session'
+const HOME_PATH = '/'
+const AUTH_PATH = '/auth'
+const AUTH_LOGOUT_PATH = '/auth/logout'
+const AUTH_LOGIN_PATH = '/auth/login'
+const ERROR_TEMPLATE = 'common/templates/error'
 
 export const plugin = {
   name: 'auth',
@@ -117,7 +122,7 @@ export const plugin = {
           ' (This may be due to an expired or invalid authentication session.)'
       }
 
-      return h.view('common/templates/error', {
+      return h.view(ERROR_TEMPLATE, {
         title: AUTH_ERROR_TITLE,
         message: errorMessage
       })
@@ -172,7 +177,7 @@ export const plugin = {
         try {
           // Skip validation for auth routes and public assets
           if (
-            request.path === '/auth/logout' ||
+            request.path === AUTH_LOGOUT_PATH ||
             request.path.startsWith('/public/')
           ) {
             return { isValid: false }
@@ -224,11 +229,11 @@ export const plugin = {
     // Route for initiating login flow
     server.route({
       method: 'GET',
-      path: '/auth/login',
+      path: AUTH_LOGIN_PATH,
       options: { auth: false },
       handler: async (request, h) => {
         if (!oidcClient) {
-          return h.view('common/templates/error', {
+          return h.view(ERROR_TEMPLATE, {
             title: AUTH_ERROR_TITLE,
             message: OIDC_CONFIG_ERROR
           })
@@ -245,12 +250,12 @@ export const plugin = {
           if (!redirectPath) {
             redirectPath = request.headers.referer
               ? new URL(request.headers.referer).pathname
-              : '/'
+              : HOME_PATH
           }
 
           // Default to home page if we're on auth pages
-          if (redirectPath === '/auth' || redirectPath === '/auth/login') {
-            redirectPath = '/'
+          if (redirectPath === AUTH_PATH || redirectPath === AUTH_LOGIN_PATH) {
+            redirectPath = HOME_PATH
           }
 
           // Store auth state and code verifier in cache
@@ -272,7 +277,7 @@ export const plugin = {
           return h.redirect(authUrl)
         } catch (error) {
           logger.error('Login initialization error:', error)
-          return h.view('common/templates/error', {
+          return h.view(ERROR_TEMPLATE, {
             title: AUTH_ERROR_TITLE,
             message: `There was a problem initiating login: ${error.message}`
           })
@@ -283,11 +288,11 @@ export const plugin = {
     // Route for handling the callback from Azure AD
     server.route({
       method: 'GET',
-      path: '/auth',
+      path: AUTH_PATH,
       options: { auth: false },
       handler: async (request, h) => {
         if (!oidcClient) {
-          return h.view('common/templates/error', {
+          return h.view(ERROR_TEMPLATE, {
             title: AUTH_ERROR_TITLE,
             message: OIDC_CONFIG_ERROR
           })
@@ -325,7 +330,7 @@ export const plugin = {
             )
 
             // Create response with session cookie
-            const response = h.redirect(stateData.redirectTo || '/')
+            const response = h.redirect(stateData.redirectTo || HOME_PATH)
             response.state(AUTH_SESSION_COOKIE_NAME, { id: sessionResult.sid })
 
             // Clear temporary auth state from cache
@@ -352,7 +357,7 @@ export const plugin = {
     // Route for logout
     server.route({
       method: 'GET',
-      path: '/auth/logout',
+      path: AUTH_LOGOUT_PATH,
       options: {
         auth: {
           strategy: 'session',
@@ -369,7 +374,7 @@ export const plugin = {
           }
 
           // Prepare response
-          const response = h.redirect('/')
+          const response = h.redirect(HOME_PATH)
 
           // Clear session cookie
           response.unstate(AUTH_SESSION_COOKIE_NAME)
@@ -394,7 +399,7 @@ export const plugin = {
           return response
         } catch (error) {
           logger.error('Logout error:', error)
-          return h.redirect('/')
+          return h.redirect(HOME_PATH)
         }
       }
     })

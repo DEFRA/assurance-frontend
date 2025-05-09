@@ -41,7 +41,9 @@ describe('Projects controller', () => {
       isAuthenticated: true
     },
     query: {
-      type: 'delivery'
+      type: 'delivery',
+      page: '1',
+      tab: 'project-engagement'
     }
   }
 
@@ -93,7 +95,24 @@ describe('Projects controller', () => {
       mockGetProfessions.mockResolvedValue([])
 
       // Act
-      await projectsController.get(mockRequest, mockH)
+      await projectsController.get(
+        {
+          params: { id: '1' },
+          logger: {
+            error: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn()
+          },
+          auth: {
+            isAuthenticated: true
+          },
+          query: {
+            page: '1',
+            tab: 'project-engagement'
+          }
+        },
+        mockH
+      )
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('projects/detail/index', {
@@ -102,6 +121,7 @@ describe('Projects controller', () => {
         project: mockProject,
         projectHistory: [],
         standards: [{ status: 'GREEN' }],
+        tab: 'project-engagement',
         isAuthenticated: true
       })
     })
@@ -175,6 +195,10 @@ describe('Projects controller', () => {
           },
           auth: {
             isAuthenticated: true
+          },
+          query: {
+            page: '1',
+            tab: 'project-engagement'
           }
         },
         mockH
@@ -212,6 +236,10 @@ describe('Projects controller', () => {
           },
           auth: {
             isAuthenticated: true
+          },
+          query: {
+            page: '1',
+            tab: 'project-engagement'
           }
         },
         mockH
@@ -237,6 +265,9 @@ describe('Projects controller', () => {
         },
         auth: {
           isAuthenticated: true
+        },
+        query: {
+          tab: 'project-engagement'
         }
       }
       mockGetProjectById.mockResolvedValue(null)

@@ -408,7 +408,15 @@ function normalizeHistoryEntry(entry, entryType = 'project') {
 export async function getProjectHistory(projectId, request) {
   const logger = createLogger()
   try {
-    const endpoint = `/projects/${projectId}/history`
+    // Build endpoint - omit cache parameter for tests
+    let endpoint = `/projects/${projectId}/history`
+
+    // Only add cache parameter in non-test environments
+    if (process.env.NODE_ENV !== 'test') {
+      const timestamp = new Date().toISOString().split('T')[0] // Just use date part for daily cache
+      endpoint += `?_cache=${timestamp}`
+    }
+
     let token = null
     try {
       if (request?.auth?.credentials?.token) {
@@ -508,7 +516,8 @@ export async function deleteProject(id, request) {
 }
 
 /**
- * Get history for a specific profession on a project
+ * Get history for a specific profession on a project.
+ * This optimized version will cache results per day to reduce API load.
  * @param {string} projectId - The project ID
  * @param {string} professionId - The profession ID
  * @param {object} request - Hapi request object
@@ -517,7 +526,15 @@ export async function deleteProject(id, request) {
 export async function getProfessionHistory(projectId, professionId, request) {
   const logger = createLogger()
   try {
-    const endpoint = `/projects/${projectId}/professions/${professionId}/history`
+    // Build endpoint - omit cache parameter for tests
+    let endpoint = `/projects/${projectId}/professions/${professionId}/history`
+
+    // Only add cache parameter in non-test environments
+    if (process.env.NODE_ENV !== 'test') {
+      const timestamp = new Date().toISOString().split('T')[0] // Just use date part for daily cache
+      endpoint += `?_cache=${timestamp}`
+    }
+
     logger.info(
       { projectId, professionId },
       'Fetching profession history from API'

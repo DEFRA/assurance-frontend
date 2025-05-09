@@ -17,14 +17,14 @@ export const getProjectHistoryController = async (request, h) => {
       })
     }
 
-    // Get project history
+    // Get ALL project history at once
     const history = await getProjectHistory(id, request)
 
-    // Render the view
+    // Render the view with full history
     return h.view('projects/detail/project-history', {
       pageTitle: `Project History: ${project.name}`,
       project,
-      history
+      history: history || []
     })
   } catch (error) {
     request.logger.error('Error getting project history')

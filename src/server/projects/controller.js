@@ -142,6 +142,7 @@ export const projectsController = {
   get: async (request, h) => {
     const { id } = request.params
     const isAuthenticated = request.auth.isAuthenticated
+    const tab = request.query.tab || 'project-engagement'
 
     try {
       // Get the project details
@@ -189,8 +190,9 @@ export const projectsController = {
 
       // Get project history for the timeline
       let projectHistory = []
+
       try {
-        // Get basic project history
+        // Get all project history - more efficient than multiple API calls
         const historyEntries = await getProjectHistory(id, request)
 
         // Start building the combined timeline
@@ -221,31 +223,34 @@ export const projectsController = {
 
         // Get profession history for each profession in the project
         if (project.professions && project.professions.length > 0) {
-          for (const profession of project.professions) {
-            try {
-              const professionHistory = await getProfessionHistory(
-                id,
-                profession.professionId,
-                request
-              )
-
-              if (professionHistory && professionHistory.length > 0) {
-                // Get the profession name using our helper
-                const professionName = getProfessionName(
-                  profession,
-                  professions,
-                  project
+          // Process professions in parallel for better performance
+          const professionPromises = project.professions.map(
+            async (profession) => {
+              try {
+                const professionHistory = await getProfessionHistory(
+                  id,
+                  profession.professionId,
+                  request
                 )
 
-                // For profession history, we only want to show commentary changes for external users
-                // We don't show RAG status changes for professions in the timeline
-                const commentaryUpdates = professionHistory.filter((entry) => {
-                  return entry.changes?.commentary?.to
-                })
+                if (professionHistory && professionHistory.length > 0) {
+                  // Get the profession name using our helper
+                  const professionName = getProfessionName(
+                    profession,
+                    professions,
+                    project
+                  )
 
-                // Add profession commentary updates to the timeline
-                combinedHistory = combinedHistory.concat(
-                  commentaryUpdates.map((entry) => {
+                  // For profession history, we only want to show commentary changes for external users
+                  // We don't show RAG status changes for professions in the timeline
+                  const commentaryUpdates = professionHistory.filter(
+                    (entry) => {
+                      return entry.changes?.commentary?.to
+                    }
+                  )
+
+                  // Return the formatted commentary updates
+                  return commentaryUpdates.map((entry) => {
                     return {
                       timestamp: entry.timestamp,
                       changedBy: professionName,
@@ -256,16 +261,22 @@ export const projectsController = {
                       changes: entry.changes
                     }
                   })
+                }
+                return []
+              } catch (err) {
+                request.logger.error(
+                  `Error fetching history for profession ${profession.professionId}:`,
+                  err
                 )
+                // Continue with other professions if one fails
+                return []
               }
-            } catch (err) {
-              request.logger.error(
-                `Error fetching history for profession ${profession.professionId}:`,
-                err
-              )
-              // Continue with other professions if one fails
             }
-          }
+          )
+
+          // Wait for all profession histories and flatten the result
+          const professionHistories = await Promise.all(professionPromises)
+          combinedHistory = combinedHistory.concat(professionHistories.flat())
         }
 
         // Sort the timeline by timestamp, most recent first
@@ -288,7 +299,8 @@ export const projectsController = {
         project,
         projectHistory,
         standards: standardsStatuses,
-        isAuthenticated
+        isAuthenticated,
+        tab
       })
     } catch (error) {
       request.logger.error({ error }, 'Error getting project')
@@ -970,7 +982,7 @@ export const projectsController = {
       const professionName =
         professionInfo?.name || `Profession ${professionId}`
 
-      // Get the profession history
+      // Get ALL the profession history at once - better for performance
       const history = await getProfessionHistory(id, professionId, request)
 
       // Sort by timestamp, most recent first
@@ -986,7 +998,7 @@ export const projectsController = {
           ...profession,
           name: professionName
         },
-        history: sortedHistory
+        history: sortedHistory || []
       })
     } catch (error) {
       request.logger.error(error)

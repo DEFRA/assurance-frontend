@@ -75,7 +75,7 @@ describe('Authenticated Fetch JSON', () => {
 
     test('should clean up token if it already has Bearer prefix', async () => {
       // Arrange
-      const mockToken = 'Bearer test-token'
+      const mockToken = '  Bearer   test-token  '
       const mockUrl = '/test-endpoint'
 
       // Act
@@ -234,6 +234,122 @@ describe('Authenticated Fetch JSON', () => {
         'Network error'
       )
     })
+
+    test('should handle empty string token', async () => {
+      // Arrange
+      const mockToken = ''
+      const mockUrl = '/test-endpoint'
+
+      // Act
+      const result = await authedFetchJson(mockUrl, mockToken)
+
+      // Assert
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${mockApiUrl}${mockUrl}`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json'
+          })
+        })
+      )
+      expect(result).toEqual({ data: 'test' })
+    })
+
+    test('should handle non-string token', async () => {
+      // Arrange
+      const mockToken = 12345
+      const mockUrl = '/test-endpoint'
+
+      // Act
+      const result = await authedFetchJson(mockUrl, mockToken)
+
+      // Assert
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${mockApiUrl}${mockUrl}`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer 12345'
+          })
+        })
+      )
+      expect(result).toEqual({ data: 'test' })
+    })
+
+    test('should handle options.headers as non-object', async () => {
+      // Arrange
+      const mockToken = 'test-token'
+      const mockUrl = '/test-endpoint'
+      const mockOptions = {
+        headers: 'not-an-object'
+      }
+
+      // Act
+      const result = await authedFetchJson(mockUrl, mockToken, mockOptions)
+
+      // Assert
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${mockApiUrl}${mockUrl}`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-token'
+          })
+        })
+      )
+      expect(result).toEqual({ data: 'test' })
+    })
+
+    test('should handle missing content-type header', async () => {
+      // Arrange
+      const mockToken = 'test-token'
+      const mockUrl = '/test-endpoint'
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: {
+          get: jest.fn().mockReturnValue(undefined)
+        },
+        text: jest.fn().mockResolvedValue('No content-type')
+      })
+
+      // Act
+      const result = await authedFetchJson(mockUrl, mockToken)
+
+      // Assert
+      expect(result).toBe('No content-type')
+    })
+
+    test('should handle token with extra whitespace and Bearer prefix', async () => {
+      // Arrange
+      const mockToken = '  Bearer   test-token  '
+      const mockUrl = '/test-endpoint'
+      const mockApiUrl = 'https://api.example.com'
+      const mockResponse = { data: 'test' }
+
+      // Mock fetch response
+      global.fetch.mockResolvedValue({
+        ok: true,
+        headers: {
+          get: () => 'application/json'
+        },
+        json: () => Promise.resolve(mockResponse)
+      })
+
+      // Act
+      const result = await authedFetchJson(mockUrl, mockToken)
+
+      // Assert
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${mockApiUrl}${mockUrl}`,
+        expect.objectContaining({
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-token'
+          }
+        })
+      )
+      expect(result).toEqual(mockResponse)
+    })
   })
 
   describe('authedFetchJsonDecorator', () => {
@@ -284,6 +400,22 @@ describe('Authenticated Fetch JSON', () => {
           })
         })
       )
+      expect(result).toEqual({ data: 'test' })
+    })
+
+    test('should handle synchronous error in getBearerToken', async () => {
+      // Arrange
+      const mockRequest = { auth: { credentials: { token: 'test-token' } } }
+      const mockUrl = '/test-endpoint'
+      getBearerToken.mockImplementation(() => {
+        throw new Error('Sync error')
+      })
+
+      // Act
+      const decoratedFetch = authedFetchJsonDecorator(mockRequest)
+      const result = await decoratedFetch(mockUrl)
+
+      // Assert
       expect(result).toEqual({ data: 'test' })
     })
   })

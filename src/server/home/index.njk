@@ -61,10 +61,10 @@
               html: "<a href='/projects/" + project.id + "' class='govuk-link'>" + project.name + "</a>"
             },
             {
-              html: "<strong class='govuk-tag " + statusClass + "'>" + project.status + "</strong>"
+              text: project.lastUpdated
             },
             {
-              text: project.lastUpdated
+              html: "<strong class='govuk-tag " + statusClass + "'>" + project.status + "</strong>"
             }
           ] %}
           {% set tableRows = (tableRows.push(row), tableRows) %}
@@ -76,10 +76,10 @@
               text: "Project name"
             },
             {
-              text: "RAG status"
+              text: "Last updated"
             },
             {
-              text: "Last updated"
+              text: "RAG status"
             }
           ],
           rows: tableRows

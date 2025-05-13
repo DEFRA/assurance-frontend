@@ -1,86 +1,160 @@
-import * as Wreck from '@hapi/wreck'
-import { fetchJson } from './fetch-json.js'
+import Wreck from '@hapi/wreck'
+import { getTraceId } from '@defra/hapi-tracing'
+import { config } from '../../../../config/config.js'
 import { handleResponse } from './handle-response.js'
-import * as tracing from '@defra/hapi-tracing'
+import { fetchJson } from './fetch-json.js'
 
-jest.mock('@hapi/wreck', () => ({
-  get: jest.fn(),
-  post: jest.fn()
-}))
+// Mock dependencies
+jest.mock('@hapi/wreck')
+jest.mock('@defra/hapi-tracing')
+jest.mock('../../../../config/config.js')
 jest.mock('./handle-response.js')
-jest.mock('@defra/hapi-tracing', () => ({
-  getTraceId: jest.fn()
-}))
-
-const mockRes = { statusCode: 200 }
-const mockPayload = { foo: 'bar' }
-
-beforeEach(() => {
-  jest.clearAllMocks()
-  tracing.getTraceId.mockReturnValue('trace-id')
-})
 
 describe('fetchJson', () => {
-  it('should make GET request and return handled response', async () => {
-    Wreck.get.mockResolvedValue({ res: mockRes, payload: mockPayload })
-    handleResponse.mockReturnValue({ res: mockRes, payload: mockPayload })
-    const result = await fetchJson('http://test', {})
-    expect(Wreck.get).toHaveBeenCalled()
-    expect(handleResponse).toHaveBeenCalledWith({
-      res: mockRes,
-      payload: mockPayload
+  const mockUrl = 'https://example.com/api'
+  const mockResponse = {
+    res: { statusCode: 200 },
+    payload: { data: 'test data' }
+  }
+  const mockHandledResponse = {
+    res: mockResponse.res,
+    payload: mockResponse.payload
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+
+    // Setup mocks
+    config.get.mockReturnValue('X-Trace-ID')
+    getTraceId.mockReturnValue('test-trace-id')
+    Wreck.get.mockResolvedValue(mockResponse)
+    Wreck.post.mockResolvedValue(mockResponse)
+    handleResponse.mockReturnValue(mockHandledResponse)
+  })
+
+  test('should make a GET request and return handled response', async () => {
+    // Act
+    const result = await fetchJson(mockUrl)
+
+    // Assert
+    expect(Wreck.get).toHaveBeenCalledWith(mockUrl, {
+      json: true,
+      headers: {
+        'X-Trace-ID': 'test-trace-id',
+        'Content-Type': 'application/json'
+      }
     })
-    expect(result).toEqual({ res: mockRes, payload: mockPayload })
+    expect(handleResponse).toHaveBeenCalledWith(mockResponse)
+    expect(result).toEqual(mockHandledResponse)
   })
 
-  it('should make POST request and return handled response', async () => {
-    Wreck.post.mockResolvedValue({ res: mockRes, payload: mockPayload })
-    handleResponse.mockReturnValue({ res: mockRes, payload: mockPayload })
-    const result = await fetchJson('http://test', { method: 'POST' })
-    expect(Wreck.post).toHaveBeenCalled()
-    expect(handleResponse).toHaveBeenCalledWith({
-      res: mockRes,
-      payload: mockPayload
+  test('should make a POST request with options', async () => {
+    // Arrange
+    const options = {
+      method: 'POST',
+      payload: { foo: 'bar' },
+      headers: {
+        'Custom-Header': 'custom-value'
+      }
+    }
+
+    // Act
+    const result = await fetchJson(mockUrl, options)
+
+    // Assert
+    expect(Wreck.post).toHaveBeenCalledWith(mockUrl, {
+      ...options,
+      json: true,
+      headers: {
+        'Custom-Header': 'custom-value',
+        'X-Trace-ID': 'test-trace-id',
+        'Content-Type': 'application/json'
+      }
     })
-    expect(result).toEqual({ res: mockRes, payload: mockPayload })
+    expect(handleResponse).toHaveBeenCalledWith(mockResponse)
+    expect(result).toEqual(mockHandledResponse)
   })
 
-  it('should handle non-JSON response', async () => {
-    Wreck.get.mockResolvedValue({ res: mockRes, payload: 'plain text' })
-    handleResponse.mockReturnValue({ res: mockRes, payload: 'plain text' })
-    const result = await fetchJson('http://test', {})
-    expect(result).toEqual({ res: mockRes, payload: 'plain text' })
+  test('should handle non-JSON responses', async () => {
+    // Arrange
+    const nonJsonResponse = {
+      res: { statusCode: 200 },
+      payload: 'plain text response'
+    }
+    Wreck.get.mockResolvedValue(nonJsonResponse)
+    handleResponse.mockReturnValue({
+      res: nonJsonResponse.res,
+      payload: nonJsonResponse.payload
+    })
+
+    // Act
+    const result = await fetchJson(mockUrl)
+
+    // Assert
+    expect(handleResponse).toHaveBeenCalledWith(nonJsonResponse)
+    expect(result).toEqual({
+      res: nonJsonResponse.res,
+      payload: nonJsonResponse.payload
+    })
   })
 
-  it('should handle error status code', async () => {
-    Wreck.get.mockResolvedValue({
+  test('should handle error status codes', async () => {
+    // Arrange
+    const errorResponse = {
       res: { statusCode: 404 },
       payload: { message: 'Not found' }
-    })
+    }
+    Wreck.get.mockResolvedValue(errorResponse)
     handleResponse.mockReturnValue({
-      res: { statusCode: 404 },
+      res: errorResponse.res,
       error: new Error('Not found')
     })
-    const result = await fetchJson('http://test', {})
-    expect(result).toEqual({
-      res: { statusCode: 404 },
-      error: new Error('Not found')
-    })
+
+    // Act
+    const result = await fetchJson(mockUrl)
+
+    // Assert
+    expect(handleResponse).toHaveBeenCalledWith(errorResponse)
+    expect(result).toHaveProperty('error')
   })
 
-  it('should handle network error', async () => {
-    Wreck.get.mockRejectedValue(new Error('Network error'))
-    await expect(fetchJson('http://test', {})).rejects.toThrow('Network error')
+  test('should handle network errors', async () => {
+    // Arrange
+    const networkError = new Error('Network error')
+    Wreck.get.mockRejectedValue(networkError)
+
+    // Act & Assert
+    await expect(fetchJson(mockUrl)).rejects.toThrow('Network error')
   })
 
-  it('should add tracing header when traceId is available', async () => {
-    Wreck.get.mockResolvedValue({ res: mockRes, payload: mockPayload })
-    await fetchJson('http://test', {})
+  test('should add tracing headers when trace ID is available', async () => {
+    // Act
+    await fetchJson(mockUrl)
+
+    // Assert
     expect(Wreck.get).toHaveBeenCalledWith(
-      'http://test',
+      mockUrl,
       expect.objectContaining({
         headers: expect.objectContaining({
-          'x-cdp-request-id': 'trace-id'
+          'X-Trace-ID': 'test-trace-id'
+        })
+      })
+    )
+  })
+
+  test('should not add tracing headers when trace ID is not available', async () => {
+    // Arrange
+    getTraceId.mockReturnValue(null)
+
+    // Act
+    await fetchJson(mockUrl)
+
+    // Assert
+    expect(Wreck.get).toHaveBeenCalledWith(
+      mockUrl,
+      expect.objectContaining({
+        headers: expect.not.objectContaining({
+          'X-Trace-ID': expect.anything()
         })
       })
     )

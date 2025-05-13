@@ -25,7 +25,7 @@ async function authedFetchJson(url, token, options = {}) {
     // Remove any existing "Bearer " prefix and ensure it's properly formatted
     const cleanToken =
       typeof token === 'string'
-        ? token.replace(/^\s*Bearer\s+/i, '').trim()
+        ? token.replace(/^Bearer\s+/i, '').trim()
         : token
 
     if (cleanToken !== token) {

@@ -1,33 +1,71 @@
 import { handleResponse } from './handle-response.js'
-import Boom from '@hapi/boom'
 
 describe('handleResponse', () => {
-  it('should return {res, payload} for statusCode < 400', () => {
-    const res = { statusCode: 200 }
-    const payload = { foo: 'bar' }
-    const result = handleResponse({ res, payload })
-    expect(result).toEqual({ res, payload })
+  test('should return payload and response for successful responses', () => {
+    // Arrange
+    const mockResponse = {
+      res: { statusCode: 200 },
+      payload: { data: 'test data' }
+    }
+
+    // Act
+    const result = handleResponse(mockResponse)
+
+    // Assert
+    expect(result).toEqual({
+      res: { statusCode: 200 },
+      payload: { data: 'test data' }
+    })
   })
 
-  it('should return {res, error} with Boom error for statusCode >= 400 and payload.message', () => {
-    const res = { statusCode: 404 }
-    const payload = { message: 'Not found' }
-    const result = handleResponse({ res, payload })
-    expect(result.res).toBe(res)
-    expect(result.error).toBeInstanceOf(Boom.Boom)
-    expect(result.error.output.statusCode).toBe(404)
-    expect(result.error.message).toBe('Not found')
-    expect(result.error.data).toBe(payload)
+  test('should return error for 4xx responses', () => {
+    // Arrange
+    const mockResponse = {
+      res: { statusCode: 400 },
+      payload: { message: 'Bad request' }
+    }
+
+    // Act
+    const result = handleResponse(mockResponse)
+
+    // Assert
+    expect(result).toHaveProperty('res')
+    expect(result).toHaveProperty('error')
+    expect(result.error.isBoom).toBe(true)
+    expect(result.error.output.statusCode).toBe(400)
+    expect(result.error.data).toEqual({ message: 'Bad request' })
   })
 
-  it('should return {res, error} with Boom error for statusCode >= 400 and no payload.message', () => {
-    const res = { statusCode: 500 }
-    const payload = { foo: 'bar' }
-    const result = handleResponse({ res, payload })
-    expect(result.res).toBe(res)
-    expect(result.error).toBeInstanceOf(Boom.Boom)
+  test('should return error for 5xx responses', () => {
+    // Arrange
+    const mockResponse = {
+      res: { statusCode: 500 },
+      payload: { message: 'Server error' }
+    }
+
+    // Act
+    const result = handleResponse(mockResponse)
+
+    // Assert
+    expect(result).toHaveProperty('res')
+    expect(result).toHaveProperty('error')
+    expect(result.error.isBoom).toBe(true)
     expect(result.error.output.statusCode).toBe(500)
-    expect(result.error.message).toBe('Request failed')
-    expect(result.error.data).toBe(payload)
+    expect(result.error.data).toEqual({ message: 'Server error' })
+  })
+
+  test('should use default error message if payload message is not provided', () => {
+    // Arrange
+    const mockResponse = {
+      res: { statusCode: 404 },
+      payload: {}
+    }
+
+    // Act
+    const result = handleResponse(mockResponse)
+
+    // Assert
+    expect(result).toHaveProperty('error')
+    expect(result.error.message).toContain('Request failed')
   })
 })

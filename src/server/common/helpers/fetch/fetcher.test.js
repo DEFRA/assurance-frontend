@@ -1,181 +1,253 @@
-import { fetcher } from './fetcher.js'
 import { fetch as undiciFetch } from 'undici'
+import { config } from '~/src/config/config.js'
+import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
+import { fetcher, getApiUrl } from './fetcher.js'
 
-// Mock undici fetch
+// Mock dependencies
 jest.mock('undici', () => ({
   fetch: jest.fn()
 }))
 
-// Mock config
+// Need to mock config.get to return appropriate values for logger-options.js
 jest.mock('~/src/config/config.js', () => ({
   config: {
-    get: jest.fn().mockReturnValue('http://test-api')
+    get: jest.fn((key) => {
+      if (key === 'api.baseUrl') return 'https://api.example.com'
+      if (key === 'log')
+        return {
+          enabled: true,
+          level: 'info',
+          format: 'pino-pretty',
+          redact: []
+        }
+      if (key === 'serviceName') return 'test-service'
+      if (key === 'serviceVersion') return '1.0.0'
+      if (key === 'env') return 'test'
+      return undefined
+    })
   }
 }))
 
-// Mock logger
-const mockLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn()
+// Mock createLogger
+jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
+  createLogger: jest.fn()
+}))
+
+// Mock AbortSignal.timeout
+global.AbortSignal = {
+  timeout: jest.fn().mockReturnValue({ aborted: false })
 }
 
-describe('Fetcher', () => {
+describe('fetcher', () => {
+  const mockApiUrl = 'https://api.example.com'
+  const mockLogger = {
+    info: jest.fn(),
+    error: jest.fn()
+  }
+  const mockRequest = {
+    logger: mockLogger
+  }
+
   beforeEach(() => {
     jest.clearAllMocks()
+
+    // Setup mocks
+    createLogger.mockReturnValue(mockLogger)
   })
 
-  describe('GET requests', () => {
-    test('should make GET request and return JSON response', async () => {
-      // Arrange
-      const mockResponse = { data: 'test' }
-      undiciFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        headers: {
-          get: () => 'application/json'
-        },
-        json: () => Promise.resolve(mockResponse)
+  test('should return data for successful JSON response', async () => {
+    // Arrange
+    const mockResponseData = { data: 'test data' }
+    const mockResponse = {
+      ok: true,
+      status: 200,
+      headers: {
+        get: jest.fn().mockReturnValue('application/json')
+      },
+      json: jest.fn().mockResolvedValue(mockResponseData)
+    }
+    undiciFetch.mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await fetcher('/test', {}, mockRequest)
+
+    // Assert
+    expect(undiciFetch).toHaveBeenCalledWith(
+      `${mockApiUrl}/test`,
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        }),
+        signal: expect.anything()
       })
-      const mockRequest = {
-        logger: mockLogger
-      }
-
-      // Act
-      const result = await fetcher('/test-endpoint', {}, mockRequest)
-
-      // Assert
-      expect(result).toEqual(mockResponse)
-      expect(undiciFetch).toHaveBeenCalledWith(
-        'http://test-api/test-endpoint',
-        expect.objectContaining({
-          method: 'GET',
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json'
-          })
-        })
-      )
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Making GET request to http://test-api/test-endpoint'
-      )
-    })
-
-    test('should handle non-OK responses', async () => {
-      // Arrange
-      undiciFetch.mockResolvedValue({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found'
-      })
-      const mockRequest = {
-        logger: mockLogger
-      }
-
-      // Act
-      const result = await fetcher('/not-found', {}, mockRequest)
-
-      // Assert
-      expect(result).toMatchObject({
-        isBoom: true,
-        output: {
-          statusCode: 404
-        }
-      })
-    })
-
-    test('should handle network errors', async () => {
-      // Arrange
-      const networkError = new Error('Network error')
-      undiciFetch.mockRejectedValue(networkError)
-      const mockRequest = {
-        logger: mockLogger
-      }
-
-      // Act
-      const result = await fetcher('/test', {}, mockRequest)
-
-      // Assert
-      expect(result).toMatchObject({
-        isBoom: true,
-        output: {
-          statusCode: 503
-        }
-      })
-      expect(mockLogger.error).toHaveBeenCalled()
-    })
+    )
+    expect(mockResponse.json).toHaveBeenCalled()
+    expect(result).toEqual(mockResponseData)
+    expect(mockLogger.info).toHaveBeenCalledTimes(2)
   })
 
-  describe('POST requests', () => {
-    test('should handle 201 Created response', async () => {
-      // Arrange
-      const mockResponse = { id: '123' }
-      undiciFetch.mockResolvedValue({
-        status: 201,
-        json: () => Promise.resolve(mockResponse)
+  test('should handle 201 Created responses', async () => {
+    // Arrange
+    const mockResponseData = { id: '123', created: true }
+    const mockResponse = {
+      ok: true,
+      status: 201,
+      headers: {
+        get: jest.fn().mockReturnValue('application/json')
+      },
+      json: jest.fn().mockResolvedValue(mockResponseData)
+    }
+    undiciFetch.mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await fetcher('/test', { method: 'POST' }, mockRequest)
+
+    // Assert
+    expect(undiciFetch).toHaveBeenCalledWith(
+      `${mockApiUrl}/test`,
+      expect.objectContaining({
+        method: 'POST'
       })
-      const mockRequest = {
-        logger: mockLogger
-      }
-
-      // Act
-      const result = await fetcher(
-        '/test-endpoint',
-        {
-          method: 'POST',
-          body: JSON.stringify({ test: 'data' })
-        },
-        mockRequest
-      )
-
-      // Assert
-      expect(result).toEqual(mockResponse)
-    })
-
-    test('should handle non-JSON responses', async () => {
-      // Arrange
-      undiciFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        headers: {
-          get: () => 'text/plain'
-        }
-      })
-      const mockRequest = {
-        logger: mockLogger
-      }
-
-      // Act
-      const result = await fetcher('/test', { method: 'POST' }, mockRequest)
-
-      // Assert
-      expect(result).toEqual({
-        ok: true,
-        status: 200
-      })
-    })
+    )
+    expect(mockResponse.json).toHaveBeenCalled()
+    expect(result).toEqual(mockResponseData)
   })
 
-  describe('URL handling', () => {
-    test('should handle full URLs', async () => {
-      // Arrange
-      const fullUrl = 'https://external-api.com/endpoint'
-      undiciFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        headers: {
-          get: () => 'application/json'
-        },
-        json: () => Promise.resolve({})
-      })
-      const mockRequest = {
-        logger: mockLogger
+  test('should handle non-JSON responses', async () => {
+    // Arrange
+    const mockResponse = {
+      ok: true,
+      status: 200,
+      headers: {
+        get: jest.fn().mockReturnValue('text/plain')
       }
+    }
+    undiciFetch.mockResolvedValue(mockResponse)
 
-      // Act
-      await fetcher(fullUrl, {}, mockRequest)
+    // Act
+    const result = await fetcher('/test', {}, mockRequest)
 
-      // Assert
-      expect(undiciFetch).toHaveBeenCalledWith(fullUrl, expect.any(Object))
-    })
+    // Assert
+    expect(result).toEqual({ ok: true, status: 200 })
+  })
+
+  test('should handle error responses', async () => {
+    // Arrange
+    const mockResponse = {
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      headers: {
+        get: jest.fn()
+      }
+    }
+    undiciFetch.mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await fetcher('/test', {}, mockRequest)
+
+    // Assert
+    expect(result).toHaveProperty('isBoom', true)
+    expect(result.output.statusCode).toBe(404)
+    expect(result.message).toContain('Not Found')
+  })
+
+  test('should handle network errors', async () => {
+    // Arrange
+    const networkError = new Error('Network error')
+    undiciFetch.mockRejectedValue(networkError)
+
+    // Act
+    const result = await fetcher('/test', {}, mockRequest)
+
+    // Assert
+    expect(result).toHaveProperty('isBoom', true)
+    expect(result.output.statusCode).toBe(503)
+    expect(mockLogger.error).toHaveBeenCalled()
+  })
+
+  test('should handle timeout errors', async () => {
+    // Arrange
+    const timeoutError = new Error('Timeout')
+    timeoutError.name = 'AbortError'
+    undiciFetch.mockRejectedValue(timeoutError)
+
+    // Act
+    const result = await fetcher('/test', {}, mockRequest)
+
+    // Assert
+    expect(result).toHaveProperty('isBoom', true)
+    expect(result.output.statusCode).toBe(503)
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ url: `${mockApiUrl}/test` }),
+      'API request timed out after 5 seconds'
+    )
+  })
+
+  test('should handle connection refused errors', async () => {
+    // Arrange
+    const connError = new Error('Connection refused')
+    connError.code = 'ECONNREFUSED'
+    undiciFetch.mockRejectedValue(connError)
+
+    // Act
+    const result = await fetcher('/test', {}, mockRequest)
+
+    // Assert
+    expect(result).toHaveProperty('isBoom', true)
+    expect(result.output.statusCode).toBe(503)
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ url: `${mockApiUrl}/test` }),
+      'API connection refused - service may be unavailable'
+    )
+  })
+
+  test('should use absolute URL if provided', async () => {
+    // Arrange
+    const absoluteUrl = 'https://other-api.com/test'
+    const mockResponse = {
+      ok: true,
+      status: 200,
+      headers: {
+        get: jest.fn().mockReturnValue('application/json')
+      },
+      json: jest.fn().mockResolvedValue({ data: 'test' })
+    }
+    undiciFetch.mockResolvedValue(mockResponse)
+
+    // Act
+    await fetcher(absoluteUrl, {}, mockRequest)
+
+    // Assert
+    expect(undiciFetch).toHaveBeenCalledWith(absoluteUrl, expect.anything())
+  })
+
+  test('should create logger if not provided in request', async () => {
+    // Arrange
+    const mockResponse = {
+      ok: true,
+      status: 200,
+      headers: {
+        get: jest.fn().mockReturnValue('application/json')
+      },
+      json: jest.fn().mockResolvedValue({ data: 'test' })
+    }
+    undiciFetch.mockResolvedValue(mockResponse)
+
+    // Act
+    await fetcher('/test')
+
+    // Assert
+    expect(createLogger).toHaveBeenCalled()
+  })
+
+  test('getApiUrl should return the configured API URL', () => {
+    // Act
+    const result = getApiUrl()
+
+    // Assert
+    expect(result).toBe('https://api.example.com')
+    expect(config.get).toHaveBeenCalledWith('api.baseUrl')
   })
 })

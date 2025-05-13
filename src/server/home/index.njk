@@ -61,9 +61,6 @@
               html: "<a href='/projects/" + project.id + "' class='govuk-link'>" + project.name + "</a>"
             },
             {
-              text: project.lastUpdated
-            },
-            {
               html: "<strong class='govuk-tag " + statusClass + "'>" + project.status + "</strong>"
             }
           ] %}
@@ -74,9 +71,6 @@
           head: [
             {
               text: "Project name"
-            },
-            {
-              text: "Last updated"
             },
             {
               text: "RAG status"

@@ -4,7 +4,9 @@ import {
   updateProject,
   getStandardHistory,
   getProjectHistory,
-  createProject
+  createProject,
+  deleteProject,
+  getProfessionHistory
 } from './projects.js'
 
 // First declare the mocks
@@ -14,6 +16,10 @@ jest.mock('~/src/server/common/helpers/fetch/fetcher.js', () => ({
 
 jest.mock('~/src/server/services/service-standards.js', () => ({
   getServiceStandards: jest.fn()
+}))
+
+jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js', () => ({
+  authedFetchJsonDecorator: jest.fn()
 }))
 
 // Define the mock logger module first
@@ -40,6 +46,8 @@ const { fetcher: mockFetch } = jest.requireMock(
 const { getServiceStandards: mockGetServiceStandards } = jest.requireMock(
   '~/src/server/services/service-standards.js'
 )
+const { authedFetchJsonDecorator: mockAuthedFetchJsonDecorator } =
+  jest.requireMock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
 
 describe('Projects service', () => {
   beforeEach(() => {
@@ -629,5 +637,276 @@ describe('createProject', () => {
         status: 'GREEN'
       })
     ).rejects.toThrow('Failed to create project')
+  })
+})
+
+describe('deleteProject', () => {
+  const mockRequest = {
+    auth: {
+      credentials: {
+        token: 'test-token'
+      }
+    },
+    logger: {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn()
+    }
+  }
+
+  const mockAuthedFetch = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+  })
+
+  test('should delete project with authenticated request', async () => {
+    // Arrange
+    mockAuthedFetch.mockResolvedValue(true)
+
+    // Act
+    const result = await deleteProject('1', mockRequest)
+
+    // Assert
+    expect(result).toBe(true)
+    expect(mockAuthedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+    expect(mockAuthedFetch).toHaveBeenCalledWith('/projects/1', {
+      method: 'DELETE'
+    })
+  })
+
+  test('should delete project without authenticated request', async () => {
+    // Arrange
+    mockFetch.mockResolvedValue(true)
+
+    // Act
+    const result = await deleteProject('1')
+
+    // Assert
+    expect(result).toBe(true)
+    expect(mockFetch).toHaveBeenCalledWith('/projects/1', {
+      method: 'DELETE'
+    })
+  })
+
+  test('should handle API errors', async () => {
+    // Arrange
+    const error = new Error('Delete failed')
+    mockFetch.mockRejectedValue(error)
+
+    // Act & Assert
+    await expect(deleteProject('1')).rejects.toThrow('Delete failed')
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: 'Delete failed',
+        id: '1'
+      }),
+      'Failed to delete project'
+    )
+  })
+
+  test('should log project ID when successfully deleted', async () => {
+    // Arrange
+    mockFetch.mockResolvedValue(true)
+
+    // Act
+    await deleteProject('test-project-id')
+
+    // Assert
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      { id: 'test-project-id' },
+      'Project deleted successfully'
+    )
+  })
+})
+
+describe('getProfessionHistory', () => {
+  const mockRequest = {
+    auth: {
+      credentials: {
+        token: 'test-token'
+      }
+    },
+    logger: {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn()
+    }
+  }
+
+  const mockAuthedFetch = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+    process.env.NODE_ENV = 'test' // Ensure we're in test mode to prevent cache parameters
+  })
+
+  test('should fetch profession history with authenticated request', async () => {
+    // Arrange
+    const mockHistory = [
+      {
+        timestamp: '2024-02-15T12:00:00Z',
+        changes: {
+          status: { from: 'AMBER', to: 'GREEN' },
+          commentary: { from: '', to: 'Updated profession status' }
+        }
+      }
+    ]
+    mockAuthedFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProfessionHistory('1', '2', mockRequest)
+
+    // Assert
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          timestamp: '2024-02-15T12:00:00Z',
+          type: 'profession'
+        })
+      ])
+    )
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/projects/1/professions/2/history'
+    )
+  })
+
+  test('should fetch profession history without authenticated request', async () => {
+    // Arrange
+    const mockHistory = [
+      {
+        timestamp: '2024-02-15T12:00:00Z',
+        status: 'GREEN',
+        commentary: 'Test commentary'
+      }
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProfessionHistory('1', '2')
+
+    // Assert
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          timestamp: '2024-02-15T12:00:00Z',
+          type: 'profession',
+          changes: expect.objectContaining({
+            status: { from: '', to: 'GREEN' },
+            commentary: { from: '', to: 'Test commentary' }
+          })
+        })
+      ])
+    )
+    expect(mockFetch).toHaveBeenCalledWith('/projects/1/professions/2/history')
+  })
+
+  test('should normalize history entries', async () => {
+    // Arrange
+    const mockHistory = [
+      {
+        // Entry without proper changes object
+        timestamp: '2024-02-15T12:00:00Z',
+        status: 'GREEN',
+        commentary: 'Test commentary'
+      },
+      {
+        // Entry with existing changes object
+        timestamp: '2024-02-16T12:00:00Z',
+        changes: {
+          status: { from: 'AMBER', to: 'GREEN' }
+        }
+      }
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProfessionHistory('1', '2')
+
+    // Assert
+    expect(result).toHaveLength(2)
+    // Check first entry was normalized
+    expect(result[0]).toMatchObject({
+      timestamp: '2024-02-15T12:00:00Z',
+      type: 'profession',
+      changes: {
+        status: { from: '', to: 'GREEN' },
+        commentary: { from: '', to: 'Test commentary' }
+      }
+    })
+    // Check second entry kept original changes but got type added
+    expect(result[1]).toMatchObject({
+      timestamp: '2024-02-16T12:00:00Z',
+      type: 'profession',
+      changes: {
+        status: { from: 'AMBER', to: 'GREEN' }
+      }
+    })
+  })
+
+  test('should handle null API response', async () => {
+    // Arrange
+    mockFetch.mockResolvedValue(null)
+
+    // Act
+    const result = await getProfessionHistory('1', '2')
+
+    // Assert
+    expect(result).toEqual([])
+    expect(mockLogger.warn).toHaveBeenCalledWith('No history found', {
+      projectId: '1',
+      professionId: '2'
+    })
+  })
+
+  test('should handle empty history array', async () => {
+    // Arrange
+    mockFetch.mockResolvedValue([])
+
+    // Act
+    const result = await getProfessionHistory('1', '2')
+
+    // Assert
+    expect(result).toEqual([])
+  })
+
+  test('should handle API errors', async () => {
+    // Arrange
+    const error = new Error('API error')
+    mockFetch.mockRejectedValue(error)
+
+    // Act & Assert
+    await expect(getProfessionHistory('1', '2')).rejects.toThrow('API error')
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: 'API error',
+        projectId: '1',
+        professionId: '2'
+      }),
+      'Failed to fetch profession history'
+    )
+  })
+
+  test('should append cache parameter in non-test environment', async () => {
+    // Arrange
+    process.env.NODE_ENV = 'development'
+    const mockDate = new Date('2024-05-15T12:00:00Z')
+    jest.spyOn(global, 'Date').mockImplementation(() => mockDate)
+
+    mockFetch.mockResolvedValue([])
+
+    // Act
+    await getProfessionHistory('1', '2')
+
+    // Assert
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects/1/professions/2/history?_cache=2024-05-15'
+    )
+
+    // Cleanup
+    global.Date = Date
+    process.env.NODE_ENV = 'test'
   })
 })

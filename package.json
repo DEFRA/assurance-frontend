@@ -48,6 +48,7 @@
     "@hapi/hapi": "^21.3.3",
     "@hapi/inert": "^7.0.0",
     "@hapi/vision": "^7.0.3",
+    "accessible-autocomplete": "^3.0.1",
     "aws-embedded-metrics": "^4.2.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "chart.js": "^4.4.8",

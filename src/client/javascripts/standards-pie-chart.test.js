@@ -2,11 +2,33 @@
  * @jest-environment jsdom
  */
 
-// Use the mock implementation instead of the real module
-// Import the mock implementation
+// Now import the module that uses Chart.js
 import { createStandardsPieChart } from './standards-pie-chart.js'
 
-jest.mock('./standards-pie-chart.js')
+// Mock Chart.js before importing modules that use it
+jest.mock('chart.js', () => {
+  return {
+    Chart: class MockChart {
+      constructor(ctx, config) {
+        this.type = config.type
+        this.data = config.data
+        this.options = config.options
+        this.ctx = ctx
+        this.update = jest.fn()
+        this.destroy = jest.fn()
+      }
+
+      static register() {
+        // Mock implementation - does nothing
+      }
+    },
+    // Mock all chart components
+    ArcElement: class {},
+    Tooltip: class {},
+    Legend: class {},
+    PieController: class {}
+  }
+})
 
 describe('Standards Pie Chart', () => {
   let container
@@ -15,9 +37,6 @@ describe('Standards Pie Chart', () => {
     // Setup a canvas element
     container = document.createElement('canvas')
     container.getContext = jest.fn().mockReturnValue('2d-context')
-
-    // Reset createStandardsPieChart mock
-    createStandardsPieChart.mockClear()
   })
 
   afterEach(() => {
@@ -39,12 +58,13 @@ describe('Standards Pie Chart', () => {
     const chart = createStandardsPieChart(container, mockStandards)
 
     // Assert
-    expect(createStandardsPieChart).toHaveBeenCalledTimes(1)
-    expect(createStandardsPieChart).toHaveBeenCalledWith(
-      container,
-      mockStandards
-    )
-    expect(chart.data).toEqual([2, 1, 1, 2]) // Counts for RED, AMBER, GREEN, NOT_STARTED
+    expect(chart.type).toBe('pie')
+
+    // Verify data counts
+    const chartData = chart.data.datasets[0].data
+
+    // Counts for RED, AMBER, GREEN, NOT_STARTED
+    expect(chartData).toEqual([2, 1, 1, 2])
   })
 
   test('should handle standards with missing statuses', () => {
@@ -59,8 +79,10 @@ describe('Standards Pie Chart', () => {
     const chart = createStandardsPieChart(container, mockStandards)
 
     // Assert
-    expect(createStandardsPieChart).toHaveBeenCalledTimes(1)
-    expect(chart.data).toEqual([1, 1, 0, 0]) // 1 RED, 1 AMBER, 0 GREEN, 0 NOT_STARTED
+    const chartData = chart.data.datasets[0].data
+
+    // 1 RED, 1 AMBER, 0 GREEN, 0 NOT_STARTED
+    expect(chartData).toEqual([1, 1, 0, 0])
   })
 
   test('should handle empty standards array', () => {
@@ -68,8 +90,10 @@ describe('Standards Pie Chart', () => {
     const chart = createStandardsPieChart(container, [])
 
     // Assert
-    expect(createStandardsPieChart).toHaveBeenCalledTimes(1)
-    expect(chart.data).toEqual([0, 0, 0, 0]) // All zeros
+    const chartData = chart.data.datasets[0].data
+
+    // All zeros
+    expect(chartData).toEqual([0, 0, 0, 0])
   })
 
   test('should handle unknown status values', () => {
@@ -83,20 +107,33 @@ describe('Standards Pie Chart', () => {
     const chart = createStandardsPieChart(container, mockStandards)
 
     // Assert
-    expect(createStandardsPieChart).toHaveBeenCalledTimes(1)
-    expect(chart.data).toEqual([1, 0, 0, 0]) // Only the RED is counted in the expected categories
+    const chartData = chart.data.datasets[0].data
+
+    // Only the RED is counted in the expected categories
+    expect(chartData).toEqual([1, 0, 0, 0])
   })
 
-  test('should return the chart instance', () => {
+  test('should configure correct colors for each status', () => {
     // Arrange
-    const mockStandards = [{ status: 'RED' }, { status: 'AMBER' }]
+    const mockStandards = [
+      { status: 'RED' },
+      { status: 'AMBER' },
+      { status: 'GREEN' },
+      { status: 'NOT_STARTED' }
+    ]
 
     // Act
     const chart = createStandardsPieChart(container, mockStandards)
 
     // Assert
-    expect(chart).toBeDefined()
-    expect(chart.update).toBeDefined()
-    expect(chart.destroy).toBeDefined()
+    const backgroundColor = chart.data.datasets[0].backgroundColor
+
+    // Check GDS color values
+    expect(backgroundColor).toEqual([
+      '#d4351c', // GDS Red
+      '#f47738', // GDS Amber
+      '#00703c', // GDS Green
+      '#b1b4b6' // GDS Grey
+    ])
   })
 })

@@ -10,14 +10,14 @@
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
-      <form method="GET" class="govuk-!-margin-bottom-6">
+      <form method="GET" action="/" class="govuk-!-margin-bottom-6">
         <div class="govuk-grid-row">
           <div class="govuk-grid-column-two-thirds">
             <div class="govuk-form-group">
               <label class="govuk-label govuk-label--s" for="search">
-                Search
+                Search projects
               </label>
-              <div id="search-container" class="autocomplete-container"></div>
+              <div id="search-container" class="govuk-!-margin-bottom-0"></div>
             </div>
           </div>
           <div class="govuk-grid-column-one-third">
@@ -87,84 +87,7 @@
 
 {% block pageStyles %}
 <style>
-  .autocomplete-container {
-    position: relative;
-    z-index: 10;
-  }
-  
-  /* Force GDS styling on the input */
-  #search, 
-  .autocomplete__input {
-    width: 100%;
-    height: 40px;
-    padding: 5px;
-    font-family: "GDS Transport", arial, sans-serif !important;
-    font-size: 19px !important;
-    font-weight: 400 !important;
-    border: 2px solid #0b0c0c;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-  
-  /* Force GDS styling on the menu */
-  .autocomplete__menu,
-  .autocomplete__menu--overlay {
-    width: 100%;
-    border: 2px solid #0b0c0c;
-    border-top: 0;
-    max-height: 342px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    font-family: "GDS Transport", arial, sans-serif !important;
-    font-weight: 400 !important;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-    z-index: 100;
-  }
-  
-  /* Super specific targeting for list items */
-  .autocomplete__menu li,
-  .autocomplete__menu--overlay li,
-  li.autocomplete__option,
-  ul[role="listbox"] li,
-  #search__listbox li,
-  .autocomplete__option {
-    font-family: "GDS Transport", arial, sans-serif !important;
-    font-size: 16px !important;
-    font-weight: 400 !important;
-    line-height: 1.25 !important;
-    padding: 10px !important;
-    border-bottom: 1px solid #b1b4b6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    margin: 0 !important;
-  }
-  
-  /* Super specific targeting for hover/focus styles */
-  .autocomplete__menu li:hover,
-  .autocomplete__menu--overlay li:hover,
-  li.autocomplete__option:hover,
-  li.autocomplete__option--focused,
-  li.autocomplete__option[aria-selected="true"],
-  ul[role="listbox"] li:hover,
-  ul[role="listbox"] li[aria-selected="true"],
-  #search__listbox li:hover,
-  #search__listbox li[aria-selected="true"] {
-    background-color: #1d70b8 !important;
-    border-color: #1d70b8 !important;
-    color: white !important;
-    cursor: pointer;
-    outline: none;
-  }
-  
-  /* Ensure hint text has correct font */
-  .autocomplete__hint {
-    font-family: "GDS Transport", arial, sans-serif !important;
-    color: #505a5f;
-  }
-  
-  /* Add @font-face rule to ensure GDS Transport is available */
+  /* Add GDS Transport font for autocomplete */
   @font-face {
     font-family: "GDS Transport";
     src: url("/fonts/light-94a07e06a1-v2.woff2") format("woff2");
@@ -180,77 +103,215 @@
     font-style: normal;
     font-display: fallback;
   }
+  
+  /* Override autocomplete with GDS styling - using more specific selectors */
+  .govuk-template .autocomplete__wrapper * {
+    font-family: "GDS Transport", arial, sans-serif !important;
+  }
+  
+  .govuk-template .autocomplete__wrapper {
+    font-family: "GDS Transport", arial, sans-serif !important;
+  }
+  
+  .govuk-template .autocomplete__input {
+    font-family: "GDS Transport", arial, sans-serif !important;
+    font-size: 19px !important;
+    line-height: 1.25 !important;
+    padding: 5px !important;
+    height: 40px !important;
+    border: 2px solid #0b0c0c !important;
+  }
+  
+  /* Target the menu and options specifically */
+  .govuk-template .autocomplete__menu {
+    font-family: "GDS Transport", arial, sans-serif !important;
+    background-color: #fff !important;
+    border: 2px solid #0b0c0c !important;
+    border-top: 0 !important;
+    width: 100% !important;
+    max-height: 342px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Target all options in the dropdown */
+  .govuk-template .autocomplete__menu .autocomplete__option {
+    font-family: "GDS Transport", arial, sans-serif !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+    padding: 8px !important;
+    border-bottom: 1px solid #b1b4b6 !important;
+    color: #0b0c0c !important;
+    background-color: #fff !important;
+  }
+  
+  /* Target odd options specifically */
+  .govuk-template .autocomplete__menu .autocomplete__option--odd {
+    background-color: #f3f2f1 !important;
+  }
+  
+  /* Override hover and focus states */
+  .govuk-template .autocomplete__menu .autocomplete__option:hover,
+  .govuk-template .autocomplete__menu .autocomplete__option--focused {
+    background-color: #1d70b8 !important;
+    border-color: #1d70b8 !important;
+    color: white !important;
+    outline: none !important;
+  }
+  
+  /* Selected option */
+  .govuk-template .autocomplete__menu .autocomplete__option--selected {
+    background-color: #1d70b8 !important;
+    color: white !important;
+  }
+  
+  /* Override media query styles */
+  @media (min-width: 641px) {
+    .govuk-template .autocomplete__hint,
+    .govuk-template .autocomplete__input,
+    .govuk-template .autocomplete__option {
+      font-family: "GDS Transport", arial, sans-serif !important;
+      font-size: 19px !important;
+      line-height: 1.31579 !important;
+    }
+  }
 </style>
 {% endblock %}
 
 {% block pageScripts %}
-  <script>
-    // Initialize autocomplete for project search
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Create a source array with project names and IDs for easy lookup
+    const projects = {{ projects | dump | safe }};
+    const projectsById = {};
+    const projectsByName = {};
+    
+    // Create lookup maps for faster access
+    projects.forEach(project => {
+      projectsById[project.id] = project;
+      projectsByName[project.name] = project;
+    });
+    
+    // Create a list of project names for the autocomplete
+    const projectNames = projects.map(project => project.name);
+    
+    // Initialize the GOV.UK accessible autocomplete
     accessibleAutocomplete({
       element: document.querySelector('#search-container'),
       id: 'search',
       name: 'search',
       defaultValue: '{{ searchTerm }}',
-      placeholder: 'Search by project',
-      source: {{ projectNames | dump | safe }},
-      onConfirm: function(selected) {
-        if (selected) {
-          // Set the input value to exactly match the selected item
-          const input = document.querySelector('#search');
-          if (input) {
-            input.value = selected;
+      source: projectNames,
+      placeholder: 'Start typing to search',
+      autoselect: false,
+      confirmOnBlur: false,
+      showNoOptionsFound: true,
+      minLength: 2,
+      displayMenu: 'overlay',
+      onConfirm: function(selectedProjectName) {
+        if (selectedProjectName) {
+          // If a project was selected from the dropdown, navigate to its page
+          const project = projectsByName[selectedProjectName];
+          if (project && project.id) {
+            window.location.href = `/projects/${project.id}`;
           }
-          // Submit the form when an option is selected
-          document.querySelector('form').submit();
         }
       },
-      minLength: 2,
-      confirmOnBlur: true,
-      displayMenu: 'overlay',
-      tNoResults: function() { return 'No projects found'; },
-      showNoOptionsFound: true,
-      autoselect: true,
-      cssNamespace: 'autocomplete',
-      dropdownArrow: () => '',
-      enhanceSelectElement: false
-    });
-    
-    // Force GDS Transport font on all autocomplete elements
-    function applyGdsStyles() {
-      // Wait for the items to be generated by the autocomplete library
-      setTimeout(function() {
-        // Get all autocomplete options and apply GDS styling
-        const items = document.querySelectorAll('.autocomplete__option');
-        if (items && items.length > 0) {
-          items.forEach(item => {
-            item.style.fontFamily = '"GDS Transport", arial, sans-serif';
-            item.style.fontSize = '16px';
-            item.style.fontWeight = '400';
-            item.style.lineHeight = '1.25';
-            item.style.WebkitFontSmoothing = 'antialiased';
-            item.style.MozOsxFontSmoothing = 'grayscale';
-          });
-        }
-        
-        // Also directly apply to the listbox
-        const listbox = document.getElementById('search__listbox');
-        if (listbox) {
-          listbox.style.fontFamily = '"GDS Transport", arial, sans-serif';
-        }
-      }, 200);
-    }
-    
-    // Apply styles on page load
-    document.addEventListener('DOMContentLoaded', applyGdsStyles);
-    
-    // Also apply styles whenever the input changes
-    document.addEventListener('DOMContentLoaded', function() {
-      const input = document.querySelector('.autocomplete__input');
-      if (input) {
-        input.addEventListener('input', applyGdsStyles);
-        input.addEventListener('focus', applyGdsStyles);
-        input.addEventListener('click', applyGdsStyles);
+      tNoResults: function() { 
+        return 'No projects found';
+      },
+      tStatusQueryTooShort: function(minQueryLength) {
+        return `Type in ${minQueryLength} or more characters for results`;
       }
     });
-  </script>
+    
+    // Handle form submission
+    const form = document.querySelector('form');
+    const searchInput = document.getElementById('search');
+    
+    form.addEventListener('submit', function(event) {
+      // This ensures the search button just performs a text search
+      // without directly navigating to a project page
+      if (searchInput.value) {
+        // Let the form submit normally - this will trigger a search
+        return true;
+      }
+      
+      // If no search term, prevent empty searches
+      event.preventDefault();
+      return false;
+    });
+    
+    // Inject GDS Transport font styling directly after component initialization
+    // This ensures our styles will be applied last and override the component's default styles
+    setTimeout(function() {
+      const styleEl = document.createElement('style');
+      styleEl.textContent = `
+        /* Force GDS Transport font on all autocomplete elements */
+        .autocomplete__wrapper * {
+          font-family: "GDS Transport", arial, sans-serif !important;
+        }
+        
+        .autocomplete__input {
+          font-family: "GDS Transport", arial, sans-serif !important;
+          font-size: 19px !important;
+          line-height: 1.25 !important;
+          padding: 5px !important;
+          height: 40px !important;
+          border: 2px solid #0b0c0c !important;
+        }
+        
+        .autocomplete__menu {
+          font-family: "GDS Transport", arial, sans-serif !important;
+          background-color: #fff !important;
+          border: 2px solid #0b0c0c !important;
+          border-top: 0 !important;
+          width: 100% !important;
+          max-height: 342px !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        
+        .autocomplete__menu .autocomplete__option {
+          font-family: "GDS Transport", arial, sans-serif !important;
+          font-size: 16px !important;
+          line-height: 1.5 !important;
+          padding: 8px !important;
+          border-bottom: 1px solid #b1b4b6 !important;
+          color: #0b0c0c !important;
+          background-color: #fff !important;
+        }
+        
+        .autocomplete__menu .autocomplete__option--odd {
+          background-color: #f3f2f1 !important;
+        }
+        
+        .autocomplete__menu .autocomplete__option:hover,
+        .autocomplete__menu .autocomplete__option--focused {
+          background-color: #1d70b8 !important;
+          border-color: #1d70b8 !important;
+          color: white !important;
+          outline: none !important;
+        }
+        
+        .autocomplete__menu .autocomplete__option--selected {
+          background-color: #1d70b8 !important;
+          color: white !important;
+        }
+        
+        /* Override media query styles */
+        @media (min-width: 641px) {
+          .autocomplete__hint,
+          .autocomplete__input,
+          .autocomplete__option {
+            font-family: "GDS Transport", arial, sans-serif !important;
+            font-size: 19px !important;
+            line-height: 1.31579 !important;
+          }
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }, 100); // Small delay to ensure autocomplete is fully initialized
+  });
+</script>
 {% endblock %}

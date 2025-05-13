@@ -6,6 +6,15 @@ import { config } from '~/src/config/config.js'
 import { getBearerToken } from '~/src/server/common/helpers/auth/get-token.js'
 
 // Mock dependencies
+jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
+  createLogger: jest.fn().mockReturnValue({
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn()
+  })
+}))
+
 jest.mock('~/src/config/config.js', () => ({
   config: {
     get: jest.fn()
@@ -16,18 +25,13 @@ jest.mock('~/src/server/common/helpers/auth/get-token.js', () => ({
   getBearerToken: jest.fn()
 }))
 
-jest.mock('~/src/server/common/helpers/logging/logger.js', () => {
-  return {
-    createLogger: jest.fn().mockReturnValue({
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn()
-    })
-  }
-})
-
 // Mock global fetch
 global.fetch = jest.fn()
+
+// Initialize mock logger
+const mockLogger = jest
+  .requireMock('~/src/server/common/helpers/logging/logger.js')
+  .createLogger()
 
 describe('Authenticated Fetch JSON', () => {
   const mockApiUrl = 'https://api.example.com'
@@ -49,128 +53,138 @@ describe('Authenticated Fetch JSON', () => {
       headers: {
         get: jest.fn().mockReturnValue('application/json')
       },
-      json: jest.fn().mockResolvedValue({ data: 'test' })
+      json: jest.fn().mockResolvedValue({ data: 'test' }),
+      text: jest.fn().mockResolvedValue(JSON.stringify({ data: 'test' }))
     })
   })
 
   describe('authedFetchJson', () => {
-    test('should fetch and return JSON response with token', async () => {
+    test('should fetch data with token', async () => {
       // Arrange
-      const mockToken = 'test-token'
-      const mockUrl = '/test-endpoint'
+      const url = '/data'
+      const token = 'test-token'
 
       // Act
-      const result = await authedFetchJson(mockUrl, mockToken)
+      const result = await authedFetchJson(url, token)
 
       // Assert
+      expect(result).toEqual({ data: 'test' })
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiUrl}${mockUrl}`,
+        `${mockApiUrl}${url}`,
         expect.objectContaining({
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${mockToken}`
+            Authorization: `Bearer ${token}`
           })
         })
       )
-      expect(result).toEqual({ data: 'test' })
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Added authorization header to request',
+        expect.objectContaining({
+          url: `${mockApiUrl}${url}`,
+          tokenLength: token.length
+        })
+      )
     })
 
-    test('should clean up token if it already has Bearer prefix', async () => {
+    test('should clean up token with "Bearer" prefix', async () => {
       // Arrange
-      const mockToken = 'Bearer test-token'
-      const mockUrl = '/test-endpoint'
+      const url = '/data'
+      const token = 'Bearer test-token'
 
       // Act
-      const result = await authedFetchJson(mockUrl, mockToken)
+      await authedFetchJson(url, token)
 
       // Assert
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiUrl}${mockUrl}`,
+        `${mockApiUrl}${url}`,
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: 'Bearer test-token'
           })
         })
       )
-      expect(result).toEqual({ data: 'test' })
-    })
 
-    test('should use full URL if provided', async () => {
-      // Arrange
-      const mockToken = 'test-token'
-      const mockUrl = 'https://another-api.example.com/endpoint'
-
-      // Act
-      const result = await authedFetchJson(mockUrl, mockToken)
-
-      // Assert
-      expect(global.fetch).toHaveBeenCalledWith(
-        mockUrl,
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Token was cleaned up before sending to API',
         expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: `Bearer ${mockToken}`
-          })
+          originalLength: token.length,
+          cleanedLength: 'test-token'.length
         })
       )
-      expect(result).toEqual({ data: 'test' })
+    })
+
+    test('should use absolute URL if provided', async () => {
+      // Arrange
+      const url = 'https://other-api.example.org/data'
+      const token = 'test-token'
+
+      // Act
+      await authedFetchJson(url, token)
+
+      // Assert
+      expect(global.fetch).toHaveBeenCalledWith(url, expect.any(Object))
     })
 
     test('should warn when no token is provided', async () => {
       // Arrange
-      const mockUrl = '/test-endpoint'
+      const url = '/data'
 
       // Act
-      const result = await authedFetchJson(mockUrl, null)
+      await authedFetchJson(url, null)
 
       // Assert
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'No token provided for authenticated request',
+        { url: `${mockApiUrl}${url}` }
+      )
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiUrl}${mockUrl}`,
+        `${mockApiUrl}${url}`,
         expect.objectContaining({
           headers: expect.objectContaining({
             'Content-Type': 'application/json'
           })
         })
       )
-      expect(result).toEqual({ data: 'test' })
+      // Verify no Authorization header was set
+      expect(
+        global.fetch.mock.calls[0][1].headers.Authorization
+      ).toBeUndefined()
     })
 
-    test('should merge provided options with defaults', async () => {
+    test('should merge custom options and headers', async () => {
       // Arrange
-      const mockToken = 'test-token'
-      const mockUrl = '/test-endpoint'
-      const mockOptions = {
+      const url = '/data'
+      const token = 'test-token'
+      const options = {
         method: 'POST',
-        body: JSON.stringify({ test: 'data' }),
+        body: JSON.stringify({ data: 'test' }),
         headers: {
           'X-Custom-Header': 'custom-value'
         }
       }
 
       // Act
-      const result = await authedFetchJson(mockUrl, mockToken, mockOptions)
+      await authedFetchJson(url, token, options)
 
       // Assert
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiUrl}${mockUrl}`,
+        `${mockApiUrl}${url}`,
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ test: 'data' }),
+          body: JSON.stringify({ data: 'test' }),
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${mockToken}`,
+            Authorization: `Bearer ${token}`,
             'X-Custom-Header': 'custom-value'
           })
         })
       )
-      expect(result).toEqual({ data: 'test' })
     })
 
     test('should handle non-JSON responses', async () => {
       // Arrange
-      const mockToken = 'test-token'
-      const mockUrl = '/test-endpoint'
-
-      // Setup fetch to return text
+      const url = '/text-data'
       global.fetch.mockResolvedValue({
         ok: true,
         status: 200,
@@ -181,112 +195,149 @@ describe('Authenticated Fetch JSON', () => {
       })
 
       // Act
-      const result = await authedFetchJson(mockUrl, mockToken)
+      const result = await authedFetchJson(url, 'test-token')
 
       // Assert
       expect(result).toBe('Plain text response')
     })
 
-    test('should handle error responses', async () => {
+    test('should handle API errors', async () => {
       // Arrange
-      const mockToken = 'test-token'
-      const mockUrl = '/test-endpoint'
-
-      // Setup fetch to return error
+      const url = '/data'
       global.fetch.mockResolvedValue({
         ok: false,
-        status: 400,
-        text: jest.fn().mockResolvedValue('Bad request')
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: jest.fn().mockResolvedValue('Server error occurred')
       })
 
       // Act & Assert
-      await expect(authedFetchJson(mockUrl, mockToken)).rejects.toThrow(
-        'API Error: 400 Bad request'
+      await expect(authedFetchJson(url, 'test-token')).rejects.toThrow(
+        'API Error: 500 Server error occurred'
+      )
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Error fetching data from API'),
+        expect.objectContaining({
+          url: `${mockApiUrl}${url}`
+        })
       )
     })
 
     test('should handle authentication errors', async () => {
       // Arrange
-      const mockToken = 'test-token'
-      const mockUrl = '/test-endpoint'
-
-      // Setup fetch to return auth error
+      const url = '/data'
       global.fetch.mockResolvedValue({
         ok: false,
         status: 401,
-        text: jest.fn().mockResolvedValue('Unauthorized')
+        statusText: 'Unauthorized',
+        text: jest.fn().mockResolvedValue('Invalid token')
       })
 
       // Act & Assert
-      await expect(authedFetchJson(mockUrl, mockToken)).rejects.toThrow(
-        'API Error: 401 Unauthorized'
+      await expect(authedFetchJson(url, 'test-token')).rejects.toThrow(
+        'API Error: 401 Invalid token'
+      )
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Authentication error - Token may be invalid or expired',
+        expect.objectContaining({
+          status: 401,
+          error: 'Invalid token',
+          url: `${mockApiUrl}${url}`
+        })
       )
     })
 
-    test('should handle network errors', async () => {
+    test('should handle fetch errors', async () => {
       // Arrange
-      const mockToken = 'test-token'
-      const mockUrl = '/test-endpoint'
-
-      // Setup fetch to throw network error
-      global.fetch.mockRejectedValue(new Error('Network error'))
+      const url = '/data'
+      const error = new Error('Network error')
+      global.fetch.mockRejectedValue(error)
 
       // Act & Assert
-      await expect(authedFetchJson(mockUrl, mockToken)).rejects.toThrow(
+      await expect(authedFetchJson(url, 'test-token')).rejects.toThrow(
         'Network error'
+      )
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error fetching data from API: Network error',
+        expect.objectContaining({
+          url: `${mockApiUrl}${url}`,
+          error: 'Network error'
+        })
       )
     })
   })
 
   describe('authedFetchJsonDecorator', () => {
-    test('should return a function that fetches with the request token', async () => {
+    test('should get token from request and use it for fetch', async () => {
       // Arrange
-      const mockRequest = { auth: { credentials: { token: 'test-token' } } }
-      const mockUrl = '/test-endpoint'
-
-      // Mock getBearerToken to return a token
-      getBearerToken.mockResolvedValue('test-token-from-request')
+      const request = { auth: { credentials: { token: 'from-request' } } }
+      const mockToken = 'bearer-token-from-auth'
+      getBearerToken.mockResolvedValue(mockToken)
 
       // Act
-      const decoratedFetch = authedFetchJsonDecorator(mockRequest)
-      const result = await decoratedFetch(mockUrl)
+      const decoratedFetch = authedFetchJsonDecorator(request)
+      await decoratedFetch('/data')
 
       // Assert
-      expect(getBearerToken).toHaveBeenCalledWith(mockRequest)
+      expect(getBearerToken).toHaveBeenCalledWith(request)
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiUrl}${mockUrl}`,
+        `${mockApiUrl}/data`,
         expect.objectContaining({
           headers: expect.objectContaining({
-            Authorization: 'Bearer test-token-from-request'
+            Authorization: `Bearer ${mockToken}`
           })
         })
       )
-      expect(result).toEqual({ data: 'test' })
     })
 
-    test('should handle error getting token', async () => {
+    test('should handle token retrieval failures', async () => {
       // Arrange
-      const mockRequest = { auth: { credentials: null } }
-      const mockUrl = '/test-endpoint'
-
-      // Mock getBearerToken to throw error
-      getBearerToken.mockRejectedValue(new Error('Token error'))
+      const request = {}
+      getBearerToken.mockRejectedValue(new Error('Token retrieval failed'))
 
       // Act
-      const decoratedFetch = authedFetchJsonDecorator(mockRequest)
-      const result = await decoratedFetch(mockUrl)
+      const decoratedFetch = authedFetchJsonDecorator(request)
+      await decoratedFetch('/data')
 
       // Assert
-      expect(getBearerToken).toHaveBeenCalledWith(mockRequest)
+      expect(getBearerToken).toHaveBeenCalledWith(request)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to get bearer token'
+      )
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiUrl}${mockUrl}`,
+        `${mockApiUrl}/data`,
         expect.objectContaining({
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json'
+          headers: expect.not.objectContaining({
+            Authorization: expect.any(String)
           })
         })
       )
-      expect(result).toEqual({ data: 'test' })
+    })
+
+    test('should pass custom options to fetch', async () => {
+      // Arrange
+      const request = {}
+      getBearerToken.mockResolvedValue('test-token')
+      const options = {
+        method: 'POST',
+        body: JSON.stringify({ data: 'test' })
+      }
+
+      // Act
+      const decoratedFetch = authedFetchJsonDecorator(request)
+      await decoratedFetch('/data', options)
+
+      // Assert
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${mockApiUrl}/data`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ data: 'test' }),
+          headers: expect.objectContaining({
+            Authorization: `Bearer test-token`
+          })
+        })
+      )
     })
   })
 })

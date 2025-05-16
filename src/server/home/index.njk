@@ -227,17 +227,25 @@
     
     // Handle form submission
     const form = document.querySelector('form');
-    const searchInput = document.getElementById('search');
     
     form.addEventListener('submit', function(event) {
-      // This ensures the search button just performs a text search
-      // without directly navigating to a project page
-      if (searchInput.value) {
-        // Let the form submit normally - this will trigger a search
-        return true;
+      // Get the visible input from the autocomplete
+      const autocompleteInput = document.querySelector('.autocomplete__input');
+      
+      // Get the hidden input created by the autocomplete component
+      const hiddenInput = form.querySelector('input[name="search"]');
+      
+      if (autocompleteInput && hiddenInput) {
+        // Ensure the hidden input has the value from the visible input
+        hiddenInput.value = autocompleteInput.value;
+        
+        // Only submit if we have a search value
+        if (hiddenInput.value) {
+          return true;
+        }
       }
       
-      // If no search term, prevent empty searches
+      // If no search term or inputs not found, prevent submission
       event.preventDefault();
       return false;
     });

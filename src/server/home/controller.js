@@ -30,7 +30,7 @@ export const homeController = {
         : projects
 
       return h.view('home/index', {
-        pageTitle: 'Projects | DDTS Assurance',
+        pageTitle: 'Home',
         projects: filteredProjects,
         searchTerm: search,
         projectNames,
@@ -47,7 +47,7 @@ export const homeController = {
 
       // Instead of throwing an error, display the page with an error message
       return h.view('home/index', {
-        pageTitle: 'Projects | DDTS Assurance',
+        pageTitle: 'Home',
         projects: [],
         searchTerm: search,
         projectNames: [],

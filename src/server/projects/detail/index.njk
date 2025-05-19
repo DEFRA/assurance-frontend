@@ -102,6 +102,16 @@
       
       <p class="govuk-body-s govuk-!-margin-bottom-4 govuk-!-margin-top-1">Last updated: {{ project.lastUpdated }}</p>
 
+      {% if isAuthenticated %}
+        <div class="govuk-button-group govuk-!-margin-bottom-6">
+          {{ govukButton({
+            text: "Edit Project",
+            href: "/projects/" + project.id + "/edit",
+            classes: "govuk-button--secondary"
+          }) }}
+        </div>
+      {% endif %}
+
       {% set overviewHtml %}
         {{ projectOverview(project) }}
       {% endset %}
@@ -172,15 +182,6 @@
         items: tabItems
       }) }}
 
-      {% if isAuthenticated %}
-        <div class="govuk-button-group">
-          {{ govukButton({
-            text: "Edit Project",
-            href: "/projects/" + project.id + "/edit",
-            classes: "govuk-button--secondary"
-          }) }}
-        </div>
-      {% endif %}
     </div>
   </div>
 {% endblock %}

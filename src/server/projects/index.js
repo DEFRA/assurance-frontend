@@ -134,8 +134,47 @@ export const projects = {
         },
         {
           method: 'GET',
+          path: '/projects/{id}/delete/delivery/{historyId}',
+          handler: projectsController.getDeleteDelivery,
+          options: {
+            pre: [{ method: requireAuth }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/delete/delivery/{historyId}',
+          handler: projectsController.postDeleteDelivery,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            }
+          }
+        },
+        {
+          method: 'GET',
           path: '/projects/{id}/standards',
           handler: projectsController.getStandards
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/history/{historyId}/archive',
+          handler: projectsController.getArchiveDelivery,
+          options: {
+            auth: {
+              mode: 'required'
+            }
+          }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/history/{historyId}/archive',
+          handler: projectsController.postArchiveDelivery,
+          options: {
+            auth: {
+              mode: 'required'
+            }
+          }
         }
       ])
     }

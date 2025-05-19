@@ -1,6 +1,4 @@
 import { projectsController, NOTIFICATIONS } from './controller.js'
-// Import the mocked module at the top
-import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 
 const mockGetProjects = jest.fn()
 const mockGetProjectById = jest.fn()
@@ -10,6 +8,7 @@ const mockGetStandardHistory = jest.fn()
 const mockGetProjectHistory = jest.fn()
 const mockGetProfessions = jest.fn()
 const mockGetProfessionHistory = jest.fn()
+const mockArchiveProjectHistoryEntry = jest.fn()
 
 jest.mock('~/src/server/services/projects.js', () => ({
   getProjects: (...args) => mockGetProjects(...args),
@@ -17,7 +16,9 @@ jest.mock('~/src/server/services/projects.js', () => ({
   updateProject: (...args) => mockUpdateProject(...args),
   getStandardHistory: (...args) => mockGetStandardHistory(...args),
   getProjectHistory: (...args) => mockGetProjectHistory(...args),
-  getProfessionHistory: (...args) => mockGetProfessionHistory(...args)
+  getProfessionHistory: (...args) => mockGetProfessionHistory(...args),
+  archiveProjectHistoryEntry: (...args) =>
+    mockArchiveProjectHistoryEntry(...args)
 }))
 
 jest.mock('~/src/server/services/service-standards.js', () => ({
@@ -1530,469 +1531,6 @@ describe('Projects controller', () => {
     })
   })
 
-  describe('getEditDelivery', () => {
-    it('should render the edit delivery view when project and history entry are found', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project',
-        status: 'GREEN'
-      }
-      const mockHistory = [
-        {
-          id: 'history-1',
-          timestamp: '2024-02-15',
-          changes: {
-            status: { from: 'AMBER', to: 'GREEN' },
-            commentary: { from: '', to: 'Delivery update' }
-          }
-        }
-      ]
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetProjectHistory.mockResolvedValue(mockHistory)
-
-      // Act
-      await projectsController.getEditDelivery(
-        {
-          params: { id: '1', historyId: 'history-1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/edit-delivery',
-        expect.objectContaining({
-          pageTitle: 'Edit Delivery Update | Test Project',
-          heading: 'Edit Delivery Update',
-          project: mockProject,
-          update: expect.objectContaining({
-            id: 'history-1',
-            status: 'GREEN',
-            commentary: 'Delivery update'
-          }),
-          statusOptions: expect.any(Array)
-        })
-      )
-    })
-
-    it('should redirect if project is not found', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue(null)
-
-      // Act
-      await projectsController.getEditDelivery(
-        {
-          params: { id: '999', historyId: 'history-1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
-      )
-    })
-
-    it('should redirect if history entry is not found', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project'
-      }
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetProjectHistory.mockResolvedValue([
-        {
-          id: 'different-history',
-          timestamp: '2024-02-15',
-          changes: { status: { to: 'GREEN' } }
-        }
-      ])
-
-      // Act
-      await projectsController.getEditDelivery(
-        {
-          params: { id: '1', historyId: 'history-1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1?notification=History entry not found'
-      )
-    })
-
-    it('should handle errors when fetching the project', async () => {
-      // Arrange
-      mockGetProjectById.mockRejectedValue(new Error('Database error'))
-
-      // Act & Assert
-      await expect(
-        projectsController.getEditDelivery(
-          {
-            params: { id: '1', historyId: 'history-1' },
-            logger: { error: jest.fn() }
-          },
-          mockH
-        )
-      ).rejects.toThrow()
-    })
-  })
-
-  describe('postEditDelivery', () => {
-    it('should update delivery history and redirect on success', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project'
-      }
-      const mockHistory = [
-        {
-          id: 'history-1',
-          timestamp: '2024-02-15',
-          changes: {
-            status: { from: 'AMBER', to: 'GREEN' },
-            commentary: { from: '', to: 'Delivery update' }
-          }
-        }
-      ]
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetProjectHistory.mockResolvedValue(mockHistory)
-
-      // Mock the authedFetchJsonDecorator
-      const mockFetch = jest.fn().mockResolvedValue({ success: true })
-      authedFetchJsonDecorator.mockReturnValue(mockFetch)
-
-      // Act
-      await projectsController.postEditDelivery(
-        {
-          params: { id: '1', historyId: 'history-1' },
-          payload: { status: 'RED', commentary: 'Updated commentary' },
-          logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(authedFetchJsonDecorator).toHaveBeenCalled()
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/projects/1/history/history-1',
-        expect.objectContaining({
-          method: 'PUT',
-          body: expect.any(String)
-        })
-      )
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1/edit?tab=delivery&notification=Project updated successfully'
-      )
-    })
-
-    it('should fall back to updating the project if history update fails', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project',
-        commentary: 'Old commentary'
-      }
-      const mockHistory = [
-        {
-          id: 'history-1',
-          timestamp: '2024-02-15',
-          changes: {
-            status: { from: 'AMBER', to: 'GREEN' },
-            commentary: { from: '', to: 'Delivery update' }
-          }
-        }
-      ]
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetProjectHistory.mockResolvedValue(mockHistory)
-      mockUpdateProject.mockResolvedValue({
-        ...mockProject,
-        status: 'RED',
-        commentary: 'Updated commentary'
-      })
-
-      // Mock the authedFetchJsonDecorator to fail
-      const mockFetch = jest.fn().mockRejectedValue(new Error('API error'))
-      authedFetchJsonDecorator.mockReturnValue(mockFetch)
-
-      // Act
-      await projectsController.postEditDelivery(
-        {
-          params: { id: '1', historyId: 'history-1' },
-          payload: { status: 'RED', commentary: 'Updated commentary' },
-          logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(authedFetchJsonDecorator).toHaveBeenCalled()
-      expect(mockFetch).toHaveBeenCalled()
-      expect(mockUpdateProject).toHaveBeenCalledWith(
-        '1',
-        expect.objectContaining({
-          status: 'RED',
-          commentary: 'Updated commentary'
-        }),
-        expect.any(Object)
-      )
-      expect(mockH.redirect).toHaveBeenCalled()
-    })
-
-    it('should redirect if project is not found', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue(null)
-
-      // Act
-      await projectsController.postEditDelivery(
-        {
-          params: { id: '999', historyId: 'history-1' },
-          payload: { status: 'RED', commentary: 'Updated commentary' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
-      )
-    })
-
-    it('should handle errors during update process', async () => {
-      // Arrange
-      mockGetProjectById.mockRejectedValue(new Error('Database error'))
-
-      // Act
-      await projectsController.postEditDelivery(
-        {
-          params: { id: '1', historyId: 'history-1' },
-          payload: { status: 'RED', commentary: 'Updated commentary' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1/edit?tab=delivery&notification=Failed to update project. Please try again.'
-      )
-    })
-  })
-
-  describe('getDeleteDelivery', () => {
-    it('should render the delete delivery view when project and history entry are found', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project'
-      }
-      const mockHistory = [
-        {
-          id: 'history-1',
-          timestamp: '2024-02-15',
-          changes: {
-            status: { from: 'AMBER', to: 'GREEN' },
-            commentary: { from: '', to: 'Delivery update' }
-          }
-        }
-      ]
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetProjectHistory.mockResolvedValue(mockHistory)
-
-      // Act
-      await projectsController.getDeleteDelivery(
-        {
-          params: { id: '1', historyId: 'history-1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/delete-delivery',
-        {
-          pageTitle: 'Delete Delivery Update | Test Project',
-          heading: 'Delete Delivery Update',
-          project: mockProject,
-          update: expect.objectContaining({
-            id: 'history-1',
-            status: 'GREEN',
-            commentary: 'Delivery update'
-          })
-        }
-      )
-    })
-
-    it('should redirect if project is not found', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue(null)
-
-      // Act
-      await projectsController.getDeleteDelivery(
-        {
-          params: { id: '999', historyId: 'history-1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
-      )
-    })
-
-    it('should redirect if no history is found', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project'
-      }
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetProjectHistory.mockResolvedValue([])
-
-      // Act
-      await projectsController.getDeleteDelivery(
-        {
-          params: { id: '1', historyId: 'history-1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1?notification=No history found for this project'
-      )
-    })
-
-    it('should handle errors when fetching the project', async () => {
-      // Arrange
-      mockGetProjectById.mockRejectedValue(new Error('Database error'))
-
-      // Act & Assert
-      await expect(
-        projectsController.getDeleteDelivery(
-          {
-            params: { id: '1', historyId: 'history-1' },
-            logger: { error: jest.fn() }
-          },
-          mockH
-        )
-      ).rejects.toThrow()
-    })
-  })
-
-  describe('postDeleteDelivery', () => {
-    it('should delete delivery history and redirect on success', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project'
-      }
-      mockGetProjectById.mockResolvedValue(mockProject)
-
-      // Mock the authedFetchJsonDecorator
-      const mockFetch = jest.fn().mockResolvedValue({ success: true })
-      authedFetchJsonDecorator.mockReturnValue(mockFetch)
-
-      // Act
-      await projectsController.postDeleteDelivery(
-        {
-          params: { id: '1', historyId: 'history-1' },
-          logger: { error: jest.fn(), info: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(authedFetchJsonDecorator).toHaveBeenCalled()
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/projects/1/history/history-1',
-        expect.objectContaining({
-          method: 'DELETE'
-        })
-      )
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1/edit?tab=delivery&notification=Delivery update successfully removed'
-      )
-    })
-
-    it('should handle API errors during deletion', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project'
-      }
-      mockGetProjectById.mockResolvedValue(mockProject)
-
-      // Mock the authedFetchJsonDecorator to fail
-      const mockFetch = jest.fn().mockRejectedValue(new Error('API error'))
-      authedFetchJsonDecorator.mockReturnValue(mockFetch)
-
-      // Act
-      await projectsController.postDeleteDelivery(
-        {
-          params: { id: '1', historyId: 'history-1' },
-          logger: { error: jest.fn(), info: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(authedFetchJsonDecorator).toHaveBeenCalled()
-      expect(mockFetch).toHaveBeenCalled()
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1/edit?tab=delivery&notification=Failed to remove delivery update'
-      )
-    })
-
-    it('should redirect if project is not found', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue(null)
-
-      // Act
-      await projectsController.postDeleteDelivery(
-        {
-          params: { id: '999', historyId: 'history-1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
-      )
-    })
-
-    it('should handle errors during deletion process', async () => {
-      // Arrange
-      mockGetProjectById.mockRejectedValue(new Error('Database error'))
-
-      // Act
-      await projectsController.postDeleteDelivery(
-        {
-          params: { id: '1', historyId: 'history-1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1/delete/delivery/history-1?notification=Failed to update project. Please try again.'
-      )
-    })
-  })
-
   describe('getHistory', () => {
     it('should render project history view when project exists', async () => {
       // Arrange
@@ -2164,6 +1702,148 @@ describe('Projects controller', () => {
           pageTitle: expect.stringContaining('Project History'),
           project: mockProject
         })
+      )
+    })
+  })
+
+  describe('getArchiveDelivery', () => {
+    it('should render archive delivery view', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project'
+      }
+      mockGetProjectById.mockResolvedValue(mockProject)
+
+      // Act
+      await projectsController.getArchiveDelivery(
+        {
+          params: { id: '1', historyId: 'history123' },
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/archive-delivery',
+        {
+          pageTitle: 'Archive Delivery Update',
+          heading: 'Archive Delivery Update',
+          projectId: '1',
+          historyId: 'history123'
+        }
+      )
+    })
+
+    it('should redirect if project not found', async () => {
+      // Arrange
+      mockGetProjectById.mockResolvedValue(null)
+
+      // Act
+      await projectsController.getArchiveDelivery(
+        {
+          params: { id: '999', historyId: 'history123' },
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/?notification=Project not found'
+      )
+    })
+
+    it('should handle errors', async () => {
+      // Arrange
+      mockGetProjectById.mockRejectedValue(new Error('Database error'))
+
+      // Act & Assert
+      await expect(
+        projectsController.getArchiveDelivery(
+          {
+            params: { id: '1', historyId: 'history123' },
+            logger: { error: jest.fn() }
+          },
+          mockH
+        )
+      ).rejects.toThrow()
+    })
+  })
+
+  describe('postArchiveDelivery', () => {
+    it('should archive history entry and redirect on success', async () => {
+      // Set up the mock to return success
+      mockArchiveProjectHistoryEntry.mockResolvedValue(true)
+
+      // Mock getProjectHistory to return sample data
+      mockGetProjectHistory.mockResolvedValue([
+        {
+          id: 'history123',
+          timestamp: '2023-01-01',
+          changes: {
+            status: { from: 'RED', to: 'GREEN' },
+            commentary: { from: 'Old', to: 'New commentary' }
+          }
+        }
+      ])
+
+      // Act
+      await projectsController.postArchiveDelivery(
+        {
+          params: { id: '1', historyId: 'history123' },
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockArchiveProjectHistoryEntry).toHaveBeenCalledWith(
+        '1',
+        'history123',
+        expect.anything()
+      )
+
+      // Check that updateProject was called with suppressHistory=true
+      expect(mockUpdateProject).toHaveBeenCalledWith(
+        '1',
+        expect.objectContaining({
+          status: 'GREEN',
+          commentary: 'New commentary'
+        }),
+        expect.anything(),
+        true // This is the suppressHistory parameter
+      )
+
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/edit?tab=delivery&notification=Delivery update successfully archived'
+      )
+    })
+
+    it('should handle archive errors', async () => {
+      // Set up the mock to throw an error
+      mockArchiveProjectHistoryEntry.mockRejectedValue(
+        new Error('Archive failed')
+      )
+
+      // Act
+      await projectsController.postArchiveDelivery(
+        {
+          params: { id: '1', historyId: 'history123' },
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockArchiveProjectHistoryEntry).toHaveBeenCalledWith(
+        '1',
+        'history123',
+        expect.anything()
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/edit?tab=delivery&notification=Failed to archive delivery update'
       )
     })
   })

@@ -1,0 +1,42 @@
+{% extends "layouts/page.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% block content %}
+  {% if errorMessage %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: [
+        {
+          text: errorMessage
+        }
+      ]
+    }) }}
+  {% endif %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">Archive Delivery Update</h1>
+      
+      <p class="govuk-body">
+        Are you sure you want to archive this delivery update? This will hide it from the project timeline and recent updates.
+      </p>
+
+      <form method="POST" action="/projects/{{ projectId }}/history/{{ historyId }}/archive" novalidate>
+        <div class="govuk-button-group">
+          {{ govukButton({
+            text: "Archive update",
+            classes: "govuk-button--warning"
+          }) }}
+
+          {{ govukButton({
+            text: "Cancel",
+            href: "/projects/" + projectId + "/edit?tab=delivery",
+            classes: "govuk-button--secondary"
+          }) }}
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %} 

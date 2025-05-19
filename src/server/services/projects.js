@@ -170,11 +170,21 @@ export async function createProject(projectData, request) {
   }
 }
 
-export async function updateProject(id, projectData, request) {
+export async function updateProject(
+  id,
+  projectData,
+  request,
+  suppressHistory = false
+) {
   const logger = createLogger()
   try {
-    const endpoint = `/projects/${id}`
-    logger.info({ id, projectData }, 'Updating project')
+    // Build endpoint - add suppressHistory parameter if true
+    let endpoint = `/projects/${id}`
+    if (suppressHistory) {
+      endpoint += `?suppressHistory=true`
+    }
+
+    logger.info({ id, projectData, suppressHistory }, 'Updating project')
 
     // Get current project to preserve existing data
     const currentProject = await getProjectById(id, request)
@@ -449,8 +459,24 @@ export async function getProjectHistory(projectId, request) {
       return []
     }
 
+    // Filter out archived entries and ensure we have valid data
+    const activeData = data.filter((entry) => {
+      // Check if entry exists and is not archived
+      return entry && !entry.archived
+    })
+
+    // Log the filtering results
+    logger.info(
+      {
+        totalEntries: data.length,
+        activeEntries: activeData.length,
+        archivedEntries: data.length - activeData.length
+      },
+      'Filtered project history entries'
+    )
+
     // Normalize all history entries
-    const normalizedData = data.map((entry) =>
+    const normalizedData = activeData.map((entry) =>
       normalizeHistoryEntry(entry, 'project')
     )
 
@@ -468,6 +494,56 @@ export async function getProjectHistory(projectId, request) {
         projectId
       },
       'Failed to fetch project history'
+    )
+    throw error
+  }
+}
+
+/**
+ * Archives a project history entry
+ * @param {string} projectId - The project ID
+ * @param {string} historyId - The history entry ID to archive
+ * @param {object} request - Hapi request object
+ * @returns {Promise<boolean>} - True if archiving was successful
+ */
+export async function archiveProjectHistoryEntry(
+  projectId,
+  historyId,
+  request
+) {
+  const logger = createLogger()
+  try {
+    const endpoint = `/projects/${projectId}/history/${historyId}/archive`
+    logger.info({ projectId, historyId }, 'Archiving project history entry')
+
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch(endpoint, {
+        method: 'PUT'
+      })
+    } else {
+      // Fall back to unauthenticated fetcher
+      await fetcher(endpoint, {
+        method: 'PUT'
+      })
+    }
+
+    logger.info(
+      { projectId, historyId },
+      'Project history entry archived successfully'
+    )
+    return true
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        projectId,
+        historyId
+      },
+      'Failed to archive project history entry'
     )
     throw error
   }

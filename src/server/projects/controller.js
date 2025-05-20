@@ -10,7 +10,8 @@ import {
   getStandardHistory,
   getProjectHistory,
   getProfessionHistory,
-  archiveProjectHistoryEntry
+  archiveProjectHistoryEntry,
+  archiveProfessionHistoryEntry
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
@@ -392,10 +393,10 @@ export const projectsController = {
             )
           })
 
-          // Sort by timestamp (newest first) and take top 3
+          // Sort by timestamp (newest first) and take top 10
           deliveryHistory = deliveryUpdates
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-            .slice(0, 3)
+            .slice(0, 10)
             .map((entry) => ({
               ...entry,
               type: 'project',
@@ -444,6 +445,49 @@ export const projectsController = {
           }))
       ]
 
+      // Fetch profession history for each profession
+      let professionHistory = []
+      if (project.professions && project.professions.length > 0) {
+        const professionHistoryPromises = project.professions.map(
+          async (profession) => {
+            try {
+              const history = await getProfessionHistory(
+                id,
+                profession.professionId,
+                request
+              )
+              if (history && history.length > 0) {
+                // Only include non-archived entries
+                const filtered = history
+                  .filter((entry) => !entry.archived)
+                  .map((entry) => ({
+                    ...entry,
+                    professionId: profession.professionId,
+                    professionName:
+                      professionNames[profession.professionId] ||
+                      `Profession ${profession.professionId}`
+                  }))
+                return filtered
+              }
+              return []
+            } catch (err) {
+              request.logger.error(
+                `Error fetching history for profession ${profession.professionId}:`,
+                err
+              )
+              return []
+            }
+          }
+        )
+
+        // Wait for all profession histories and combine them
+        const allHistories = await Promise.all(professionHistoryPromises)
+        professionHistory = allHistories
+          .flat()
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+          .slice(0, 20) // Limit to 20 most recent entries
+      }
+
       return h.view('projects/detail/edit', {
         pageTitle: `Edit ${project.name} | DDTS Assurance`,
         heading: `Edit ${project.name}`,
@@ -452,7 +496,8 @@ export const projectsController = {
         professionNames,
         professionOptions,
         statusOptions: STATUS_OPTIONS,
-        deliveryHistory
+        deliveryHistory,
+        professionHistory
       })
     } catch (error) {
       request.logger.error(error)
@@ -1355,6 +1400,58 @@ export const projectsController = {
       )
       return h.redirect(
         `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS.ARCHIVE_FAILED}`
+      )
+    }
+  },
+
+  getArchiveProfessionHistory: async (request, h) => {
+    const { id, professionId, historyId } = request.params
+    try {
+      const project = await getProjectById(id, request)
+      if (!project) {
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+      }
+      // Find the profession
+      const profession = project.professions?.find(
+        (p) => p.professionId === professionId
+      )
+      if (!profession) {
+        return h.redirect(
+          `/projects/${id}?notification=Profession not found in this project`
+        )
+      }
+      return h.view('projects/detail/archive-profession-history', {
+        pageTitle: 'Archive Profession Update',
+        heading: 'Archive Profession Update',
+        projectId: id,
+        professionId,
+        historyId,
+        profession
+      })
+    } catch (error) {
+      request.logger.error(error)
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  postArchiveProfessionHistory: async (request, h) => {
+    const { id, professionId, historyId } = request.params
+    try {
+      await archiveProfessionHistoryEntry(id, professionId, historyId, request)
+      request.logger.info(
+        { projectId: id, professionId, historyId },
+        'Profession history entry archived successfully'
+      )
+      return h.redirect(
+        `/projects/${id}/professions/${professionId}/history?notification=Profession update successfully archived`
+      )
+    } catch (error) {
+      request.logger.error(
+        { error: error.message, projectId: id, professionId, historyId },
+        'Failed to archive profession history entry'
+      )
+      return h.redirect(
+        `/projects/${id}/professions/${professionId}/history?notification=Failed to archive profession update`
       )
     }
   }

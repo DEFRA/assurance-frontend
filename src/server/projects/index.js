@@ -77,6 +77,26 @@ export const projects = {
         },
         {
           method: 'GET',
+          path: '/projects/{id}/professions/{professionId}/history/{historyId}/archive',
+          handler: projectsController.getArchiveProfessionHistory,
+          options: {
+            auth: {
+              mode: 'required'
+            }
+          }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/professions/{professionId}/history/{historyId}/archive',
+          handler: projectsController.postArchiveProfessionHistory,
+          options: {
+            auth: {
+              mode: 'required'
+            }
+          }
+        },
+        {
+          method: 'GET',
           path: '/projects/{id}/edit',
           handler: projectsController.getEdit,
           options: {

@@ -6,7 +6,6 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
-{% from "govuk/components/table/macro.njk" import govukTable %}
 
 {% block content %}
   {% if errorMessage %}
@@ -60,58 +59,40 @@
 
     <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
 
-    <h2 class="govuk-heading-m">Recent Delivery Updates</h2>
-    
+    <h2 class="govuk-heading-m">Recent Delivery Status Updates</h2>
     {% if deliveryHistory and deliveryHistory.length > 0 %}
-      <table class="govuk-table">
-        <thead class="govuk-table__head">
-          <tr class="govuk-table__row">
-            <th class="govuk-table__header">Date</th>
-            <th class="govuk-table__header">Status</th>
-            <th class="govuk-table__header">Commentary</th>
-            <th class="govuk-table__header">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="govuk-table__body">
-          {% for entry in deliveryHistory %}
-            <tr class="govuk-table__row">
-              <td class="govuk-table__cell">
-                {{ entry.timestamp | formatDate }}
-              </td>
-              <td class="govuk-table__cell">
-                {% if entry.changes.status.to == "RED" %}
-                  <strong class="govuk-tag govuk-tag--red">{{ entry.changes.status.to }}</strong>
-                {% elif entry.changes.status.to == "AMBER" %}
-                  <strong class="govuk-tag govuk-tag--yellow">{{ entry.changes.status.to }}</strong>
-                {% elif entry.changes.status.to == "GREEN" %}
-                  <strong class="govuk-tag govuk-tag--green">{{ entry.changes.status.to }}</strong>
-                {% else %}
-                  <strong class="govuk-tag">{{ entry.changes.status.to }}</strong>
-                {% endif %}
-              </td>
-              <td class="govuk-table__cell">
-                {% if entry.changes.commentary.to %}
-                  {{ entry.changes.commentary.to | truncate(50) }}
-                {% else %}
-                  <em>No commentary</em>
-                {% endif %}
-              </td>
-              <td class="govuk-table__cell">
-                <a
-                  href="/projects/{{ project.id }}/history/{{ entry.id }}/archive"
-                  class="govuk-link govuk-link--no-visited-state"
-                  >Archive</a
-                >
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <p class="govuk-body-s">
-        <a href="/projects/{{ project.id }}/history" class="govuk-link">View all history</a>
-      </p>
+      <div class="timeline">
+        {% for change in deliveryHistory %}
+          <div class="timeline__event">
+            <h3 class="timeline__event-title govuk-heading-s">
+              {{ change.timestamp | formatDate }}
+            </h3>
+            <div class="govuk-body">
+              {% if change.changes.status and change.changes.status.from !== change.changes.status.to %}
+                <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">
+                  Delivery status update:
+                  <span class="govuk-tag 
+                    {% if change.changes.status.to === "RED" %}govuk-tag--red
+                    {% elif change.changes.status.to === "AMBER" %}govuk-tag--yellow
+                    {% elif change.changes.status.to === "GREEN" %}govuk-tag--green
+                    {% endif %}">
+                    {{ change.changes.status.to }}
+                  </span>
+                </p>
+              {% endif %}
+              
+              {% if change.changes.commentary %}
+                <p>{{ change.changes.commentary.to }}</p>
+              {% endif %}
+              <p class="govuk-body-s">
+                <a href="/projects/{{ project.id }}/history/{{ change.id }}/archive" class="govuk-link govuk-link--no-visited-state">Archive this update</a>
+              </p>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
     {% else %}
-      <p class="govuk-body">No recent delivery updates</p>
+      <p class="govuk-body">No delivery status updates found.</p>
     {% endif %}
   {% endset %}
 
@@ -166,49 +147,40 @@
 
     <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
 
-    <h2 class="govuk-heading-m">Current Profession Updates</h2>
-    
-    {% if project.professions and project.professions.length > 0 %}
-      <table class="govuk-table">
-        <thead class="govuk-table__head">
-          <tr class="govuk-table__row">
-            <th scope="col" class="govuk-table__header">Profession</th>
-            <th scope="col" class="govuk-table__header">Status</th>
-            <th scope="col" class="govuk-table__header">Commentary</th>
-            <th scope="col" class="govuk-table__header">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="govuk-table__body">
-          {% for profession in project.professions %}
-            <tr class="govuk-table__row">
-              <td class="govuk-table__cell">{{ professionNames[profession.professionId] }}</td>
-              <td class="govuk-table__cell">
-                {% if profession.status == "RED" %}
-                  <strong class="govuk-tag govuk-tag--red">{{ profession.status }}</strong>
-                {% elif profession.status == "AMBER" %}
-                  <strong class="govuk-tag govuk-tag--yellow">{{ profession.status }}</strong>
-                {% elif profession.status == "GREEN" %}
-                  <strong class="govuk-tag govuk-tag--green">{{ profession.status }}</strong>
-                {% else %}
-                  <strong class="govuk-tag">{{ profession.status }}</strong>
+    <h2 class="govuk-heading-m">Recent Profession Updates</h2>
+    {% if professionHistory and professionHistory.length > 0 %}
+      <div class="timeline">
+        {% for change in professionHistory %}
+          <div class="timeline__event">
+            <h3 class="timeline__event-title govuk-heading-s">
+              {{ change.timestamp | formatDate }}
+            </h3>
+            <div class="govuk-body">
+              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">
+                {{ change.professionName }} update:
+                {% if change.changes.status.to %}
+                  <span class="govuk-tag 
+                    {% if change.changes.status.to === "RED" %}govuk-tag--red
+                    {% elif change.changes.status.to === "AMBER" %}govuk-tag--yellow
+                    {% elif change.changes.status.to === "GREEN" %}govuk-tag--green
+                    {% endif %}">
+                    {{ change.changes.status.to }}
+                  </span>
                 {% endif %}
-              </td>
-              <td class="govuk-table__cell">
-                {% if profession.commentary %}
-                  {{ profession.commentary | truncate(50) }}
-                {% else %}
-                  <em>No commentary</em>
-                {% endif %}
-              </td>
-              <td class="govuk-table__cell">
-                <a href="/projects/{{ project.id }}/delete/profession/{{ profession.professionId }}" class="govuk-link govuk-link--no-visited-state">Remove</a>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              </p>
+              
+              {% if change.changes.commentary %}
+                <p>{{ change.changes.commentary.to }}</p>
+              {% endif %}
+              <p class="govuk-body-s">
+                <a href="/projects/{{ project.id }}/professions/{{ change.professionId }}/history/{{ change.id }}/archive" class="govuk-link govuk-link--no-visited-state">Archive this update</a>
+              </p>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
     {% else %}
-      <p class="govuk-body">No profession updates have been added to this project yet.</p>
+      <p class="govuk-body">No profession updates found.</p>
     {% endif %}
   {% endset %}
 
@@ -230,6 +202,42 @@
       }
     ]
   }) }}
+{% endblock %}
+
+{% block pageStyles %}
+<style>
+  .timeline {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .timeline__event {
+    position: relative;
+    padding: 1em 0 1em 2em;
+    border-left: 2px solid #b1b4b6;
+  }
+
+  .timeline__event:last-child {
+    border-left: none;
+  }
+
+  .timeline__event:before {
+    content: "";
+    position: absolute;
+    left: -7px;
+    top: 1.5em;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #0b0c0c;
+  }
+
+  .timeline__event-title {
+    margin: 0 0 0.5em;
+  }
+</style>
 {% endblock %}
 
 {% block bodyEnd %}

@@ -124,33 +124,42 @@
       {% set professionsHtml %}
         <h2 class="govuk-heading-m">Profession Updates</h2>
         {% if project.professions and project.professions.length > 0 %}
-          <div class="govuk-grid-row">
-            {% for profession in project.professions %}
-              <div class="govuk-grid-column-one-third">
-                <div class="govuk-card govuk-card--clickable" style="border: 1px solid #b1b4b6; padding: 15px; margin-bottom: 20px; height: 100%;">
-                  <div class="govuk-card__content">
-                    <h3 class="govuk-heading-m">
-                      {{ profession.name }}
-                    </h3>
-                    <p class="govuk-body">
-                      Status: 
-                      <strong class="govuk-tag 
-                        {% if profession.status === 'RED' %}govuk-tag--red
-                        {% elif profession.status === 'AMBER' %}govuk-tag--yellow
-                        {% elif profession.status === 'GREEN' %}govuk-tag--green
-                        {% endif %}">
-                        {{ profession.status }}
-                      </strong>
-                    </p>
-                    <p class="govuk-body">{{ profession.commentary }}</p>
-                    <p class="govuk-body">
-                      <a href="/projects/{{ project.id }}/professions/{{ profession.professionId }}/history" class="govuk-link">View history</a>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            {% endfor %}
-          </div>
+          <table class="govuk-table">
+            <thead class="govuk-table__head">
+              <tr class="govuk-table__row">
+                <th scope="col" class="govuk-table__header">Profession</th>
+                <th scope="col" class="govuk-table__header">Status</th>
+                <th scope="col" class="govuk-table__header">Commentary</th>
+                <th scope="col" class="govuk-table__header">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="govuk-table__body">
+              {% for profession in project.professions %}
+                <tr class="govuk-table__row">
+                  <td class="govuk-table__cell">{{ profession.name }}</td>
+                  <td class="govuk-table__cell">
+                    <strong class="govuk-tag 
+                      {% if profession.status === 'RED' %}govuk-tag--red
+                      {% elif profession.status === 'AMBER' %}govuk-tag--yellow
+                      {% elif profession.status === 'GREEN' %}govuk-tag--green
+                      {% endif %}">
+                      {{ profession.status }}
+                    </strong>
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if profession.commentary %}
+                      {{ profession.commentary | truncate(100) }}
+                    {% else %}
+                      <em>No commentary</em>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell">
+                    <a href="/projects/{{ project.id }}/professions/{{ profession.professionId }}/history" class="govuk-link">View history</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         {% else %}
           <p class="govuk-body">No profession updates have been added to this project.</p>
         {% endif %}

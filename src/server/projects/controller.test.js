@@ -444,6 +444,8 @@ describe('Projects controller', () => {
         pageTitle: 'Edit Test Project | DDTS Assurance',
         heading: 'Edit Test Project',
         project: expect.objectContaining({
+          id: '1',
+          name: 'Test Project',
           professions: [],
           standards: expect.arrayContaining([
             expect.objectContaining({
@@ -454,13 +456,19 @@ describe('Projects controller', () => {
         }),
         professions: [],
         professionNames: {},
-        professionOptions: [{ value: '', text: 'Select a profession' }],
+        professionOptions: [
+          {
+            value: '',
+            text: 'Select a profession'
+          }
+        ],
         statusOptions: [
           { value: 'RED', text: 'Red' },
           { value: 'AMBER', text: 'Amber' },
           { value: 'GREEN', text: 'Green' }
         ],
-        deliveryHistory: expect.any(Array)
+        deliveryHistory: expect.any(Array),
+        professionHistory: expect.any(Array)
       })
     })
 

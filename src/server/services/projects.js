@@ -655,3 +655,59 @@ export async function getProfessionHistory(projectId, professionId, request) {
     throw error
   }
 }
+
+/**
+ * Archives a profession history entry
+ * @param {string} projectId - The project ID
+ * @param {string} professionId - The profession ID
+ * @param {string} historyId - The history entry ID to archive
+ * @param {object} request - Hapi request object
+ * @returns {Promise<boolean>} - True if archiving was successful
+ */
+export async function archiveProfessionHistoryEntry(
+  projectId,
+  professionId,
+  historyId,
+  request
+) {
+  const logger = createLogger()
+  try {
+    const endpoint = `/projects/${projectId}/professions/${professionId}/history/${historyId}/archive`
+    logger.info(
+      { projectId, professionId, historyId },
+      'Archiving profession history entry'
+    )
+
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch(endpoint, {
+        method: 'PUT'
+      })
+    } else {
+      // Fall back to unauthenticated fetcher
+      await fetcher(endpoint, {
+        method: 'PUT'
+      })
+    }
+
+    logger.info(
+      { projectId, professionId, historyId },
+      'Profession history entry archived successfully'
+    )
+    return true
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        projectId,
+        professionId,
+        historyId
+      },
+      'Failed to archive profession history entry'
+    )
+    throw error
+  }
+}

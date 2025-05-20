@@ -302,9 +302,7 @@ export const projectsController = {
                   // For profession history, we only want to show commentary changes for external users
                   // We don't show RAG status changes for professions in the timeline
                   const commentaryUpdates = professionHistory.filter(
-                    (entry) => {
-                      return entry.changes?.commentary?.to
-                    }
+                    (entry) => entry.changes?.commentary?.to && !entry.archived
                   )
 
                   // Return the formatted commentary updates
@@ -1037,13 +1035,13 @@ export const projectsController = {
         professionInfo?.name || `Profession ${professionId}`
 
       // Get ALL the profession history at once - better for performance
-      const history = await getProfessionHistory(id, professionId, request)
-
+      let history = await getProfessionHistory(id, professionId, request)
+      // Filter out archived entries
+      history = history.filter((entry) => !entry.archived)
       // Sort by timestamp, most recent first
       const sortedHistory = history.sort(
         (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
       )
-
       return h.view('projects/detail/profession-history', {
         pageTitle: `${professionName} Update History | ${project.name}`,
         heading: `${professionName} Update History`,

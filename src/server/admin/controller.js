@@ -19,24 +19,28 @@ export const adminController = {
       let projects = []
       let professions = []
 
+      // Try to get standards from API, fall back to defaults if not available
       try {
         standards = (await getServiceStandards(request)) || []
       } catch (error) {
-        request.logger.error({ error }, 'Error fetching admin dashboard data')
-        throw Boom.boomify(error, { statusCode: 500 })
+        request.logger.warn(
+          { error },
+          'Could not fetch standards from API, using defaults'
+        )
+        standards = defaultServiceStandards
       }
 
       try {
         projects = (await getProjects(request)) || []
       } catch (error) {
-        request.logger.error({ error }, 'Error fetching admin dashboard data')
+        request.logger.error({ error }, 'Error fetching projects')
         throw Boom.boomify(error, { statusCode: 500 })
       }
 
       try {
         professions = (await getProfessions(request)) || []
       } catch (error) {
-        request.logger.error({ error }, 'Error fetching admin dashboard data')
+        request.logger.error({ error }, 'Error fetching professions')
         throw Boom.boomify(error, { statusCode: 500 })
       }
 

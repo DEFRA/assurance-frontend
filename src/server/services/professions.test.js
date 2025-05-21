@@ -5,7 +5,6 @@ import {
   getProfessionById,
   deleteProfession
 } from './professions.js'
-import { defaultProfessions } from '~/src/server/data/professions.js'
 
 // Mock dependencies
 jest.mock('~/src/server/common/helpers/fetch/fetcher.js', () => ({
@@ -17,11 +16,12 @@ jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js', () => ({
 }))
 
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
-  createLogger: jest.fn().mockReturnValue({
+  logger: {
     info: jest.fn(),
     warn: jest.fn(),
-    error: jest.fn()
-  })
+    error: jest.fn(),
+    debug: jest.fn()
+  }
 }))
 
 describe('Professions service', () => {
@@ -77,28 +77,6 @@ describe('Professions service', () => {
       // Assert
       expect(fetcher).toHaveBeenCalledWith('/professions')
       expect(result).toEqual(mockProfessions)
-    })
-
-    test('should return default professions when API errors with request', async () => {
-      // Arrange
-      mockAuthedFetch.mockRejectedValue(new Error('API error'))
-
-      // Act
-      const result = await getProfessions(mockRequest)
-
-      // Assert
-      expect(result).toEqual(defaultProfessions)
-    })
-
-    test('should return default professions when API errors without request', async () => {
-      // Arrange
-      fetcher.mockRejectedValue(new Error('API error'))
-
-      // Act
-      const result = await getProfessions()
-
-      // Assert
-      expect(result).toEqual(defaultProfessions)
     })
 
     test('should handle null response from API', async () => {

@@ -1,6 +1,5 @@
 import { fetch as undiciFetch } from 'undici'
 import { config } from '~/src/config/config.js'
-import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher, getApiUrl } from './fetcher.js'
 
 // Mock dependencies
@@ -28,15 +27,19 @@ jest.mock('~/src/config/config.js', () => ({
   }
 }))
 
-// Mock createLogger
-jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
-  createLogger: jest.fn()
-}))
-
 // Mock AbortSignal.timeout
 global.AbortSignal = {
   timeout: jest.fn().mockReturnValue({ aborted: false })
 }
+
+jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn()
+  }
+}))
 
 describe('fetcher', () => {
   const mockApiUrl = 'https://api.example.com'
@@ -50,9 +53,6 @@ describe('fetcher', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-
-    // Setup mocks
-    createLogger.mockReturnValue(mockLogger)
   })
 
   test('should return data for successful JSON response', async () => {
@@ -64,7 +64,7 @@ describe('fetcher', () => {
       headers: {
         get: jest.fn().mockReturnValue('application/json')
       },
-      json: jest.fn().mockResolvedValue(mockResponseData)
+      text: jest.fn().mockResolvedValue(JSON.stringify(mockResponseData))
     }
     undiciFetch.mockResolvedValue(mockResponse)
 
@@ -82,7 +82,7 @@ describe('fetcher', () => {
         signal: expect.anything()
       })
     )
-    expect(mockResponse.json).toHaveBeenCalled()
+    expect(mockResponse.text).toHaveBeenCalled()
     expect(result).toEqual(mockResponseData)
     expect(mockLogger.info).toHaveBeenCalledTimes(2)
   })
@@ -96,7 +96,7 @@ describe('fetcher', () => {
       headers: {
         get: jest.fn().mockReturnValue('application/json')
       },
-      json: jest.fn().mockResolvedValue(mockResponseData)
+      text: jest.fn().mockResolvedValue(JSON.stringify(mockResponseData))
     }
     undiciFetch.mockResolvedValue(mockResponse)
 
@@ -110,7 +110,7 @@ describe('fetcher', () => {
         method: 'POST'
       })
     )
-    expect(mockResponse.json).toHaveBeenCalled()
+    expect(mockResponse.text).toHaveBeenCalled()
     expect(result).toEqual(mockResponseData)
   })
 
@@ -212,7 +212,7 @@ describe('fetcher', () => {
       headers: {
         get: jest.fn().mockReturnValue('application/json')
       },
-      json: jest.fn().mockResolvedValue({ data: 'test' })
+      text: jest.fn().mockResolvedValue(JSON.stringify({ data: 'test' }))
     }
     undiciFetch.mockResolvedValue(mockResponse)
 
@@ -221,25 +221,6 @@ describe('fetcher', () => {
 
     // Assert
     expect(undiciFetch).toHaveBeenCalledWith(absoluteUrl, expect.anything())
-  })
-
-  test('should create logger if not provided in request', async () => {
-    // Arrange
-    const mockResponse = {
-      ok: true,
-      status: 200,
-      headers: {
-        get: jest.fn().mockReturnValue('application/json')
-      },
-      json: jest.fn().mockResolvedValue({ data: 'test' })
-    }
-    undiciFetch.mockResolvedValue(mockResponse)
-
-    // Act
-    await fetcher('/test')
-
-    // Assert
-    expect(createLogger).toHaveBeenCalled()
   })
 
   test('getApiUrl should return the configured API URL', () => {

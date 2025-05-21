@@ -1,6 +1,5 @@
-import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
-import { config } from '~/src/config/config.js'
-import { getBearerToken } from '~/src/server/common/helpers/auth/get-token.js'
+import { logger } from '~/src/server/common/helpers/logging/logger.js'
+import { getApiUrl } from './fetcher.js'
 
 /**
  * Fetch JSON from a given URL with the provided token
@@ -9,108 +8,58 @@ import { getBearerToken } from '~/src/server/common/helpers/auth/get-token.js'
  * @param {object} options
  * @returns {Promise<object>}
  */
-async function authedFetchJson(url, token, options = {}) {
-  const logger = createLogger()
-  const apiUrl = getApiUrl()
-  const fullUrl = url.startsWith('http') ? url : `${apiUrl}${url}`
-
-  // Set up default headers
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {})
-  }
-
-  // Add auth token if provided
-  if (token) {
-    // Remove any existing "Bearer " prefix and ensure it's properly formatted
-    const cleanToken =
-      typeof token === 'string'
-        ? token.replace(/^Bearer\s+/i, '').trim()
-        : token
-
-    if (cleanToken !== token) {
-      logger.info('Token was cleaned up before sending to API', {
-        originalLength: token.length,
-        cleanedLength: cleanToken.length
-      })
-    }
-
-    headers.Authorization = `Bearer ${cleanToken}`
-    logger.info('Added authorization header to request', {
-      url: fullUrl,
-      tokenLength: cleanToken.length
-    })
-  } else {
-    logger.warn('No token provided for authenticated request', { url: fullUrl })
-  }
-
-  // Merge our headers with options
-  const mergedOptions = {
-    ...options,
-    headers
-  }
-
-  try {
-    const response = await fetch(fullUrl, mergedOptions)
-
-    // Handle common HTTP errors
-    if (!response.ok) {
-      const errorText = await response.text()
-
-      // Special handling for 401/403 responses
-      if (response.status === 401 || response.status === 403) {
-        logger.error('Authentication error - Token may be invalid or expired', {
-          status: response.status,
-          error: errorText,
-          url: fullUrl
-        })
-      }
-
-      throw new Error(`API Error: ${response.status} ${errorText}`)
-    }
-
-    // Parse the JSON response
-    if (response.headers.get('content-type')?.includes('application/json')) {
-      return await response.json()
-    }
-
-    return response.text()
-  } catch (error) {
-    logger.error(`Error fetching data from API: ${error.message}`, {
-      url: fullUrl,
-      error: error.message
-    })
-    throw error
-  }
-}
+// Removed authedFetchJson if not used elsewhere
 
 /**
- * Returns a function that fetches data with the authenticated user's token
+ * Creates a function that can make authenticated API requests using the request's auth token
  * @param {object} request - Hapi request object
- * @returns {Function}
+ * @returns {Function} - Function that can make authenticated API requests
  */
-function authedFetchJsonDecorator(request) {
-  const logger = createLogger()
-
-  return async (url, options = {}) => {
-    let token = null
+export function authedFetchJsonDecorator(request) {
+  return async (endpoint, options = {}) => {
+    const url = endpoint.startsWith('http')
+      ? endpoint
+      : `${getApiUrl()}${endpoint}`
+    logger.info({ url }, 'Making authenticated API request')
 
     try {
-      token = await getBearerToken(request)
-    } catch (error) {
-      logger.error('Failed to get bearer token')
-    }
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${request.auth.credentials.token}`,
+          ...options.headers
+        }
+      })
 
-    return authedFetchJson(url, token, options)
+      if (!response.ok) {
+        const error = new Error(`API request failed: ${response.statusText}`)
+        error.status = response.status
+        throw error
+      }
+
+      // Handle 204 No Content
+      if (response.status === 204) {
+        return null
+      }
+      const text = await response.text()
+      const data = text ? JSON.parse(text) : null
+      logger.info(
+        { url, status: response.status },
+        'Authenticated API request successful'
+      )
+      return data
+    } catch (error) {
+      logger.error(
+        {
+          error: error.message,
+          stack: error.stack,
+          code: error.code,
+          url
+        },
+        'Authenticated API request failed'
+      )
+      throw error
+    }
   }
 }
-
-/**
- * Gets the API URL from configuration
- * @returns {string} API URL
- */
-function getApiUrl() {
-  return config.get('api.baseUrl')
-}
-
-export { authedFetchJsonDecorator, authedFetchJson }

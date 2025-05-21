@@ -243,6 +243,10 @@
 {% block bodyEnd %}
   {{ super() }}
   <script nonce="{{ nonce }}">
+    // Store event handlers in variables for cleanup
+    let professionChangeHandler = null;
+    let domContentLoadedHandler = null;
+
     // Simple tab selection function
     function selectTabWithId(tabId) {
       try {
@@ -273,7 +277,7 @@
     }
     
     // Set up event handlers when DOM is loaded
-    document.addEventListener('DOMContentLoaded', function() {
+    domContentLoadedHandler = function() {
       try {
         // Set up profession form behavior
         const professionSelect = document.getElementById('profession');
@@ -281,7 +285,7 @@
         const commentaryInput = document.getElementById('profession-commentary');
         
         if (professionSelect) {
-          professionSelect.addEventListener('change', function() {
+          professionChangeHandler = function() {
             const professionId = professionSelect.value;
             if (!professionId) {
               // Reset fields if "Select a profession" is chosen
@@ -293,7 +297,9 @@
             // Set default value for new profession
             if (statusSelect) statusSelect.value = 'AMBER'; // Set a default value
             if (commentaryInput) commentaryInput.value = '';
-          });
+          };
+          
+          professionSelect.addEventListener('change', professionChangeHandler);
         }
 
         // Handle tab selection from query parameter
@@ -307,6 +313,23 @@
       } catch (e) {
         console.error('Error in DOM setup:', e);
       }
-    });
+    };
+
+    // Add the DOMContentLoaded listener
+    document.addEventListener('DOMContentLoaded', domContentLoadedHandler);
+
+    // Cleanup function to remove event listeners
+    function cleanup() {
+      const professionSelect = document.getElementById('profession');
+      if (professionSelect && professionChangeHandler) {
+        professionSelect.removeEventListener('change', professionChangeHandler);
+      }
+      if (domContentLoadedHandler) {
+        document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
+      }
+    }
+
+    // Clean up event listeners when the page is unloaded
+    window.addEventListener('unload', cleanup);
   </script>
 {% endblock %} 

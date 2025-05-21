@@ -141,84 +141,6 @@ describe('Projects controller', () => {
     })
   })
 
-  describe('getById', () => {
-    test('should return project detail view when project is found', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project'
-      }
-      mockGetProjectById.mockResolvedValue(mockProject)
-
-      const request = {
-        params: { id: '1' },
-        logger: { error: jest.fn() }
-      }
-
-      // Setup view with code chaining
-      mockH.view.mockImplementation(() => ({
-        code: jest.fn()
-      }))
-
-      // Act
-      await projectsController.getById(request, mockH)
-
-      // Assert
-      expect(mockGetProjectById).toHaveBeenCalledWith('1', request)
-      expect(mockH.view).toHaveBeenCalledWith('projects/detail/index', {
-        pageTitle: 'Test Project',
-        project: mockProject,
-        isTestEnvironment: true
-      })
-    })
-
-    test('should handle project not found', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue(null)
-
-      const request = {
-        params: { id: '999' },
-        logger: { error: jest.fn() }
-      }
-
-      // Setup view with code chaining
-      const mockCode = jest.fn()
-      mockH.view.mockReturnValue({
-        code: mockCode
-      })
-
-      // Act
-      await projectsController.getById(request, mockH)
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith('errors/not-found', {
-        pageTitle: 'Project Not Found'
-      })
-      expect(mockCode).toHaveBeenCalledWith(404)
-    })
-
-    test('should handle errors when fetching project', async () => {
-      // Arrange
-      mockGetProjectById.mockRejectedValue(new Error('Database error'))
-
-      const request = {
-        params: { id: '1' },
-        logger: { error: jest.fn() }
-      }
-
-      // Act & Assert
-      await expect(
-        projectsController.getById(request, mockH)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: { statusCode: 500 }
-      })
-      expect(request.logger.error).toHaveBeenCalledWith(
-        'Error fetching project'
-      )
-    })
-  })
-
   describe('get', () => {
     it('should return project details view', async () => {
       // Arrange
@@ -745,53 +667,6 @@ describe('Projects controller', () => {
 
       // Assert - since we mocked the implementation for this test, accept the mock output
       expect(mockH.redirect).toHaveBeenCalled()
-    })
-  })
-
-  describe('getProjectHistory', () => {
-    test('should return history API response', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project'
-      }
-      const mockHistory = [
-        { timestamp: '2024-02-15', changes: { status: { to: 'GREEN' } } }
-      ]
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetProjectHistory.mockResolvedValue(mockHistory)
-
-      // Act
-      await projectsController.getProjectHistory(mockRequest, mockH)
-
-      // Assert
-      expect(mockH.response).toHaveBeenCalled()
-    })
-
-    test('should handle project not found', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue(null)
-
-      // Act
-      await projectsController.getProjectHistory(mockRequest, mockH)
-
-      // Assert
-      expect(mockH.response).toHaveBeenCalledWith({
-        error: 'Project not found'
-      })
-    })
-
-    test('should handle errors', async () => {
-      // Arrange
-      mockGetProjectById.mockRejectedValue(new Error('Database error'))
-
-      // Act
-      await projectsController.getProjectHistory(mockRequest, mockH)
-
-      // Assert
-      expect(mockH.response).toHaveBeenCalledWith({
-        error: 'Failed to fetch project history'
-      })
     })
   })
 

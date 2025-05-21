@@ -18,6 +18,7 @@ const AUTH_PATH = '/auth'
 const AUTH_LOGOUT_PATH = '/auth/logout'
 const AUTH_LOGIN_PATH = '/auth/login'
 const ERROR_TEMPLATE = 'common/templates/error'
+const AZURE_CALLBACK_URL = config.get('azure.callbackUrl')
 
 export const plugin = {
   name: 'auth',
@@ -57,17 +58,13 @@ export const plugin = {
     ) {
       logger.debug('Initiating token exchange', {
         hasCode: !!params.code,
-        callbackUrl: appConfig.get('azure.callbackUrl')
+        callbackUrl: AZURE_CALLBACK_URL
       })
 
-      const tokenSet = await client.callback(
-        appConfig.get('azure.callbackUrl'),
-        params,
-        {
-          state,
-          code_verifier: stateData.codeVerifier
-        }
-      )
+      const tokenSet = await client.callback(AZURE_CALLBACK_URL, params, {
+        state,
+        code_verifier: stateData.codeVerifier
+      })
 
       // Get user info from ID token
       const claims = tokenSet.claims()
@@ -120,6 +117,9 @@ export const plugin = {
       } else if (error.message?.includes('state')) {
         errorMessage +=
           ' (This may be due to an expired or invalid authentication session.)'
+      } else {
+        errorMessage +=
+          ' (Please try signing in again. If the problem persists, contact support.)'
       }
 
       return h.view(ERROR_TEMPLATE, {

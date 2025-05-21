@@ -5,9 +5,17 @@ import { startServer } from '~/src/server/common/helpers/start-server.js'
 
 await startServer()
 
-process.on('unhandledRejection', (error) => {
+// Store the handler function so we can remove it later if needed
+const unhandledRejectionHandler = (error) => {
   const logger = createLogger()
   logger.info('Unhandled rejection')
   logger.error(error)
   process.exitCode = 1
-})
+}
+
+process.on('unhandledRejection', unhandledRejectionHandler)
+
+// Cleanup function to remove event listeners
+export function cleanup() {
+  process.removeListener('unhandledRejection', unhandledRejectionHandler)
+}

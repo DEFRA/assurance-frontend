@@ -1,7 +1,7 @@
 import { fetch as undiciFetch } from 'undici'
 import Boom from '@hapi/boom'
 import { config } from '~/src/config/config.js'
-import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
+import { logger as baseLogger } from '~/src/server/common/helpers/logging/logger.js'
 
 export function getApiUrl() {
   const apiUrl = config.get('api.baseUrl')
@@ -10,9 +10,9 @@ export function getApiUrl() {
 
 async function fetcher(url, options = {}, request) {
   const fullUrl = url.startsWith('http') ? url : `${getApiUrl()}${url}`
-  const logger = request?.logger || createLogger()
+  const log = request?.logger || baseLogger
 
-  logger.info(`Making ${options?.method || 'GET'} request to ${fullUrl}`)
+  log.info(`Making ${options?.method || 'GET'} request to ${fullUrl}`)
 
   try {
     const response = await undiciFetch(fullUrl, {
@@ -26,12 +26,17 @@ async function fetcher(url, options = {}, request) {
       signal: AbortSignal.timeout(5000) // 5 second timeout
     })
 
-    logger.info(`Request completed with status ${response.status}: ${fullUrl}`)
+    log.info(`Request completed with status ${response.status}: ${fullUrl}`)
+
+    // Handle 204 No Content
+    if (response.status === 204) {
+      return null
+    }
 
     // Handle 201 Created response
     if (response.status === 201) {
-      const data = await response.json()
-      return data
+      const text = await response.text()
+      return text ? JSON.parse(text) : null
     }
 
     if (!response.ok) {
@@ -42,22 +47,22 @@ async function fetcher(url, options = {}, request) {
 
     const contentType = response.headers.get('content-type')
     if (contentType?.includes('application/json')) {
-      const data = await response.json()
-      return data
+      const text = await response.text()
+      return text ? JSON.parse(text) : null
     }
 
     return { ok: response.ok, status: response.status }
   } catch (error) {
     // Better logging for connection errors
     if (error.name === 'AbortError') {
-      logger.error({ url: fullUrl }, 'API request timed out after 5 seconds')
+      log.error({ url: fullUrl }, 'API request timed out after 5 seconds')
     } else if (error.code === 'ECONNREFUSED') {
-      logger.error(
+      log.error(
         { url: fullUrl },
         'API connection refused - service may be unavailable'
       )
     } else {
-      logger.error(
+      log.error(
         {
           error: error.message,
           stack: error.stack,

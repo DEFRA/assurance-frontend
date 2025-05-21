@@ -1,10 +1,9 @@
-import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
+import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 
 export async function getProjects(request) {
-  const logger = createLogger()
   try {
     const endpoint = '/projects'
     logger.info({ endpoint }, 'Fetching projects from API')
@@ -61,7 +60,6 @@ export async function getProjects(request) {
 }
 
 export async function createProject(projectData, request) {
-  const logger = createLogger()
   try {
     const endpoint = '/projects'
     logger.info({ projectData }, 'Creating new project')
@@ -176,7 +174,6 @@ export async function updateProject(
   request,
   suppressHistory = false
 ) {
-  const logger = createLogger()
   try {
     // Build endpoint - add suppressHistory parameter if true
     let endpoint = `/projects/${id}`
@@ -291,7 +288,6 @@ export async function updateProject(
 }
 
 export async function getProjectById(id, request) {
-  const logger = createLogger()
   try {
     const endpoint = `/projects/${id}`
     logger.info({ endpoint, id }, 'Fetching project from API')
@@ -328,7 +324,6 @@ export async function getProjectById(id, request) {
 }
 
 export async function getStandardHistory(projectId, standardId, request) {
-  const logger = createLogger()
   try {
     const endpoint = `/projects/${projectId}/standards/${standardId}/history`
     logger.info({ projectId, standardId }, 'Fetching standard history from API')
@@ -416,7 +411,6 @@ function normalizeHistoryEntry(entry, entryType = 'project') {
 }
 
 export async function getProjectHistory(projectId, request) {
-  const logger = createLogger()
   try {
     // Build endpoint - omit cache parameter for tests
     let endpoint = `/projects/${projectId}/history`
@@ -511,7 +505,6 @@ export async function archiveProjectHistoryEntry(
   historyId,
   request
 ) {
-  const logger = createLogger()
   try {
     const endpoint = `/projects/${projectId}/history/${historyId}/archive`
     logger.info({ projectId, historyId }, 'Archiving project history entry')
@@ -556,7 +549,6 @@ export async function archiveProjectHistoryEntry(
  * @returns {Promise<boolean>} - True if deletion was successful
  */
 export async function deleteProject(id, request) {
-  const logger = createLogger()
   try {
     const endpoint = `/projects/${id}`
     logger.info({ id }, 'Deleting project')
@@ -600,7 +592,6 @@ export async function deleteProject(id, request) {
  * @returns {Promise<Array>} - Array of profession history items
  */
 export async function getProfessionHistory(projectId, professionId, request) {
-  const logger = createLogger()
   try {
     // Build endpoint - omit cache parameter for tests
     let endpoint = `/projects/${projectId}/professions/${professionId}/history`
@@ -670,7 +661,6 @@ export async function archiveProfessionHistoryEntry(
   historyId,
   request
 ) {
-  const logger = createLogger()
   try {
     const endpoint = `/projects/${projectId}/professions/${professionId}/history/${historyId}/archive`
     logger.info(

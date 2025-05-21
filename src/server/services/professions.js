@@ -1,7 +1,6 @@
+import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
-import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
-import { defaultProfessions } from '~/src/server/data/professions.js'
 
 /**
  * Get all professions
@@ -9,32 +8,29 @@ import { defaultProfessions } from '~/src/server/data/professions.js'
  * @returns {Promise<Array>} - The professions
  */
 export async function getProfessions(request) {
-  const logger = createLogger()
   try {
     const endpoint = '/professions'
     logger.info({ endpoint }, 'Fetching professions from API')
 
     let data
-    try {
-      if (request) {
-        // Use authenticated fetcher if request is provided
-        const authedFetch = authedFetchJsonDecorator(request)
-        data = await authedFetch(endpoint)
-      } else {
-        // Fall back to unauthenticated fetcher
-        data = await fetcher(endpoint)
-      }
-    } catch (error) {
-      // If API endpoint is 404 or other error, return default professions
+    if (request) {
+      logger.info('[API_AUTH] Using authenticated fetcher for professions API')
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
       logger.warn(
-        { error },
-        'Professions API not available, using default data'
+        '[API_AUTH] No request context provided, using unauthenticated fetcher'
       )
-      return defaultProfessions
+      data = await fetcher(endpoint)
     }
 
-    logger.info({ count: data?.length }, 'Professions retrieved successfully')
-    return data || []
+    if (!data || !Array.isArray(data)) {
+      logger.warn('Invalid data returned from API', { data })
+      return []
+    }
+
+    logger.info({ count: data.length }, 'Professions retrieved successfully')
+    return data
   } catch (error) {
     logger.error(
       {
@@ -44,8 +40,7 @@ export async function getProfessions(request) {
       },
       'Failed to fetch professions'
     )
-    // Return default professions as fallback
-    return defaultProfessions
+    throw error
   }
 }
 
@@ -56,7 +51,6 @@ export async function getProfessions(request) {
  * @returns {Promise<object>} - The profession
  */
 export async function getProfessionById(id, request) {
-  const logger = createLogger()
   try {
     const endpoint = `/professions/${id}`
     logger.info({ endpoint, id }, 'Fetching profession from API')
@@ -99,7 +93,6 @@ export async function getProfessionById(id, request) {
  * @returns {Promise<object>} - Result of deletion
  */
 export async function deleteProfession(id, request) {
-  const logger = createLogger()
   try {
     const endpoint = `/professions/${id}`
     logger.info({ endpoint, id }, 'Deleting profession')

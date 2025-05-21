@@ -49,7 +49,6 @@ export const plugin = {
     // Process token exchange and create session
     async function processTokenExchange(
       client,
-      appConfig,
       params,
       state,
       stateData,
@@ -321,7 +320,6 @@ export const plugin = {
             // Process the token exchange and create session
             const sessionResult = await processTokenExchange(
               oidcClient,
-              config,
               params,
               state,
               stateData,

@@ -180,146 +180,172 @@
 
 {% block pageScripts %}
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // Create a source array with project names and IDs for easy lookup
-    const projects = {{ projects | dump | safe }};
-    const projectsById = {};
-    const projectsByName = {};
-    
-    // Create lookup maps for faster access
-    projects.forEach(project => {
-      projectsById[project.id] = project;
-      projectsByName[project.name] = project;
-    });
-    
-    // Create a list of project names for the autocomplete
-    const projectNames = projects.map(project => project.name);
-    
-    // Initialize the GOV.UK accessible autocomplete
-    accessibleAutocomplete({
-      element: document.querySelector('#search-container'),
-      id: 'search',
-      name: 'search',
-      defaultValue: '{{ searchTerm }}',
-      source: projectNames,
-      placeholder: 'Start typing to search',
-      autoselect: false,
-      confirmOnBlur: false,
-      showNoOptionsFound: true,
-      minLength: 2,
-      displayMenu: 'overlay',
-      onConfirm: function(selectedProjectName) {
-        if (selectedProjectName) {
-          // If a project was selected from the dropdown, navigate to its page
-          const project = projectsByName[selectedProjectName];
-          if (project && project.id) {
-            window.location.href = `/projects/${project.id}`;
+  (function() {
+    // Store event handlers in variables for cleanup
+    let formSubmitHandler = null;
+    let domContentLoadedHandler = null;
+
+    // Initialize autocomplete and form handling
+    domContentLoadedHandler = function() {
+      // Create a source array with project names and IDs for easy lookup
+      const projects = {{ projects | dump | safe }};
+      const projectsById = {};
+      const projectsByName = {};
+      
+      // Create lookup maps for faster access
+      projects.forEach(project => {
+        projectsById[project.id] = project;
+        projectsByName[project.name] = project;
+      });
+      
+      // Create a list of project names for the autocomplete
+      const projectNames = projects.map(project => project.name);
+      
+      // Initialize the GOV.UK accessible autocomplete
+      accessibleAutocomplete({
+        element: document.querySelector('#search-container'),
+        id: 'search',
+        name: 'search',
+        defaultValue: '{{ searchTerm }}',
+        source: projectNames,
+        placeholder: 'Start typing to search',
+        autoselect: false,
+        confirmOnBlur: false,
+        showNoOptionsFound: true,
+        minLength: 2,
+        displayMenu: 'overlay',
+        onConfirm: function(selectedProjectName) {
+          if (selectedProjectName) {
+            // If a project was selected from the dropdown, navigate to its page
+            const project = projectsByName[selectedProjectName];
+            if (project && project.id) {
+              window.location.href = `/projects/${project.id}`;
+            }
+          }
+        },
+        tNoResults: function() { 
+          return 'No projects found';
+        },
+        tStatusQueryTooShort: function(minQueryLength) {
+          return `Type in ${minQueryLength} or more characters for results`;
+        }
+      });
+      
+      // Handle form submission
+      const form = document.querySelector('form');
+      
+      formSubmitHandler = function(event) {
+        // Get the visible input from the autocomplete
+        const autocompleteInput = document.querySelector('.autocomplete__input');
+        
+        // Get the hidden input created by the autocomplete component
+        const hiddenInput = form.querySelector('input[name="search"]');
+        
+        if (autocompleteInput && hiddenInput) {
+          // Ensure the hidden input has the value from the visible input
+          hiddenInput.value = autocompleteInput.value;
+          
+          // Only submit if we have a search value
+          if (hiddenInput.value) {
+            return true;
           }
         }
-      },
-      tNoResults: function() { 
-        return 'No projects found';
-      },
-      tStatusQueryTooShort: function(minQueryLength) {
-        return `Type in ${minQueryLength} or more characters for results`;
-      }
-    });
-    
-    // Handle form submission
-    const form = document.querySelector('form');
-    
-    form.addEventListener('submit', function(event) {
-      // Get the visible input from the autocomplete
-      const autocompleteInput = document.querySelector('.autocomplete__input');
+        
+        // If no search term or inputs not found, prevent submission
+        event.preventDefault();
+        return false;
+      };
       
-      // Get the hidden input created by the autocomplete component
-      const hiddenInput = form.querySelector('input[name="search"]');
+      form.addEventListener('submit', formSubmitHandler);
       
-      if (autocompleteInput && hiddenInput) {
-        // Ensure the hidden input has the value from the visible input
-        hiddenInput.value = autocompleteInput.value;
-        
-        // Only submit if we have a search value
-        if (hiddenInput.value) {
-          return true;
-        }
-      }
-      
-      // If no search term or inputs not found, prevent submission
-      event.preventDefault();
-      return false;
-    });
-    
-    // Inject GDS Transport font styling directly after component initialization
-    // This ensures our styles will be applied last and override the component's default styles
-    setTimeout(function() {
-      const styleEl = document.createElement('style');
-      styleEl.textContent = `
-        /* Force GDS Transport font on all autocomplete elements */
-        .autocomplete__wrapper * {
-          font-family: "GDS Transport", arial, sans-serif !important;
-        }
-        
-        .autocomplete__input {
-          font-family: "GDS Transport", arial, sans-serif !important;
-          font-size: 19px !important;
-          line-height: 1.25 !important;
-          padding: 5px !important;
-          height: 40px !important;
-          border: 2px solid #0b0c0c !important;
-        }
-        
-        .autocomplete__menu {
-          font-family: "GDS Transport", arial, sans-serif !important;
-          background-color: #fff !important;
-          border: 2px solid #0b0c0c !important;
-          border-top: 0 !important;
-          width: 100% !important;
-          max-height: 342px !important;
-          margin: 0 !important;
-          padding: 0 !important;
-        }
-        
-        .autocomplete__menu .autocomplete__option {
-          font-family: "GDS Transport", arial, sans-serif !important;
-          font-size: 16px !important;
-          line-height: 1.5 !important;
-          padding: 8px !important;
-          border-bottom: 1px solid #b1b4b6 !important;
-          color: #0b0c0c !important;
-          background-color: #fff !important;
-        }
-        
-        .autocomplete__menu .autocomplete__option--odd {
-          background-color: #f3f2f1 !important;
-        }
-        
-        .autocomplete__menu .autocomplete__option:hover,
-        .autocomplete__menu .autocomplete__option--focused {
-          background-color: #1d70b8 !important;
-          border-color: #1d70b8 !important;
-          color: white !important;
-          outline: none !important;
-        }
-        
-        .autocomplete__menu .autocomplete__option--selected {
-          background-color: #1d70b8 !important;
-          color: white !important;
-        }
-        
-        /* Override media query styles */
-        @media (min-width: 641px) {
-          .autocomplete__hint,
-          .autocomplete__input,
-          .autocomplete__option {
+      // Inject GDS Transport font styling directly after component initialization
+      // This ensures our styles will be applied last and override the component's default styles
+      setTimeout(function() {
+        const styleEl = document.createElement('style');
+        styleEl.textContent = `
+          /* Force GDS Transport font on all autocomplete elements */
+          .autocomplete__wrapper * {
+            font-family: "GDS Transport", arial, sans-serif !important;
+          }
+          
+          .autocomplete__input {
             font-family: "GDS Transport", arial, sans-serif !important;
             font-size: 19px !important;
-            line-height: 1.31579 !important;
+            line-height: 1.25 !important;
+            padding: 5px !important;
+            height: 40px !important;
+            border: 2px solid #0b0c0c !important;
           }
-        }
-      `;
-      document.head.appendChild(styleEl);
-    }, 100); // Small delay to ensure autocomplete is fully initialized
-  });
+          
+          .autocomplete__menu {
+            font-family: "GDS Transport", arial, sans-serif !important;
+            background-color: #fff !important;
+            border: 2px solid #0b0c0c !important;
+            border-top: 0 !important;
+            width: 100% !important;
+            max-height: 342px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          .autocomplete__menu .autocomplete__option {
+            font-family: "GDS Transport", arial, sans-serif !important;
+            font-size: 16px !important;
+            line-height: 1.5 !important;
+            padding: 8px !important;
+            border-bottom: 1px solid #b1b4b6 !important;
+            color: #0b0c0c !important;
+            background-color: #fff !important;
+          }
+          
+          .autocomplete__menu .autocomplete__option--odd {
+            background-color: #f3f2f1 !important;
+          }
+          
+          .autocomplete__menu .autocomplete__option:hover,
+          .autocomplete__menu .autocomplete__option--focused {
+            background-color: #1d70b8 !important;
+            border-color: #1d70b8 !important;
+            color: white !important;
+            outline: none !important;
+          }
+          
+          .autocomplete__menu .autocomplete__option--selected {
+            background-color: #1d70b8 !important;
+            color: white !important;
+          }
+          
+          /* Override media query styles */
+          @media (min-width: 641px) {
+            .autocomplete__hint,
+            .autocomplete__input,
+            .autocomplete__option {
+              font-family: "GDS Transport", arial, sans-serif !important;
+              font-size: 19px !important;
+              line-height: 1.31579 !important;
+            }
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }, 100); // Small delay to ensure autocomplete is fully initialized
+    };
+
+    // Add the DOMContentLoaded listener
+    document.addEventListener('DOMContentLoaded', domContentLoadedHandler);
+
+    // Cleanup function to remove event listeners
+    function cleanup() {
+      const form = document.querySelector('form');
+      if (form && formSubmitHandler) {
+        form.removeEventListener('submit', formSubmitHandler);
+      }
+      if (domContentLoadedHandler) {
+        document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
+      }
+    }
+
+    // Clean up event listeners when the page is unloaded
+    window.addEventListener('unload', cleanup);
+  })();
 </script>
 {% endblock %}

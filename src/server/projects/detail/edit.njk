@@ -243,93 +243,96 @@
 {% block bodyEnd %}
   {{ super() }}
   <script nonce="{{ nonce }}">
-    // Store event handlers in variables for cleanup
-    let professionChangeHandler = null;
-    let domContentLoadedHandler = null;
+    // Wrap everything in an IIFE to avoid global scope pollution
+    (function() {
+      // Store event handlers in variables for cleanup
+      let professionChangeHandler = null;
+      let domContentLoadedHandler = null;
 
-    // Simple tab selection function
-    function selectTabWithId(tabId) {
-      try {
-        const tabElements = document.querySelectorAll('[role="tab"]');
-        if (!tabElements || tabElements.length === 0) {
-          console.warn('No tab elements found');
-          return;
-        }
-        
-        // Find the tab with the matching id or containing the id
-        let targetTab = null;
-        for (let i = 0; i < tabElements.length; i++) {
-          if (tabElements[i].id === tabId || tabElements[i].id.includes(tabId)) {
-            targetTab = tabElements[i];
-            break;
+      // Simple tab selection function
+      function selectTabWithId(tabId) {
+        try {
+          const tabElements = document.querySelectorAll('[role="tab"]');
+          if (!tabElements || tabElements.length === 0) {
+            console.warn('No tab elements found');
+            return;
           }
-        }
-        
-        // Click the tab if found
-        if (targetTab) {
-          targetTab.click();
-        } else {
-          console.warn('Tab with id containing "' + tabId + '" not found');
-        }
-      } catch (err) {
-        console.error('Error selecting tab:', err);
-      }
-    }
-    
-    // Set up event handlers when DOM is loaded
-    domContentLoadedHandler = function() {
-      try {
-        // Set up profession form behavior
-        const professionSelect = document.getElementById('profession');
-        const statusSelect = document.getElementById('profession-status');
-        const commentaryInput = document.getElementById('profession-commentary');
-        
-        if (professionSelect) {
-          professionChangeHandler = function() {
-            const professionId = professionSelect.value;
-            if (!professionId) {
-              // Reset fields if "Select a profession" is chosen
-              if (statusSelect) statusSelect.value = '';
-              if (commentaryInput) commentaryInput.value = '';
-              return;
-            }
-            
-            // Set default value for new profession
-            if (statusSelect) statusSelect.value = 'AMBER'; // Set a default value
-            if (commentaryInput) commentaryInput.value = '';
-          };
           
-          professionSelect.addEventListener('change', professionChangeHandler);
+          // Find the tab with the matching id or containing the id
+          let targetTab = null;
+          for (let i = 0; i < tabElements.length; i++) {
+            if (tabElements[i].id === tabId || tabElements[i].id.includes(tabId)) {
+              targetTab = tabElements[i];
+              break;
+            }
+          }
+          
+          // Click the tab if found
+          if (targetTab) {
+            targetTab.click();
+          } else {
+            console.warn('Tab with id containing "' + tabId + '" not found');
+          }
+        } catch (err) {
+          console.error('Error selecting tab:', err);
         }
+      }
+      
+      // Set up event handlers when DOM is loaded
+      domContentLoadedHandler = function() {
+        try {
+          // Set up profession form behavior
+          const professionSelect = document.getElementById('profession');
+          const statusSelect = document.getElementById('profession-status');
+          const commentaryInput = document.getElementById('profession-commentary');
+          
+          if (professionSelect) {
+            professionChangeHandler = function() {
+              const professionId = professionSelect.value;
+              if (!professionId) {
+                // Reset fields if "Select a profession" is chosen
+                if (statusSelect) statusSelect.value = '';
+                if (commentaryInput) commentaryInput.value = '';
+                return;
+              }
+              
+              // Set default value for new profession
+              if (statusSelect) statusSelect.value = 'AMBER'; // Set a default value
+              if (commentaryInput) commentaryInput.value = '';
+            };
+            
+            professionSelect.addEventListener('change', professionChangeHandler);
+          }
 
-        // Handle tab selection from query parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        const tabParam = urlParams.get('tab');
-        if (tabParam === 'professions') {
-          selectTabWithId('professions');
-        } else if (tabParam === 'delivery') {
-          selectTabWithId('delivery');
+          // Handle tab selection from query parameter
+          const urlParams = new URLSearchParams(window.location.search);
+          const tabParam = urlParams.get('tab');
+          if (tabParam === 'professions') {
+            selectTabWithId('professions');
+          } else if (tabParam === 'delivery') {
+            selectTabWithId('delivery');
+          }
+        } catch (e) {
+          console.error('Error in DOM setup:', e);
         }
-      } catch (e) {
-        console.error('Error in DOM setup:', e);
-      }
-    };
+      };
 
-    // Add the DOMContentLoaded listener
-    document.addEventListener('DOMContentLoaded', domContentLoadedHandler);
+      // Add the DOMContentLoaded listener
+      document.addEventListener('DOMContentLoaded', domContentLoadedHandler);
 
-    // Cleanup function to remove event listeners
-    function cleanup() {
-      const professionSelect = document.getElementById('profession');
-      if (professionSelect && professionChangeHandler) {
-        professionSelect.removeEventListener('change', professionChangeHandler);
+      // Cleanup function to remove event listeners
+      function cleanup() {
+        const professionSelect = document.getElementById('profession');
+        if (professionSelect && professionChangeHandler) {
+          professionSelect.removeEventListener('change', professionChangeHandler);
+        }
+        if (domContentLoadedHandler) {
+          document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
+        }
       }
-      if (domContentLoadedHandler) {
-        document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
-      }
-    }
 
-    // Clean up event listeners when the page is unloaded
-    window.addEventListener('unload', cleanup);
+      // Clean up event listeners when the page is unloaded
+      window.addEventListener('unload', cleanup);
+    })();
   </script>
 {% endblock %} 

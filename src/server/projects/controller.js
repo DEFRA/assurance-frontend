@@ -165,7 +165,9 @@ async function addProfessionHistoryToTimeline({
   getProfessionName,
   logger
 }) {
-  if (!project.professions || project.professions.length === 0) return
+  if (!project.professions || project.professions.length === 0) {
+    return
+  }
 
   for (const profession of project.professions) {
     let professionHistory
@@ -183,7 +185,9 @@ async function addProfessionHistoryToTimeline({
       continue // Continue with other professions if one fails
     }
 
-    if (!professionHistory || professionHistory.length === 0) continue
+    if (!professionHistory || professionHistory.length === 0) {
+      continue
+    }
 
     const professionName = getProfessionName(profession, professions, project)
 

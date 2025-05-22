@@ -260,7 +260,8 @@ describe('Auth Plugin', () => {
         claims: jest.fn().mockReturnValue({
           sub: 'user-123',
           name: 'Test User',
-          email: 'test@example.com'
+          email: 'test@example.com',
+          roles: ['admin']
         })
       }
       mockOidcClient.callbackParams.mockReturnValue({

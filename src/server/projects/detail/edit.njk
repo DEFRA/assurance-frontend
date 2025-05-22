@@ -6,8 +6,10 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
 
 {% block content %}
+  <h1 class="govuk-heading-xl">{{ project.name }}</h1>
   {% if errorMessage %}
     {{ govukErrorSummary({
       titleText: "There is a problem",
@@ -44,6 +46,21 @@
         value: project.commentary
       }) }}
 
+      {{ govukDateInput({
+        id: "update-date",
+        namePrefix: "updateDate",
+        fieldset: {
+          legend: {
+            text: "Date of this update",
+            classes: "govuk-fieldset__legend--s"
+          }
+        },
+        hint: {
+          text: "For example, 27 3 2024. Cannot be in the future. Defaults to today."
+        },
+        value: { day: '', month: '', year: '' }
+      }) }}
+
       <div class="govuk-button-group">
         {{ govukButton({
           text: "Save Delivery Status"
@@ -68,7 +85,7 @@
               {{ change.timestamp | formatDate }}
             </h3>
             <div class="govuk-body">
-              {% if change.changes.status and change.changes.status.from !== change.changes.status.to %}
+              {% if change.changes.status and change.changes.status.to %}
                 <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">
                   Delivery status update:
                   <span class="govuk-tag 
@@ -130,6 +147,21 @@
           },
           value: ""
         }) }}
+
+        {{ govukDateInput({
+          id: "profession-update-date",
+          namePrefix: "profession-updateDate",
+          fieldset: {
+            legend: {
+              text: "Date of this profession update",
+              classes: "govuk-fieldset__legend--s"
+            }
+          },
+          hint: {
+            text: "For example, 27 3 2024. Cannot be in the future. Defaults to today."
+          },
+          value: { day: '', month: '', year: '' }
+        }) }}
       </div>
 
       <div class="govuk-button-group">
@@ -188,14 +220,14 @@
     items: [
       {
         id: "delivery",
-        label: "Delivery Status",
+        label: "Delivery status",
         panel: {
           html: deliveryHtml
         }
       },
       {
         id: "professions",
-        label: "Profession Updates",
+        label: "Profession updates",
         panel: {
           html: professionsHtml
         }

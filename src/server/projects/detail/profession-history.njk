@@ -36,7 +36,7 @@
           {% for change in history %}
             <div class="timeline__event">
               <h4 class="timeline__event-title govuk-heading-s">
-                {% if change.changes.status and change.changes.status.from !== change.changes.status.to %}
+                {% if change.changes.status and change.changes.status.to %}
                   Status update:
                   <strong class="govuk-tag 
                     {% if change.changes.status.to === 'RED' %}govuk-tag--red

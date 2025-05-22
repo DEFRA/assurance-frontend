@@ -19,5 +19,5 @@ export function formatDate(value, formattedDateStr) {
 
   // Otherwise use date-fns formatting
   const date = isDate(value) ? value : parseISO(value)
-  return format(date, formattedDateStr ?? 'EEE do MMMM yyyy')
+  return format(date, formattedDateStr ?? 'd MMMM yyyy')
 }

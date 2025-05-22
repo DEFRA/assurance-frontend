@@ -64,13 +64,16 @@ describe('Authenticated Fetch JSON Decorator', () => {
     )
   })
 
-  test('should throw if request.auth.credentials is missing', async () => {
+  test('should allow unauthenticated fetch if token is missing', async () => {
     // Arrange
     const request = { auth: {} }
     const decoratedFetch = authedFetchJsonDecorator(request)
 
-    // Act & Assert
-    await expect(decoratedFetch('/data')).rejects.toThrow()
+    // Act
+    const result = await decoratedFetch('/data')
+
+    // Assert
+    expect(result).toEqual({ data: 'test' })
   })
 
   test('should pass custom options to fetch', async () => {

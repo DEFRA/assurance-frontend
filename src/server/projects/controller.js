@@ -35,6 +35,7 @@ const STATUS_OPTIONS = [
   { value: 'GREEN', text: 'Green' }
 ]
 const PROJECT_NOT_FOUND_VIEW = 'errors/not-found'
+const HTTP_STATUS_NOT_FOUND = 404
 
 // Helper to get profession name from either the professions array or project data
 function getProfessionName(profession, professions, project) {
@@ -161,8 +162,8 @@ async function addProfessionHistoryToTimeline({
   id,
   request,
   combinedHistory,
-  getProfessionHistory,
-  getProfessionName,
+  getProfessionHistory: getProfHistoryFn,
+  getProfessionName: getProfNameFn,
   logger
 }) {
   if (!project.professions || project.professions.length === 0) {
@@ -172,7 +173,7 @@ async function addProfessionHistoryToTimeline({
   for (const profession of project.professions) {
     let professionHistory
     try {
-      professionHistory = await getProfessionHistory(
+      professionHistory = await getProfHistoryFn(
         id,
         profession.professionId,
         request
@@ -189,7 +190,7 @@ async function addProfessionHistoryToTimeline({
       continue
     }
 
-    const professionName = getProfessionName(profession, professions, project)
+    const professionName = getProfNameFn(profession, professions, project)
 
     const commentaryUpdates = professionHistory.filter(
       (entry) => entry.changes?.commentary?.to
@@ -238,7 +239,7 @@ export const projectsController = {
           .view(PROJECT_NOT_FOUND_VIEW, {
             pageTitle: NOTIFICATIONS.NOT_FOUND
           })
-          .code(404)
+          .code(HTTP_STATUS_NOT_FOUND)
       }
 
       return h.view('projects/detail/index', {

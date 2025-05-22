@@ -154,6 +154,57 @@ async function updateProjectAfterArchive(id, request) {
   }
 }
 
+// Helper to add profession history to the timeline without deep nesting
+async function addProfessionHistoryToTimeline({
+  project,
+  professions,
+  id,
+  request,
+  combinedHistory,
+  getProfessionHistory,
+  getProfessionName,
+  logger
+}) {
+  if (!project.professions || project.professions.length === 0) return
+
+  for (const profession of project.professions) {
+    let professionHistory
+    try {
+      professionHistory = await getProfessionHistory(
+        id,
+        profession.professionId,
+        request
+      )
+    } catch (err) {
+      logger.error(
+        `Error fetching history for profession ${profession.professionId}:`,
+        err
+      )
+      continue // Continue with other professions if one fails
+    }
+
+    if (!professionHistory || professionHistory.length === 0) continue
+
+    const professionName = getProfessionName(profession, professions, project)
+
+    const commentaryUpdates = professionHistory.filter(
+      (entry) => entry.changes?.commentary?.to
+    )
+
+    commentaryUpdates.forEach((entry) => {
+      combinedHistory.push({
+        ...entry,
+        professionName,
+        type: 'profession',
+        historyType: 'comment',
+        changedBy: professionName
+      })
+    })
+  }
+}
+
+export { addProfessionHistoryToTimeline }
+
 export const projectsController = {
   getAll: async (request, h) => {
     try {
@@ -181,7 +232,7 @@ export const projectsController = {
       if (!project) {
         return h
           .view(PROJECT_NOT_FOUND_VIEW, {
-            pageTitle: 'Project Not Found'
+            pageTitle: NOTIFICATIONS.NOT_FOUND
           })
           .code(404)
       }
@@ -207,7 +258,7 @@ export const projectsController = {
       const project = await getProjectById(id, request)
 
       if (!project) {
-        request.logger.error('Project not found', { id })
+        request.logger.error(NOTIFICATIONS.NOT_FOUND, { id })
         return h.redirect('/?notification=Project not found')
       }
 
@@ -739,7 +790,7 @@ export const projectsController = {
       const project = await getProjectById(id, request)
 
       if (!project) {
-        return h.response({ error: 'Project not found' }).code(404)
+        return h.response({ error: NOTIFICATIONS.NOT_FOUND }).code(404)
       }
 
       // Fetch the project history
@@ -877,7 +928,7 @@ export const projectsController = {
         if (!project) {
           return h
             .view(PROJECT_NOT_FOUND_VIEW, {
-              pageTitle: 'Project Not Found'
+              pageTitle: NOTIFICATIONS.NOT_FOUND
             })
             .code(404)
         }
@@ -913,7 +964,7 @@ export const projectsController = {
       // Get the existing project
       const existingProject = await getProjectById(id, request)
       if (!existingProject) {
-        return h.redirect(`/?notification=Project not found`)
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
       // Update the project with the new data
@@ -949,9 +1000,9 @@ export const projectsController = {
       const project = await getProjectById(id, request)
 
       if (!project) {
-        request.logger.error(`Project not found with ID: ${id}`)
+        request.logger.error(`${NOTIFICATIONS.NOT_FOUND} with ID: ${id}`)
         return h.view(PROJECT_NOT_FOUND_VIEW, {
-          pageTitle: 'Project Not Found'
+          pageTitle: NOTIFICATIONS.NOT_FOUND
         })
       }
 
@@ -987,51 +1038,17 @@ export const projectsController = {
         )
       }
 
-      // Get profession history for each profession in the project
-      if (project.professions && project.professions.length > 0) {
-        for (const profession of project.professions) {
-          try {
-            const professionHistory = await getProfessionHistory(
-              id,
-              profession.professionId,
-              request
-            )
-
-            if (professionHistory && professionHistory.length > 0) {
-              // Get the profession name using our helper
-              const professionName = getProfessionName(
-                profession,
-                professions,
-                project
-              )
-
-              // For profession history, we only want to show commentary changes for external users
-              // We don't show RAG status changes for professions in the timeline
-              const commentaryUpdates = professionHistory.filter((entry) => {
-                return entry.changes?.commentary?.to
-              })
-
-              // Add profession commentary updates to the timeline
-              commentaryUpdates.forEach((entry) => {
-                combinedHistory.push({
-                  ...entry,
-                  professionName,
-                  type: 'profession',
-                  historyType: 'comment',
-                  // Ensure the changedBy is the profession name for consistency
-                  changedBy: professionName
-                })
-              })
-            }
-          } catch (err) {
-            request.logger.error(
-              `Error fetching history for profession ${profession.professionId}:`,
-              err
-            )
-            // Continue with other professions if one fails
-          }
-        }
-      }
+      // Add profession history to the timeline using the helper
+      await addProfessionHistoryToTimeline({
+        project,
+        professions,
+        id,
+        request,
+        combinedHistory,
+        getProfessionHistory,
+        getProfessionName,
+        logger: request.logger
+      })
 
       // Sort the timeline by timestamp, most recent first
       combinedHistory.sort(

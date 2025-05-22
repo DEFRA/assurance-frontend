@@ -79,12 +79,19 @@ export const plugin = {
       })
 
       // Create session
+        // Normalize roles to lower case for comparison
+        userRoles = claims.roles.map((r) => r.toLowerCase())
+      } else if (typeof claims.roles === 'string') {
+        userRoles = [claims.roles.toLowerCase()]
+      }
+      // Only assign 'admin' if the user has 'admin' (case-insensitive) in their roles
+      const hasAdminRole = userRoles.includes('admin')
       const sessionData = {
         user: {
           id: claims.sub,
           email: claims.email || claims.preferred_username,
           name: claims.name,
-          roles: [ADMIN_ROLE] // Assign just the admin role
+          roles: hasAdminRole ? ['admin'] : []
         },
         token: tokenSet.access_token,
         expires: Date.now() + (tokenSet.expires_in || 3600) * 1000 // Convert to milliseconds

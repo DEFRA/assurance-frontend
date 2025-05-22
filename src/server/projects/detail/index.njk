@@ -20,7 +20,7 @@
             {% if change.type === 'profession' %}
               {# Profession comment #}
               <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">{{ change.changedBy }} update</p>
-            {% elif change.changes.status and change.changes.status.from !== change.changes.status.to %}
+            {% elif change.changes.status and change.changes.status.to %}
               {# Project overall status update #}
               <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">
                 Delivery status update:
@@ -105,7 +105,7 @@
       {% if isAuthenticated %}
         <div class="govuk-button-group govuk-!-margin-bottom-6">
           {{ govukButton({
-            text: "Edit Project",
+            text: "Edit project",
             href: "/projects/" + project.id + "/edit",
             classes: "govuk-button--secondary"
           }) }}

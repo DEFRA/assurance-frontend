@@ -260,11 +260,11 @@ export const projectsController = {
         if (historyEntries && historyEntries.length > 0) {
           // Filter for status and commentary changes
           const deliveryUpdates = historyEntries.filter((entry) => {
-            return (
-              (entry.changes?.status?.from !== entry.changes?.status?.to &&
-                entry.changes?.status?.to) ||
-              entry.changes?.commentary?.to
-            )
+            // Ensure entry exists and is not archived
+            if (!entry || entry.archived) {
+              return false
+            }
+            return entry.changes?.status?.to || entry.changes?.commentary?.to
           })
 
           combinedHistory = combinedHistory.concat(
@@ -384,11 +384,7 @@ export const projectsController = {
             if (!entry || entry.archived) {
               return false
             }
-            return (
-              (entry.changes?.status?.from !== entry.changes?.status?.to &&
-                entry.changes?.status?.to) ||
-              entry.changes?.commentary?.to
-            )
+            return entry.changes?.status?.to || entry.changes?.commentary?.to
           })
 
           // Sort by timestamp (newest first) and take top 10
@@ -512,7 +508,15 @@ export const projectsController = {
       // For profession updates
       profession,
       'profession-status': professionStatus,
-      'profession-commentary': professionCommentary
+      'profession-commentary': professionCommentary,
+      // Date fields for delivery
+      'updateDate-day': updateDateDay,
+      'updateDate-month': updateDateMonth,
+      'updateDate-year': updateDateYear,
+      // Date fields for profession
+      'profession-updateDate-day': professionUpdateDateDay,
+      'profession-updateDate-month': professionUpdateDateMonth,
+      'profession-updateDate-year': professionUpdateDateYear
     } = request.payload
     const updateType = request.query.type || 'delivery'
 
@@ -525,6 +529,7 @@ export const projectsController = {
 
       // Initialize the project data that will be updated
       let projectData = {}
+      let updateDate = null
 
       if (updateType === 'delivery') {
         // Process tags - split by comma and trim whitespace
@@ -535,18 +540,37 @@ export const projectsController = {
               .filter(Boolean)
           : []
 
-        // Create updated project data for delivery status
-        projectData = {
-          status,
-          commentary,
-          tags: processedTags
+        // Parse date from form fields
+        if (updateDateDay && updateDateMonth && updateDateYear) {
+          const iso = `${updateDateYear.padStart(4, '0')}-${updateDateMonth.padStart(2, '0')}-${updateDateDay.padStart(2, '0')}`
+          // Only set if valid date
+          if (!isNaN(Date.parse(iso))) {
+            updateDate = iso
+          }
+        }
+
+        // Only include updateDate if all fields are present and valid
+        if (updateDate) {
+          projectData = {
+            status,
+            commentary,
+            tags: processedTags,
+            updateDate
+          }
+        } else {
+          projectData = {
+            status,
+            commentary,
+            tags: processedTags
+          }
         }
 
         request.logger.info(
           {
             status,
             commentary: commentary?.substring(0, 50) + '...',
-            tags: processedTags
+            tags: processedTags,
+            updateDate
           },
           'Updating project delivery status'
         )
@@ -567,6 +591,18 @@ export const projectsController = {
             (p) => p.professionId !== profession
           )
 
+          // Parse date from form fields
+          if (
+            professionUpdateDateDay &&
+            professionUpdateDateMonth &&
+            professionUpdateDateYear
+          ) {
+            const iso = `${professionUpdateDateYear.padStart(4, '0')}-${professionUpdateDateMonth.padStart(2, '0')}-${professionUpdateDateDay.padStart(2, '0')}`
+            if (!isNaN(Date.parse(iso))) {
+              updateDate = iso
+            }
+          }
+
           // Add the updated profession
           const updatedProfessions = [
             ...otherProfessions,
@@ -583,13 +619,19 @@ export const projectsController = {
               updatedProfessions: updatedProfessions.map((p) => ({
                 id: p.professionId,
                 status: p.status
-              }))
+              })),
+              updateDate
             },
             'Updated project professions'
           )
 
           // Add professions to project data
           projectData.professions = updatedProfessions
+          if (updateDate) {
+            projectData.updateDate = updateDate
+          } else if ('updateDate' in projectData) {
+            delete projectData.updateDate
+          }
         } else {
           // Missing required fields
           return h.redirect(

@@ -28,17 +28,6 @@ export async function getServiceStandards(request) {
       { count: data.length },
       'Service standards retrieved successfully'
     )
-    if (data.length > 0) {
-      logger.info(
-        {
-          sampleStandard: {
-            id: data[0].id,
-            name: data[0].name
-          }
-        },
-        'Sample service standard structure'
-      )
-    }
     return data
   } catch (error) {
     logger.error(

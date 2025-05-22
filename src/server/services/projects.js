@@ -237,6 +237,18 @@ export async function updateProject(
       )
     }
 
+    // Pass updateDate through if present
+    if (projectData.updateDate) {
+      logger.info(
+        {
+          updateDate: projectData.updateDate,
+          type: typeof projectData.updateDate
+        },
+        'Passing updateDate to backend'
+      )
+      updatedProject.updateDate = projectData.updateDate
+    }
+
     let result
     if (request) {
       // Use authenticated fetcher if request is provided

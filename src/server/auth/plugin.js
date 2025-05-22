@@ -79,6 +79,8 @@ export const plugin = {
       })
 
       // Create session
+      let userRoles = []
+      if (Array.isArray(claims.roles)) {
         // Normalize roles to lower case for comparison
         userRoles = claims.roles.map((r) => r.toLowerCase())
       } else if (typeof claims.roles === 'string') {

@@ -22,14 +22,20 @@ export function authedFetchJsonDecorator(request) {
       : `${getApiUrl()}${endpoint}`
     logger.info({ url }, 'Making authenticated API request')
 
+    // Safely get the token if it exists
+    const token = request?.auth?.credentials?.token
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${request.auth.credentials.token}`,
-          ...options.headers
-        }
+        headers
       })
 
       if (!response.ok) {

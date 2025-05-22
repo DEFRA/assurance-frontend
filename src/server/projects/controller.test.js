@@ -1,4 +1,9 @@
-import { projectsController, NOTIFICATIONS } from './controller.js'
+import {
+  projectsController,
+  NOTIFICATIONS,
+  addProfessionHistoryToTimeline
+} from './controller.js'
+import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 
 const mockGetProjects = jest.fn()
 const mockGetProjectById = jest.fn()
@@ -9,6 +14,7 @@ const mockGetProjectHistory = jest.fn()
 const mockGetProfessions = jest.fn()
 const mockGetProfessionHistory = jest.fn()
 const mockArchiveProjectHistoryEntry = jest.fn()
+const mockArchiveProfessionHistoryEntry = jest.fn()
 
 jest.mock('~/src/server/services/projects.js', () => ({
   getProjects: (...args) => mockGetProjects(...args),
@@ -18,7 +24,9 @@ jest.mock('~/src/server/services/projects.js', () => ({
   getProjectHistory: (...args) => mockGetProjectHistory(...args),
   getProfessionHistory: (...args) => mockGetProfessionHistory(...args),
   archiveProjectHistoryEntry: (...args) =>
-    mockArchiveProjectHistoryEntry(...args)
+    mockArchiveProjectHistoryEntry(...args),
+  archiveProfessionHistoryEntry: (...args) =>
+    mockArchiveProfessionHistoryEntry(...args)
 }))
 
 jest.mock('~/src/server/services/service-standards.js', () => ({
@@ -192,7 +200,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('errors/not-found', {
-        pageTitle: 'Project Not Found'
+        pageTitle: 'Project not found'
       })
       expect(mockCode).toHaveBeenCalledWith(404)
     })
@@ -1050,7 +1058,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('errors/not-found', {
-        pageTitle: 'Project Not Found'
+        pageTitle: 'Project not found'
       })
       expect(result).toBe('view-with-code')
     })
@@ -1647,7 +1655,7 @@ describe('Projects controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'errors/not-found',
         expect.objectContaining({
-          pageTitle: 'Project Not Found'
+          pageTitle: 'Project not found'
         })
       )
     })
@@ -1852,6 +1860,311 @@ describe('Projects controller', () => {
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/projects/1/edit?tab=delivery&notification=Failed to archive delivery update'
+      )
+    })
+  })
+
+  describe('addProfessionHistoryToTimeline', () => {
+    const logger = { error: jest.fn() }
+    const getProfessionName = jest.fn(() => 'Test Profession')
+    const id = '1'
+    const request = {}
+
+    beforeEach(() => {
+      jest.clearAllMocks()
+    })
+
+    it('should do nothing if project.professions is undefined', async () => {
+      const combinedHistory = []
+      await addProfessionHistoryToTimeline({
+        project: {},
+        professions: [],
+        id,
+        request,
+        combinedHistory,
+        getProfessionHistory: jest.fn(),
+        getProfessionName,
+        logger
+      })
+      expect(combinedHistory).toEqual([])
+    })
+
+    it('should continue if getProfessionHistory throws', async () => {
+      const combinedHistory = []
+      await addProfessionHistoryToTimeline({
+        project: { professions: [{ professionId: '1' }] },
+        professions: [],
+        id,
+        request,
+        combinedHistory,
+        getProfessionHistory: jest.fn().mockRejectedValue(new Error('fail')),
+        getProfessionName,
+        logger
+      })
+      expect(combinedHistory).toEqual([])
+      expect(logger.error).toHaveBeenCalled()
+    })
+
+    it('should continue if professionHistory is empty', async () => {
+      const combinedHistory = []
+      await addProfessionHistoryToTimeline({
+        project: { professions: [{ professionId: '1' }] },
+        professions: [],
+        id,
+        request,
+        combinedHistory,
+        getProfessionHistory: jest.fn().mockResolvedValue([]),
+        getProfessionName,
+        logger
+      })
+      expect(combinedHistory).toEqual([])
+    })
+
+    it('should not add entries if no commentary updates', async () => {
+      const combinedHistory = []
+      await addProfessionHistoryToTimeline({
+        project: { professions: [{ professionId: '1' }] },
+        professions: [],
+        id,
+        request,
+        combinedHistory,
+        getProfessionHistory: jest
+          .fn()
+          .mockResolvedValue([{ changes: { status: { to: 'GREEN' } } }]),
+        getProfessionName,
+        logger
+      })
+      expect(combinedHistory).toEqual([])
+    })
+
+    it('should add entries for commentary updates', async () => {
+      const combinedHistory = []
+      const commentaryEntry = {
+        id: 'abc',
+        timestamp: '2024-01-01',
+        changes: { commentary: { to: 'A comment' } }
+      }
+      await addProfessionHistoryToTimeline({
+        project: { professions: [{ professionId: '1' }] },
+        professions: [],
+        id,
+        request,
+        combinedHistory,
+        getProfessionHistory: jest.fn().mockResolvedValue([commentaryEntry]),
+        getProfessionName,
+        logger
+      })
+      expect(combinedHistory).toHaveLength(1)
+      expect(combinedHistory[0]).toMatchObject({
+        ...commentaryEntry,
+        professionName: 'Test Profession',
+        type: 'profession',
+        historyType: 'comment',
+        changedBy: 'Test Profession'
+      })
+    })
+  })
+
+  describe('project delivery and archive endpoints', () => {
+    const mockH = {
+      view: jest.fn(() => ({ code: jest.fn() })),
+      redirect: jest.fn()
+    }
+    const mockRequest = {
+      params: { id: '1', historyId: 'h1', professionId: 'p1' },
+      logger: { error: jest.fn(), info: jest.fn() }
+    }
+
+    beforeEach(() => {
+      jest.clearAllMocks()
+    })
+
+    it('getDeleteDelivery: should render delete view when found', async () => {
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test',
+        standards: [],
+        professions: []
+      })
+      mockGetProjectHistory.mockResolvedValue([
+        {
+          id: 'h1',
+          changes: { status: { to: 'GREEN' }, commentary: { to: 'C' } },
+          timestamp: 't'
+        }
+      ])
+      await projectsController.getDeleteDelivery(mockRequest, mockH)
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/delete-delivery',
+        expect.objectContaining({
+          pageTitle: expect.stringContaining('Delete Delivery Update')
+        })
+      )
+    })
+
+    it('getDeleteDelivery: should redirect if project not found', async () => {
+      mockGetProjectById.mockResolvedValue(null)
+      await projectsController.getDeleteDelivery(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/?notification=Project not found'
+      )
+    })
+
+    it('getDeleteDelivery: should redirect if no history', async () => {
+      mockGetProjectById.mockResolvedValue({ id: '1', name: 'Test' })
+      mockGetProjectHistory.mockResolvedValue([])
+      await projectsController.getDeleteDelivery(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1?notification=No history found for this project'
+      )
+    })
+
+    it('getDeleteDelivery: should redirect if history entry not found', async () => {
+      mockGetProjectById.mockResolvedValue({ id: '1', name: 'Test' })
+      mockGetProjectHistory.mockResolvedValue([{ id: 'other' }])
+      await projectsController.getDeleteDelivery(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1?notification=History entry not found'
+      )
+    })
+
+    it('getDeleteDelivery: should handle error', async () => {
+      mockGetProjectById.mockRejectedValue(new Error('fail'))
+      await expect(
+        projectsController.getDeleteDelivery(mockRequest, mockH)
+      ).rejects.toMatchObject({ isBoom: true })
+    })
+
+    it('postDeleteDelivery: should redirect on success', async () => {
+      mockGetProjectById.mockResolvedValue({ id: '1' })
+      const mockAuthedFetch = jest.fn().mockResolvedValue()
+      authedFetchJsonDecorator.mockImplementation(() => mockAuthedFetch)
+      await projectsController.postDeleteDelivery(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/edit?tab=delivery&notification=Delivery update successfully removed'
+      )
+    })
+
+    it('postDeleteDelivery: should redirect if project not found', async () => {
+      mockGetProjectById.mockResolvedValue(null)
+      await projectsController.postDeleteDelivery(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/?notification=Project not found'
+      )
+    })
+
+    it('postDeleteDelivery: should handle error in delete', async () => {
+      mockGetProjectById.mockResolvedValue({ id: '1' })
+      authedFetchJsonDecorator.mockImplementation(() => {
+        throw new Error('fail')
+      })
+      await projectsController.postDeleteDelivery(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/edit?tab=delivery&notification=Failed to remove delivery update'
+      )
+    })
+
+    it('postDeleteDelivery: should handle outer error', async () => {
+      mockGetProjectById.mockRejectedValue(new Error('fail'))
+      await projectsController.postDeleteDelivery(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/delete/delivery/h1?notification=Failed to update project. Please try again.'
+      )
+    })
+
+    it('getArchiveDelivery: should render archive view', async () => {
+      mockGetProjectById.mockResolvedValue({ id: '1', name: 'Test' })
+      await projectsController.getArchiveDelivery(mockRequest, mockH)
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/archive-delivery',
+        expect.objectContaining({ pageTitle: 'Archive Delivery Update' })
+      )
+    })
+
+    it('getArchiveDelivery: should redirect if project not found', async () => {
+      mockGetProjectById.mockResolvedValue(null)
+      await projectsController.getArchiveDelivery(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/?notification=Project not found'
+      )
+    })
+
+    it('getArchiveDelivery: should handle error', async () => {
+      mockGetProjectById.mockRejectedValue(new Error('fail'))
+      await expect(
+        projectsController.getArchiveDelivery(mockRequest, mockH)
+      ).rejects.toMatchObject({ isBoom: true })
+    })
+
+    it('postArchiveDelivery: should redirect on success', async () => {
+      mockArchiveProjectHistoryEntry.mockResolvedValue()
+      await projectsController.postArchiveDelivery(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/edit?tab=delivery&notification=Delivery update successfully archived'
+      )
+    })
+
+    it('postArchiveDelivery: should handle error', async () => {
+      mockArchiveProjectHistoryEntry.mockRejectedValue(new Error('fail'))
+      await projectsController.postArchiveDelivery(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/edit?tab=delivery&notification=Failed to archive delivery update'
+      )
+    })
+
+    it('getArchiveProfessionHistory: should render archive profession view', async () => {
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test',
+        professions: [{ professionId: 'p1' }]
+      })
+      await projectsController.getArchiveProfessionHistory(mockRequest, mockH)
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/archive-profession-history',
+        expect.objectContaining({ pageTitle: 'Archive Profession Update' })
+      )
+    })
+
+    it('getArchiveProfessionHistory: should redirect if project not found', async () => {
+      mockGetProjectById.mockResolvedValue(null)
+      await projectsController.getArchiveProfessionHistory(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/?notification=Project not found'
+      )
+    })
+
+    it('getArchiveProfessionHistory: should redirect if profession not found', async () => {
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test',
+        professions: []
+      })
+      await projectsController.getArchiveProfessionHistory(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1?notification=Profession not found in this project'
+      )
+    })
+
+    it('getArchiveProfessionHistory: should handle error', async () => {
+      mockGetProjectById.mockRejectedValue(new Error('fail'))
+      await expect(
+        projectsController.getArchiveProfessionHistory(mockRequest, mockH)
+      ).rejects.toMatchObject({ isBoom: true })
+    })
+
+    it('postArchiveProfessionHistory: should redirect on success', async () => {
+      mockArchiveProfessionHistoryEntry.mockResolvedValue()
+      await projectsController.postArchiveProfessionHistory(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/professions/p1/history?notification=Profession update successfully archived'
+      )
+    })
+
+    it('postArchiveProfessionHistory: should handle error', async () => {
+      mockArchiveProfessionHistoryEntry.mockRejectedValue(new Error('fail'))
+      await projectsController.postArchiveProfessionHistory(mockRequest, mockH)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/professions/p1/history?notification=Failed to archive profession update'
       )
     })
   })

@@ -55,19 +55,16 @@ export const plugin = {
       sessionCache,
       logger
     ) {
+      const callbackUrl = appConfig.get('azure.callbackUrl')
       logger.debug('Initiating token exchange', {
         hasCode: !!params.code,
-        callbackUrl: appConfig.get('azure.callbackUrl')
+        callbackUrl
       })
 
-      const tokenSet = await client.callback(
-        appConfig.get('azure.callbackUrl'),
-        params,
-        {
-          state,
-          code_verifier: stateData.codeVerifier
-        }
-      )
+      const tokenSet = await client.callback(callbackUrl, params, {
+        state,
+        code_verifier: stateData.codeVerifier
+      })
 
       // Get user info from ID token
       const claims = tokenSet.claims()
@@ -85,6 +82,8 @@ export const plugin = {
         userRoles = claims.roles.map((r) => r.toLowerCase())
       } else if (typeof claims.roles === 'string') {
         userRoles = [claims.roles.toLowerCase()]
+      } else {
+        userRoles = []
       }
       // Only assign 'admin' if the user has 'admin' (case-insensitive) in their roles
       const hasAdminRole = userRoles.includes('admin')
@@ -120,6 +119,8 @@ export const plugin = {
       let errorMessage = 'There was a problem signing you in.'
       if (error.message) {
         errorMessage += ` Error: ${error.message}`
+      } else {
+        errorMessage += ' (No additional error details provided.)'
       }
 
       // Add troubleshooting info for specific errors

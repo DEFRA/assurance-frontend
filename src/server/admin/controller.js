@@ -90,23 +90,6 @@ export const adminController = {
     }
   },
 
-  deleteAllProjects: async (request, h) => {
-    try {
-      request.logger.info('Deleting all projects')
-
-      const authedFetch = authedFetchJsonDecorator(request)
-      await authedFetch('/projects/deleteAll', {
-        method: 'POST'
-      })
-
-      request.logger.info('All projects deleted successfully')
-      return h.redirect('/admin?notification=All projects deleted successfully')
-    } catch (error) {
-      request.logger.error({ error }, 'Failed to delete all projects')
-      return h.redirect('/admin?notification=Failed to delete all projects')
-    }
-  },
-
   deleteProject: async (request, h) => {
     const { id } = request.params
 
@@ -160,31 +143,6 @@ export const adminController = {
         confirmUrl: `/admin/projects/${id}/delete`,
         cancelUrl: id ? `/projects/${id}` : '/admin',
         backLink: id ? `/projects/${id}` : '/admin'
-      })
-    } catch (error) {
-      request.logger.error({ error }, 'Failed to show delete confirmation')
-      return h.redirect(
-        '/admin?notification=Failed to show delete confirmation'
-      )
-    }
-  },
-
-  confirmDeleteAllProjects: async (request, h) => {
-    try {
-      // If this is a POST with confirmed=true, proceed with deletion
-      if (request.method === 'post' && request.payload.confirmed === 'true') {
-        return await adminController.deleteAllProjects(request, h)
-      }
-
-      // Otherwise show confirmation page
-      return h.view('admin/confirm-delete', {
-        pageTitle: 'Confirm Delete All Projects',
-        heading: 'Delete All Projects',
-        message:
-          'Are you sure you want to delete ALL projects? This will remove all project data from the system.',
-        confirmUrl: '/admin/projects/delete',
-        cancelUrl: '/admin',
-        backLink: '/admin'
       })
     } catch (error) {
       request.logger.error({ error }, 'Failed to show delete confirmation')

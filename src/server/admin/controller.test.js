@@ -1,6 +1,10 @@
 import { adminController } from './controller.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
-import { getProjects } from '~/src/server/services/projects.js'
+import {
+  getProjects,
+  getProjectById,
+  deleteProject
+} from '~/src/server/services/projects.js'
 import { getProfessions } from '~/src/server/services/professions.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProjects } from '~/src/server/data/projects.js'
@@ -235,6 +239,157 @@ describe('Admin controller', () => {
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Failed to delete standards'
+      )
+    })
+  })
+
+  describe('confirmDeleteProject', () => {
+    it('should show confirmation page', async () => {
+      // Arrange
+      mockRequest.params = { id: '123' }
+      mockRequest.method = 'get'
+      getProjectById.mockResolvedValue({ name: 'Test Project' })
+
+      // Act
+      await adminController.confirmDeleteProject(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith('admin/confirm-delete', {
+        pageTitle: 'Confirm Project Deletion',
+        heading: 'Delete Project',
+        message: 'Are you sure you want to delete the project "Test Project"?',
+        confirmUrl: '/admin/projects/123/delete',
+        cancelUrl: '/projects/123',
+        backLink: '/projects/123'
+      })
+    })
+
+    it('should handle project not found', async () => {
+      // Arrange
+      mockRequest.params = { id: '123' }
+      mockRequest.method = 'get'
+      getProjectById.mockResolvedValue(null)
+
+      // Act
+      await adminController.confirmDeleteProject(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith('admin/confirm-delete', {
+        pageTitle: 'Confirm Project Deletion',
+        heading: 'Delete Project',
+        message: 'Are you sure you want to delete the project "this project"?',
+        confirmUrl: '/admin/projects/123/delete',
+        cancelUrl: '/projects/123',
+        backLink: '/projects/123'
+      })
+    })
+
+    it('should handle fetch error', async () => {
+      // Arrange
+      mockRequest.params = { id: '123' }
+      mockRequest.method = 'get'
+      getProjectById.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.confirmDeleteProject(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith('admin/confirm-delete', {
+        pageTitle: 'Confirm Project Deletion',
+        heading: 'Delete Project',
+        message: 'Are you sure you want to delete the project "this project"?',
+        confirmUrl: '/admin/projects/123/delete',
+        cancelUrl: '/projects/123',
+        backLink: '/projects/123'
+      })
+    })
+
+    it('should proceed with deletion when confirmed', async () => {
+      // Arrange
+      mockRequest.params = { id: '123' }
+      mockRequest.method = 'post'
+      mockRequest.payload = { confirmed: 'true' }
+      deleteProject.mockResolvedValue(true)
+
+      // Act
+      await adminController.confirmDeleteProject(mockRequest, mockH)
+
+      // Assert
+      expect(deleteProject).toHaveBeenCalledWith('123', mockRequest)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Project deleted successfully'
+      )
+    })
+  })
+
+  describe('confirmDeleteAllStandards', () => {
+    it('should show confirmation page', async () => {
+      // Arrange
+      mockRequest.method = 'get'
+
+      // Act
+      await adminController.confirmDeleteAllStandards(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith('admin/confirm-delete', {
+        pageTitle: 'Confirm Delete All Standards',
+        heading: 'Delete All Standards',
+        message:
+          'Are you sure you want to delete ALL service standards? This will remove all standard definitions from the system.',
+        confirmUrl: '/admin/standards/delete',
+        cancelUrl: '/admin',
+        backLink: '/admin'
+      })
+    })
+
+    it('should proceed with deletion when confirmed', async () => {
+      // Arrange
+      mockRequest.method = 'post'
+      mockRequest.payload = { confirmed: 'true' }
+      mockAuthedFetch.mockResolvedValue({ ok: true })
+
+      // Act
+      await adminController.confirmDeleteAllStandards(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Standards deleted successfully'
+      )
+    })
+  })
+
+  describe('confirmDeleteAllProfessions', () => {
+    it('should show confirmation page', async () => {
+      // Arrange
+      mockRequest.method = 'get'
+
+      // Act
+      await adminController.confirmDeleteAllProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith('admin/confirm-delete', {
+        pageTitle: 'Confirm Delete All Professions',
+        heading: 'Delete All Professions',
+        message:
+          'Are you sure you want to delete ALL professions? This will remove all profession definitions from the system.',
+        confirmUrl: '/admin/professions/delete',
+        cancelUrl: '/admin',
+        backLink: '/admin'
+      })
+    })
+
+    it('should proceed with deletion when confirmed', async () => {
+      // Arrange
+      mockRequest.method = 'post'
+      mockRequest.payload = { confirmed: 'true' }
+      mockAuthedFetch.mockResolvedValue({ ok: true })
+
+      // Act
+      await adminController.confirmDeleteAllProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Professions deleted successfully'
       )
     })
   })

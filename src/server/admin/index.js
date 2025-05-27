@@ -45,30 +45,6 @@ export const admin = {
         },
         {
           method: 'POST',
-          path: '/admin/projects/delete',
-          handler: adminController.deleteAllProjects,
-          options: {
-            auth: {
-              strategy: 'session',
-              mode: 'required'
-            },
-            pre: [{ method: requireRole('admin') }]
-          }
-        },
-        {
-          method: ['GET', 'POST'],
-          path: '/admin/projects/delete/confirm',
-          handler: adminController.confirmDeleteAllProjects,
-          options: {
-            auth: {
-              strategy: 'session',
-              mode: 'required'
-            },
-            pre: [{ method: requireRole('admin') }]
-          }
-        },
-        {
-          method: 'POST',
           path: '/admin/projects/{id}/delete',
           handler: adminController.deleteProject,
           options: {

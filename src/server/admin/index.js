@@ -1,27 +1,16 @@
 import { adminController } from './controller.js'
 import { requireRole } from '~/src/server/auth/middleware.js'
+import { config } from '~/src/config/config.js'
 
 export const admin = {
   plugin: {
     name: 'admin',
     register: (server) => {
-      server.route([
+      const routes = [
         {
           method: 'GET',
           path: '/admin',
           handler: adminController.get,
-          options: {
-            auth: {
-              strategy: 'session',
-              mode: 'required'
-            },
-            pre: [{ method: requireRole('admin') }]
-          }
-        },
-        {
-          method: 'POST',
-          path: '/admin/standards/seed',
-          handler: adminController.seedStandards,
           options: {
             auth: {
               strategy: 'session',
@@ -46,18 +35,6 @@ export const admin = {
           method: ['GET', 'POST'],
           path: '/admin/standards/delete/confirm',
           handler: adminController.confirmDeleteAllStandards,
-          options: {
-            auth: {
-              strategy: 'session',
-              mode: 'required'
-            },
-            pre: [{ method: requireRole('admin') }]
-          }
-        },
-        {
-          method: 'POST',
-          path: '/admin/projects/seed',
-          handler: adminController.seedProjects,
           options: {
             auth: {
               strategy: 'session',
@@ -116,18 +93,6 @@ export const admin = {
         },
         {
           method: 'POST',
-          path: '/admin/professions/seed',
-          handler: adminController.seedProfessions,
-          options: {
-            auth: {
-              strategy: 'session',
-              mode: 'required'
-            },
-            pre: [{ method: requireRole('admin') }]
-          }
-        },
-        {
-          method: 'POST',
           path: '/admin/professions/delete',
           handler: adminController.deleteProfessions,
           options: {
@@ -150,7 +115,39 @@ export const admin = {
             pre: [{ method: requireRole('admin') }]
           }
         }
-      ])
+      ]
+
+      // Add dev-only routes if in development mode
+      if (config.get('env') === 'development') {
+        routes.push(
+          {
+            method: 'POST',
+            path: '/admin/projects/seed-dev',
+            handler: adminController.seedProjectsDev,
+            options: {
+              auth: {
+                strategy: 'session',
+                mode: 'required'
+              },
+              pre: [{ method: requireRole('admin') }]
+            }
+          },
+          {
+            method: 'POST',
+            path: '/admin/professions/seed-dev',
+            handler: adminController.seedProfessionsDev,
+            options: {
+              auth: {
+                strategy: 'session',
+                mode: 'required'
+              },
+              pre: [{ method: requireRole('admin') }]
+            }
+          }
+        )
+      }
+
+      server.route(routes)
     }
   }
 }

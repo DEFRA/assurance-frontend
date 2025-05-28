@@ -103,13 +103,6 @@
       {% if not isTestEnvironment %}
       <div class="govuk-button-group">
         {% if isDevelopment %}
-        <form method="POST" action="/admin/projects/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
-          <button class="govuk-button" data-module="govuk-button">
-            Add Sample Projects with History (Dev Only)
-          </button>
-        </form>
-        {% endif %}
-        
         <form method="POST" action="/admin/professions/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
           <button class="govuk-button" data-module="govuk-button">
             Add Professions

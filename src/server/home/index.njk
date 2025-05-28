@@ -216,10 +216,13 @@
         displayMenu: 'overlay',
         onConfirm: function(selectedProjectName) {
           if (selectedProjectName) {
-            // If a project was selected from the dropdown, navigate to its page
+            // Only navigate directly if the name exactly matches a project
             const project = projectsByName[selectedProjectName];
-            if (project && project.id) {
+            if (project && project.id && selectedProjectName === project.name) {
               window.location.href = `/projects/${project.id}`;
+            } else {
+              // Otherwise submit the form to perform a search
+              form.submit();
             }
           }
         },
@@ -233,6 +236,17 @@
       
       // Handle form submission
       const form = document.querySelector('form');
+      const autocompleteInput = document.querySelector('.autocomplete__input');
+      
+      // Add keydown event listener for enter key
+      if (autocompleteInput) {
+        autocompleteInput.addEventListener('keydown', function(event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            form.submit();
+          }
+        });
+      }
       
       formSubmitHandler = function(event) {
         // Get the visible input from the autocomplete
@@ -244,16 +258,10 @@
         if (autocompleteInput && hiddenInput) {
           // Ensure the hidden input has the value from the visible input
           hiddenInput.value = autocompleteInput.value;
-          
-          // Only submit if we have a search value
-          if (hiddenInput.value) {
-            return true;
-          }
         }
         
-        // If no search term or inputs not found, prevent submission
-        event.preventDefault();
-        return false;
+        // Always allow form submission
+        return true;
       };
       
       form.addEventListener('submit', formSubmitHandler);

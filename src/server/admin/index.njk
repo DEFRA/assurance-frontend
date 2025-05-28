@@ -105,9 +105,10 @@
         {% if isDevelopment %}
         <form method="POST" action="/admin/professions/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
           <button class="govuk-button" data-module="govuk-button">
-            Add Professions
+            Add Professions (Dev Only)
           </button>
         </form>
+        {% endif %}
         
         <div class="govuk-!-display-inline">
           {{ govukButton({
@@ -178,4 +179,4 @@
     }
   }
 </script>
-{% endblock %} 
+{% endblock %}

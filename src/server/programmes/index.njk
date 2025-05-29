@@ -32,7 +32,13 @@
               html: "<strong class='govuk-tag govuk-tag--red app-tag-count'>" + programme.redCount + "</strong>"
             },
             {
+              html: "<strong class='govuk-tag govuk-tag--red govuk-tag--yellow app-tag-count'>" + programme.amberRedCount + "</strong>"
+            },
+            {
               html: "<strong class='govuk-tag govuk-tag--yellow app-tag-count'>" + programme.amberCount + "</strong>"
+            },
+            {
+              html: "<strong class='govuk-tag govuk-tag--yellow govuk-tag--green app-tag-count'>" + programme.amberGreenCount + "</strong>"
             },
             {
               html: "<strong class='govuk-tag govuk-tag--green app-tag-count'>" + programme.greenCount + "</strong>"
@@ -50,7 +56,13 @@
               text: "Red"
             },
             {
+              text: "Amber Red"
+            },
+            {
               text: "Amber"
+            },
+            {
+              text: "Green Amber"
             },
             {
               text: "Green"
@@ -63,4 +75,4 @@
       {% endif %}
     </div>
   </div>
-{% endblock %} 
+{% endblock %}

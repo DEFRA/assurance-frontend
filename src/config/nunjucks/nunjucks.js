@@ -16,7 +16,8 @@ export function configureNunjucks() {
     [
       'node_modules/govuk-frontend/dist/',
       path.resolve(dirname, '../../server/common/templates'),
-      path.resolve(dirname, '../../server/common/components')
+      path.resolve(dirname, '../../server/common/components'),
+      path.resolve(dirname, '../../server/common/macros') // <-- added macros directory
     ],
     {
       autoescape: true,

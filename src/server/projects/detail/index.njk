@@ -6,6 +6,7 @@
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "status-tag.njk" import renderStatusTag %}
 
 {# Create a macro for the project engagement timeline #}
 {% macro projectEngagementTimeline(history, project, isAuthenticated) %}
@@ -24,13 +25,7 @@
               {# Project overall status update #}
               <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">
                 Delivery status update:
-                <span class="govuk-tag 
-                  {% if change.changes.status.to === "RED" %}govuk-tag--red
-                  {% elif change.changes.status.to === "AMBER" %}govuk-tag--yellow
-                  {% elif change.changes.status.to === "GREEN" %}govuk-tag--green
-                  {% endif %}">
-                  {{ change.changes.status.to }}
-                </span>
+                {{ renderStatusTag(change.changes.status.to) }}
               </p>
             {% elif change.changes.name %}
               <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">Project name updated</p>
@@ -81,13 +76,7 @@
         <div class="govuk-grid-column-full">
           <h2 class="govuk-heading-m inline-heading">
             Current delivery status:
-            <strong class="govuk-tag govuk-tag--large govuk-!-margin-left-1
-              {% if project.status === 'RED' %}govuk-tag--red
-              {% elif project.status === 'AMBER' %}govuk-tag--yellow
-              {% elif project.status === 'GREEN' %}govuk-tag--green
-              {% endif %}">
-              {{ project.status }}
-            </strong>
+            {{ renderStatusTag(project.status) }}
           </h2>
         </div>
       </div>
@@ -137,14 +126,8 @@
               {% for profession in project.professions %}
                 <tr class="govuk-table__row">
                   <td class="govuk-table__cell">{{ profession.name }}</td>
-                  <td class="govuk-table__cell">
-                    <strong class="govuk-tag 
-                      {% if profession.status === 'RED' %}govuk-tag--red
-                      {% elif profession.status === 'AMBER' %}govuk-tag--yellow
-                      {% elif profession.status === 'GREEN' %}govuk-tag--green
-                      {% endif %}">
-                      {{ profession.status }}
-                    </strong>
+                  <td class="govuk-table__cell" style="min-width: 120px; vertical-align: middle;">
+                    {{ renderStatusTag(profession.status) }}
                   </td>
                   <td class="govuk-table__cell">
                     {% if profession.commentary %}
@@ -239,4 +222,4 @@
       window.createStandardsPieChart(pieContainer, {{ standards | dump | safe }})
     }
   </script>
-{% endblock %} 
+{% endblock %}

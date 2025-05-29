@@ -1,6 +1,7 @@
 import { addProjectController } from './controller.js'
 import { createProject } from '~/src/server/services/projects.js'
 import Boom from '@hapi/boom'
+import { STATUS, STATUS_LABEL } from '~/src/server/constants/status.js'
 
 jest.mock('~/src/server/services/projects.js')
 
@@ -12,7 +13,7 @@ describe('Add Project controller', () => {
     mockRequest = {
       payload: {
         name: 'New Project',
-        status: 'GREEN',
+        status: STATUS.GREEN,
         commentary: 'Initial setup'
       },
       logger: {
@@ -31,25 +32,30 @@ describe('Add Project controller', () => {
 
   describe('get', () => {
     test('should return add project form', async () => {
+      // Arrange
+      const expectedStatusOptions = [
+        { text: 'Select status', value: '' },
+        ...Object.entries(STATUS_LABEL).map(([value, text]) => ({
+          value,
+          text
+        }))
+      ]
       // Act
       const result = await addProjectController.get({}, mockH)
 
       // Assert
-      expect(mockH.view).toHaveBeenCalledWith('projects/add/index', {
-        pageTitle: 'Add Project | DDTS Assurance',
-        heading: 'Add Project',
-        values: {},
-        errors: {},
-        statusOptions: [
-          {
-            text: 'Select status',
-            value: ''
-          },
-          { value: 'RED', text: 'Red' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'GREEN', text: 'Green' }
-        ]
-      })
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/add/index',
+        expect.objectContaining({
+          pageTitle: 'Add Project | DDTS Assurance',
+          heading: 'Add Project',
+          values: {},
+          errors: {},
+          statusOptions: expectedStatusOptions,
+          statusClassMap: expect.any(Object),
+          statusLabelMap: expect.any(Object)
+        })
+      )
       expect(result).toBe('view-response')
     })
   })

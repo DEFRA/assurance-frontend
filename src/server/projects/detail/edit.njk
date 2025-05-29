@@ -7,6 +7,7 @@
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
 {% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "status-tag.njk" import renderStatusTag %}
 
 {% block content %}
   <h1 class="govuk-heading-xl">{{ project.name }}</h1>
@@ -88,13 +89,7 @@
               {% if change.changes.status and change.changes.status.to %}
                 <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">
                   Delivery status update:
-                  <span class="govuk-tag 
-                    {% if change.changes.status.to === "RED" %}govuk-tag--red
-                    {% elif change.changes.status.to === "AMBER" %}govuk-tag--yellow
-                    {% elif change.changes.status.to === "GREEN" %}govuk-tag--green
-                    {% endif %}">
-                    {{ change.changes.status.to }}
-                  </span>
+                  {{ renderStatusTag(change.changes.status.to) }}
                 </p>
               {% endif %}
               
@@ -191,13 +186,7 @@
               <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">
                 {{ change.professionName }} update:
                 {% if change.changes.status.to %}
-                  <span class="govuk-tag 
-                    {% if change.changes.status.to === "RED" %}govuk-tag--red
-                    {% elif change.changes.status.to === "AMBER" %}govuk-tag--yellow
-                    {% elif change.changes.status.to === "GREEN" %}govuk-tag--green
-                    {% endif %}">
-                    {{ change.changes.status.to }}
-                  </span>
+                  {{ renderStatusTag(change.changes.status.to) }}
                 {% endif %}
               </p>
               
@@ -367,4 +356,4 @@
       window.addEventListener('unload', cleanup);
     })();
   </script>
-{% endblock %} 
+{% endblock %}

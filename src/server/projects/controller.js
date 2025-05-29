@@ -16,6 +16,11 @@ import {
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
 import { config } from '~/src/config/config.js'
+import {
+  STATUS,
+  STATUS_CLASS,
+  STATUS_LABEL
+} from '~/src/server/constants/status.js'
 
 export const NOTIFICATIONS = {
   NOT_FOUND: 'Project not found',
@@ -29,9 +34,11 @@ export const NOTIFICATIONS = {
 
 // Constants for repeated literals
 const STATUS_OPTIONS = [
-  { value: 'RED', text: 'Red' },
-  { value: 'AMBER', text: 'Amber' },
-  { value: 'GREEN', text: 'Green' }
+  { value: STATUS.GREEN, text: STATUS_LABEL[STATUS.GREEN] },
+  { value: STATUS.GREEN_AMBER, text: STATUS_LABEL[STATUS.GREEN_AMBER] },
+  { value: STATUS.AMBER, text: STATUS_LABEL[STATUS.AMBER] },
+  { value: STATUS.AMBER_RED, text: STATUS_LABEL[STATUS.AMBER_RED] },
+  { value: STATUS.RED, text: STATUS_LABEL[STATUS.RED] }
 ]
 const PROJECT_NOT_FOUND_VIEW = 'errors/not-found'
 const HTTP_STATUS_NOT_FOUND = 404
@@ -411,7 +418,9 @@ export const projectsController = {
         projectHistory,
         standards: standardsStatuses,
         isAuthenticated,
-        tab
+        tab,
+        statusClassMap: STATUS_CLASS,
+        statusLabelMap: STATUS_LABEL
       })
     } catch (error) {
       request.logger.error({ error }, 'Error getting project')
@@ -546,7 +555,9 @@ export const projectsController = {
         professionOptions,
         statusOptions: STATUS_OPTIONS,
         deliveryHistory,
-        professionHistory
+        professionHistory,
+        statusClassMap: STATUS_CLASS,
+        statusLabelMap: STATUS_LABEL
       })
     } catch (error) {
       request.logger.error(error)
@@ -1062,7 +1073,9 @@ export const projectsController = {
       return h.view('projects/detail/project-history', {
         pageTitle: `Project History: ${project.name}`,
         project,
-        history: combinedHistory
+        history: combinedHistory,
+        statusClassMap: STATUS_CLASS,
+        statusLabelMap: STATUS_LABEL
       })
     } catch (error) {
       request.logger.error(

@@ -273,11 +273,19 @@ export const adminController = {
       for (const project of defaultProjects) {
         try {
           // Add some random professions to each project
+          const allStatuses = [
+            'RED',
+            'AMBER_RED',
+            'AMBER',
+            'GREEN_AMBER',
+            'GREEN'
+          ]
           project.professions = professions
             .slice(0, Math.floor(Math.random() * 3) + 1) // 1-3 professions per project
             .map((prof) => ({
               professionId: prof.id,
-              status: ['RED', 'AMBER', 'GREEN'][Math.floor(Math.random() * 3)],
+              status:
+                allStatuses[Math.floor(Math.random() * allStatuses.length)],
               commentary: `Initial assessment for ${prof.name}`
             }))
 
@@ -302,9 +310,8 @@ export const adminController = {
             await updateProject(
               createdProject.id,
               {
-                status: ['RED', 'AMBER', 'GREEN'][
-                  Math.floor(Math.random() * 3)
-                ],
+                status:
+                  allStatuses[Math.floor(Math.random() * allStatuses.length)],
                 commentary: `Historic update from ${formattedDate}`,
                 updateDate: formattedDate
               },
@@ -326,9 +333,8 @@ export const adminController = {
               // Create a new profession update with the historic date
               const professionUpdate = {
                 professionId: profession.professionId,
-                status: ['RED', 'AMBER', 'GREEN'][
-                  Math.floor(Math.random() * 3)
-                ],
+                status:
+                  allStatuses[Math.floor(Math.random() * allStatuses.length)],
                 commentary: `Historic update for ${professionName} from ${professionFormattedDate}`
               }
 

@@ -1,18 +1,26 @@
 import Boom from '@hapi/boom'
 import { createProject } from '~/src/server/services/projects.js'
+import {
+  STATUS,
+  STATUS_CLASS,
+  STATUS_LABEL
+} from '~/src/server/constants/status.js'
 
 const PAGE_TITLE = 'Add Project | DDTS Assurance'
 const PAGE_HEADING = 'Add Project'
 const VIEW_TEMPLATE = 'projects/add/index'
 
+const STATUS_ORDER = [
+  STATUS.GREEN,
+  STATUS.GREEN_AMBER,
+  STATUS.AMBER,
+  STATUS.AMBER_RED,
+  STATUS.RED
+]
+
 const STATUS_OPTIONS = [
-  {
-    text: 'Select status',
-    value: ''
-  },
-  { value: 'RED', text: 'Red' },
-  { value: 'AMBER', text: 'Amber' },
-  { value: 'GREEN', text: 'Green' }
+  { text: 'Select status', value: '' },
+  ...STATUS_ORDER.map((value) => ({ value, text: STATUS_LABEL[value] }))
 ]
 
 export const addProjectController = {
@@ -22,7 +30,9 @@ export const addProjectController = {
       heading: PAGE_HEADING,
       values: {},
       errors: {},
-      statusOptions: STATUS_OPTIONS
+      statusOptions: STATUS_OPTIONS,
+      statusClassMap: STATUS_CLASS,
+      statusLabelMap: STATUS_LABEL
     })
   },
 
@@ -42,7 +52,9 @@ export const addProjectController = {
             status: !status,
             commentary: !commentary
           },
-          statusOptions: STATUS_OPTIONS
+          statusOptions: STATUS_OPTIONS,
+          statusClassMap: STATUS_CLASS,
+          statusLabelMap: STATUS_LABEL
         })
       }
 
@@ -61,6 +73,8 @@ export const addProjectController = {
             errorMessage: 'Please check your input - some fields are invalid',
             values: { name, status, commentary },
             statusOptions: STATUS_OPTIONS,
+            statusClassMap: STATUS_CLASS,
+            statusLabelMap: STATUS_LABEL,
             errors: {}
           })
         }
@@ -74,6 +88,8 @@ export const addProjectController = {
               'Unable to create project: Service standards not available',
             values: { name, status, commentary },
             statusOptions: STATUS_OPTIONS,
+            statusClassMap: STATUS_CLASS,
+            statusLabelMap: STATUS_LABEL,
             errors: {}
           })
         }

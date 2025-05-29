@@ -1,25 +1,23 @@
 @use 'govuk-frontend' as *;
 @use 'variables/colours' as *;
 
-$navigation-height: 60px;
+$navigation-height: 50px;
 $border-bottom-width: 4px;
 
 .app-navigation {
   background-color: govuk-colour('light-grey');
   border-bottom: 1px solid $govuk-border-colour;
-  margin-bottom: govuk-spacing(7);
-  padding: govuk-spacing(2) 0;
+  margin-bottom: 8px;
+  padding: 4px 0;
 
   &__list {
     display: flex;
     justify-content: space-between;
     margin: 0;
     padding: 0;
-
-    @include govuk-media-query($from: tablet) {
-      height: $navigation-height;
-      height: govuk-px-to-rem($navigation-height);
-    }
+    height: 36px;
+    min-height: 0;
+    align-items: center;
   }
 
   &__primary,
@@ -28,10 +26,11 @@ $border-bottom-width: 4px;
     list-style: none;
     margin: 0;
     padding: 0;
+    align-items: center;
   }
 
   &__list-item {
-    margin: 0 govuk-spacing(4) 0 0;
+    margin: 0 govuk-spacing(3) 0 0;
     padding: 0;
 
     &:last-child {
@@ -54,7 +53,7 @@ $border-bottom-width: 4px;
     @include govuk-font($size: 19, $weight: bold);
     color: $govuk-text-colour;
     display: inline-block;
-    padding: govuk-spacing(2) 0;
+    padding: 4px 0;
     text-decoration: none;
     border-bottom: 4px solid transparent;
 
@@ -86,8 +85,7 @@ $border-bottom-width: 4px;
       padding-bottom: 0;
       margin: 0;
       display: flex;
-      height: $navigation-height - $border-bottom-width;
-      height: govuk-px-to-rem($navigation-height - $border-bottom-width);
+      height: 32px;
       align-items: center;
     }
   }

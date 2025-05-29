@@ -89,7 +89,7 @@
         html: '<p class="govuk-body">' + project.commentary + '</p>'
       }) }}
       
-      <p class="govuk-body-s govuk-!-margin-bottom-4 govuk-!-margin-top-1">Last updated: {{ project.lastUpdated }}</p>
+      <p class="govuk-body-s govuk-!-margin-bottom-4 govuk-!-margin-top-1">Last updated: {{ project.lastUpdated | formatDate }}</p>
 
       {% if isAuthenticated %}
         <div class="govuk-button-group govuk-!-margin-bottom-6">

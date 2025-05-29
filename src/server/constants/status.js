@@ -3,13 +3,25 @@
  */
 
 export const STATUS = {
-  RED: 'RED',
+  GREEN: 'GREEN',
+  GREEN_AMBER: 'GREEN_AMBER',
   AMBER: 'AMBER',
-  GREEN: 'GREEN'
+  AMBER_RED: 'AMBER_RED',
+  RED: 'RED'
 }
 
 export const STATUS_CLASS = {
-  [STATUS.RED]: 'govuk-tag--red',
+  [STATUS.GREEN]: 'govuk-tag--green',
+  [STATUS.GREEN_AMBER]: 'govuk-tag--green govuk-tag--yellow', // Will render as two tags in UI
   [STATUS.AMBER]: 'govuk-tag--yellow',
-  [STATUS.GREEN]: 'govuk-tag--green'
+  [STATUS.AMBER_RED]: 'govuk-tag--yellow govuk-tag--red', // Will render as two tags in UI
+  [STATUS.RED]: 'govuk-tag--red'
+}
+
+export const STATUS_LABEL = {
+  [STATUS.GREEN]: 'Green',
+  [STATUS.GREEN_AMBER]: 'Green Amber',
+  [STATUS.AMBER]: 'Amber',
+  [STATUS.AMBER_RED]: 'Amber Red',
+  [STATUS.RED]: 'Red'
 }

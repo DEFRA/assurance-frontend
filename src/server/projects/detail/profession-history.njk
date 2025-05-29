@@ -2,6 +2,7 @@
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "status-tag.njk" import renderStatusTag %}
 
 {% block content %}
   {{ appHeading({
@@ -16,15 +17,7 @@
       
       <p class="govuk-body">
         Current status: 
-        {% if profession.status === 'RED' %}
-          {{ govukTag({ text: profession.status, classes: "govuk-tag--red" }) }}
-        {% elif profession.status === 'AMBER' %}
-          {{ govukTag({ text: profession.status, classes: "govuk-tag--yellow" }) }}
-        {% elif profession.status === 'GREEN' %}
-          {{ govukTag({ text: profession.status, classes: "govuk-tag--green" }) }}
-        {% else %}
-          {{ govukTag({ text: profession.status, classes: "govuk-tag--grey" }) }}
-        {% endif %}
+        {{ renderStatusTag(profession.status) }}
       </p>
       
       <p class="govuk-body">{{ profession.commentary }}</p>
@@ -38,13 +31,7 @@
               <h4 class="timeline__event-title govuk-heading-s">
                 {% if change.changes.status and change.changes.status.to %}
                   Status update:
-                  <strong class="govuk-tag 
-                    {% if change.changes.status.to === 'RED' %}govuk-tag--red
-                    {% elif change.changes.status.to === 'AMBER' %}govuk-tag--yellow
-                    {% elif change.changes.status.to === 'GREEN' %}govuk-tag--green
-                    {% endif %}">
-                    {{ change.changes.status.to }}
-                  </strong>
+                  {{ renderStatusTag(change.changes.status.to) }}
                 {% else %}
                   Comment:
                 {% endif %}
@@ -72,4 +59,4 @@
       }) }}
     </div>
   </div>
-{% endblock %} 
+{% endblock %}

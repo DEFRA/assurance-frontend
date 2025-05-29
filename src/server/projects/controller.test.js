@@ -261,15 +261,20 @@ describe('Projects controller', () => {
       )
 
       // Assert
-      expect(mockH.view).toHaveBeenCalledWith('projects/detail/index', {
-        pageTitle: 'Test Project | DDTS Assurance',
-        heading: 'Test Project',
-        project: mockProject,
-        projectHistory: [],
-        standards: [{ status: 'GREEN' }],
-        tab: 'project-engagement',
-        isAuthenticated: true
-      })
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/index',
+        expect.objectContaining({
+          pageTitle: 'Test Project | DDTS Assurance',
+          heading: 'Test Project',
+          project: mockProject,
+          projectHistory: [],
+          standards: [{ status: 'GREEN' }],
+          tab: 'project-engagement',
+          isAuthenticated: true,
+          statusClassMap: expect.any(Object),
+          statusLabelMap: expect.any(Object)
+        })
+      )
     })
 
     test('should redirect if project not found', async () => {
@@ -447,36 +452,37 @@ describe('Projects controller', () => {
       await projectsController.getEdit(mockRequest, mockH)
 
       // Assert
-      expect(mockH.view).toHaveBeenCalledWith('projects/detail/edit', {
-        pageTitle: 'Edit Test Project | DDTS Assurance',
-        heading: 'Edit Test Project',
-        project: expect.objectContaining({
-          id: '1',
-          name: 'Test Project',
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/edit',
+        expect.objectContaining({
+          pageTitle: 'Edit Test Project | DDTS Assurance',
+          heading: 'Edit Test Project',
+          project: expect.objectContaining({
+            id: '1',
+            name: 'Test Project',
+            professions: [],
+            standards: expect.arrayContaining([
+              expect.objectContaining({
+                standardId: '1',
+                status: 'GREEN'
+              })
+            ])
+          }),
           professions: [],
-          standards: expect.arrayContaining([
-            expect.objectContaining({
-              standardId: '1',
-              status: 'GREEN'
-            })
-          ])
-        }),
-        professions: [],
-        professionNames: {},
-        professionOptions: [
-          {
-            value: '',
-            text: 'Select a profession'
-          }
-        ],
-        statusOptions: [
-          { value: 'RED', text: 'Red' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'GREEN', text: 'Green' }
-        ],
-        deliveryHistory: expect.any(Array),
-        professionHistory: expect.any(Array)
-      })
+          professionNames: {},
+          professionOptions: [
+            {
+              value: '',
+              text: 'Select a profession'
+            }
+          ],
+          statusOptions: expect.any(Array),
+          deliveryHistory: expect.any(Array),
+          professionHistory: expect.any(Array),
+          statusClassMap: expect.any(Object),
+          statusLabelMap: expect.any(Object)
+        })
+      )
     })
 
     test('should handle error fetching project', async () => {

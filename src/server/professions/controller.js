@@ -95,11 +95,18 @@ export const professionsController = {
             }
           }
         })
-        // Sort by status (RED first, then AMBER, then GREEN)
+        // Sort by status (RED first, then AMBER_RED, AMBER, GREEN_AMBER, GREEN)
         .sort((a, b) => {
-          const statusOrder = { RED: 0, AMBER: 1, GREEN: 2, NOT_UPDATED: 3 }
-          const statusA = statusOrder[a.professionAssessment.status] || 3
-          const statusB = statusOrder[b.professionAssessment.status] || 3
+          const statusOrder = {
+            RED: 0,
+            AMBER_RED: 1,
+            AMBER: 2,
+            GREEN_AMBER: 3,
+            GREEN: 4,
+            NOT_UPDATED: 5
+          }
+          const statusA = statusOrder[a.professionAssessment.status] ?? 5
+          const statusB = statusOrder[b.professionAssessment.status] ?? 5
           return statusA - statusB
         })
 
@@ -113,8 +120,14 @@ export const professionsController = {
           red: projectsWithProfession.filter(
             (p) => p.professionAssessment.status === 'RED'
           ).length,
+          amberRed: projectsWithProfession.filter(
+            (p) => p.professionAssessment.status === 'AMBER_RED'
+          ).length,
           amber: projectsWithProfession.filter(
             (p) => p.professionAssessment.status === 'AMBER'
+          ).length,
+          amberGreen: projectsWithProfession.filter(
+            (p) => p.professionAssessment.status === 'GREEN_AMBER'
           ).length,
           green: projectsWithProfession.filter(
             (p) => p.professionAssessment.status === 'GREEN'

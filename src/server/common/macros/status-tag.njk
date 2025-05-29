@@ -1,0 +1,55 @@
+{# Shared macro for rendering RAG status tags, including dual tags for AMBER_RED and GREEN_AMBER #}
+{% macro renderStatusTag(status, statusClassMap = {}, statusLabelMap = {}) %}
+  {# Internal default mappings if not provided #}
+  {% set defaultClassMap = {
+    'GREEN': 'govuk-tag--green',
+    'GREEN_AMBER': 'govuk-tag--green govuk-tag--yellow',
+    'AMBER': 'govuk-tag--yellow',
+    'AMBER_RED': 'govuk-tag--yellow govuk-tag--red',
+    'RED': 'govuk-tag--red'
+  } %}
+  {% set defaultLabelMap = {
+    'GREEN': 'GREEN',
+    'GREEN_AMBER': 'GREEN',
+    'AMBER': 'AMBER',
+    'AMBER_RED': 'AMBER',
+    'RED': 'RED'
+  } %}
+  {% if statusClassMap|length > 0 %}
+    {% set classMap = statusClassMap %}
+  {% else %}
+    {% set classMap = defaultClassMap %}
+  {% endif %}
+  {% if statusLabelMap|length > 0 %}
+    {% set labelMap = statusLabelMap %}
+  {% else %}
+    {% set labelMap = defaultLabelMap %}
+  {% endif %}
+
+  {% if status == 'AMBER_RED' %}
+    <span class="app-tag-list">
+     <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
+      <strong class="govuk-tag govuk-tag--red govuk-tag--uppercase">RED</strong>
+    </span>
+  {% elif status == 'GREEN_AMBER' %}
+    <span class="app-tag-list">
+    <strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong>
+      <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
+    </span>
+  {% elif classMap[status] and labelMap[status] %}
+    <strong class="govuk-tag {{ classMap[status] }} govuk-tag--uppercase">{{ labelMap[status] }}</strong>
+  {% else %}
+    <strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">UNKNOWN</strong>
+  {% endif %}
+{% endmacro %}
+
+<style>
+  .govuk-tag--uppercase {
+    text-transform: uppercase;
+  }
+  .app-tag-list {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+</style>

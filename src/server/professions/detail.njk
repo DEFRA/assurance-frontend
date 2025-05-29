@@ -6,6 +6,24 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 
+{% macro renderStatusTag(status) %}
+  {% if status == 'AMBER_RED' %}
+    <strong class="govuk-tag govuk-tag--red">Red</strong>
+    <strong class="govuk-tag govuk-tag--yellow">Amber</strong>
+  {% elif status == 'GREEN_AMBER' %}
+    <strong class="govuk-tag govuk-tag--yellow">Amber</strong>
+    <strong class="govuk-tag govuk-tag--green">Green</strong>
+  {% elif status == 'RED' %}
+    <strong class="govuk-tag govuk-tag--red">Red</strong>
+  {% elif status == 'AMBER' %}
+    <strong class="govuk-tag govuk-tag--yellow">Amber</strong>
+  {% elif status == 'GREEN' %}
+    <strong class="govuk-tag govuk-tag--green">Green</strong>
+  {% else %}
+    <strong class="govuk-tag govuk-tag--grey">{{ status }}</strong>
+  {% endif %}
+{% endmacro %}
+
 {% block beforeContent %}
   {{ govukBackLink({
     text: "Back to all professions",
@@ -60,6 +78,20 @@
               <dt class="govuk-summary-list__key">Not updated</dt>
               <dd class="govuk-summary-list__value">{{ summary.notUpdated }}</dd>
             </div>
+            <div class="govuk-summary-list__row">
+              <dt class="govuk-summary-list__key">Amber Red status</dt>
+              <dd class="govuk-summary-list__value">
+                <strong class="govuk-tag govuk-tag--red">{{ summary.amberRed }}</strong>
+                <strong class="govuk-tag govuk-tag--yellow">{{ summary.amberRed }}</strong>
+              </dd>
+            </div>
+            <div class="govuk-summary-list__row">
+              <dt class="govuk-summary-list__key">Green Amber status</dt>
+              <dd class="govuk-summary-list__value">
+                <strong class="govuk-tag govuk-tag--yellow">{{ summary.amberGreen }}</strong>
+                <strong class="govuk-tag govuk-tag--green">{{ summary.amberGreen }}</strong>
+              </dd>
+            </div>
           </dl>
         </div>
       </div>
@@ -84,15 +116,7 @@
                   <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
                 </td>
                 <td class="govuk-table__cell">
-                  {% if project.status == "RED" %}
-                    <strong class="govuk-tag govuk-tag--red">{{ project.status }}</strong>
-                  {% elif project.status == "AMBER" %}
-                    <strong class="govuk-tag govuk-tag--yellow">{{ project.status }}</strong>
-                  {% elif project.status == "GREEN" %}
-                    <strong class="govuk-tag govuk-tag--green">{{ project.status }}</strong>
-                  {% else %}
-                    <strong class="govuk-tag">{{ project.status }}</strong>
-                  {% endif %}
+                  {{ renderStatusTag(project.status) }}
                 </td>
                 <td class="govuk-table__cell">
                   {% if project.professionAssessment.status == "RED" %}
@@ -124,4 +148,4 @@
       {% endif %}
     </div>
   </div>
-{% endblock %} 
+{% endblock %}

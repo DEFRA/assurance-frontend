@@ -2,6 +2,7 @@
 
 {# Import GOVUK components globally #}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
 
 {# Import custom components globally #}
 {% from "heading/macro.njk" import appHeading %}
@@ -23,6 +24,14 @@
     useTudorCrown: true
   }) }}
   {% include "partials/navigation/navigation.njk" %}
+  <div class="govuk-width-container">
+    {{ govukPhaseBanner({
+      tag: {
+        text: "Beta"
+      },
+      html: 'This is a new service – <a class="govuk-link" href="mailto:CCTSAssurance@defra.gov.uk?subject=Assurance%20Service%20feedback">give your feedback by email</a>.'
+    }) }}
+  </div>
 {% endblock %}
 
 {% block pageTitle %}

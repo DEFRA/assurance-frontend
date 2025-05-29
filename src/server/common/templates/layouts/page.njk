@@ -15,12 +15,6 @@
 {% endblock %}
 
 {% block header %}
-  {{ govukPhaseBanner({
-    tag: {
-      text: "Beta"
-    },
-    html: 'This is a new service – <a class="govuk-link" href="mailto:CCTSAssurance@defra.gov.uk?subject=Assurance%20Service%20feedback">give your feedback by email</a>.'
-  }) }}
   {{ govukHeader({
     homepageUrl: "https://www.gov.uk/",
     classes: "app-header",
@@ -30,6 +24,12 @@
     useTudorCrown: true
   }) }}
   {% include "partials/navigation/navigation.njk" %}
+  {{ govukPhaseBanner({
+    tag: {
+      text: "Beta"
+    },
+    html: 'This is a new service – <a class="govuk-link" href="mailto:CCTSAssurance@defra.gov.uk?subject=Assurance%20Service%20feedback">give your feedback by email</a>.'
+  }) }}
 {% endblock %}
 
 {% block pageTitle %}

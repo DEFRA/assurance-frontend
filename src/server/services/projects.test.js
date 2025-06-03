@@ -245,7 +245,7 @@ describe('Projects service', () => {
           commentary: 'Updated commentary'
         })
       )
-      expect(secondCallBody.lastUpdated).toMatch(/\d{1,2} \w+ \d{4}/)
+      // lastUpdated is now handled by the backend, so we don't expect it in the request body
     })
 
     test('should handle update failure', async () => {

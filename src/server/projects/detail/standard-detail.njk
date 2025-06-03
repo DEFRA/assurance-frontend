@@ -52,7 +52,7 @@
           
           {% if standardSummary %}
             <p class="govuk-body-m">
-              <strong>Overall Status:</strong> 
+              <strong>Standard {{ standard.number }} Status:</strong> 
               {{ renderStatusTag(standardSummary.aggregatedStatus) }}
             </p>
             
@@ -63,7 +63,7 @@
             {% endif %}
           {% else %}
             <p class="govuk-body-m">
-              <strong>Overall Status:</strong> 
+              <strong>Standard {{ standard.number }} Status:</strong> 
               {{ renderStatusTag('NOT_ASSESSED') }}
             </p>
           {% endif %}
@@ -84,10 +84,22 @@
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
-      {% if standard.description %}
-        {{ govukInsetText({
-          html: '<p class="govuk-body">' + standard.description + '</p>'
-        }) }}
+      {% if assessments and assessments.length > 0 %}
+        {% set hasCommentary = false %}
+        {% for assessment in assessments %}
+          {% if assessment.commentary %}
+            {% set hasCommentary = true %}
+          {% endif %}
+        {% endfor %}
+        
+        {% if hasCommentary %}
+          <h2 class="govuk-heading-m">Summary</h2>
+          {{ govukInsetText({
+            html: '<div class="govuk-body">' + 
+              (assessments | selectattr("commentary") | map(attribute="professionDisplayName,commentary") | map("join", ": ") | join("<br>")) +
+              '</div>'
+          }) }}
+        {% endif %}
       {% endif %}
 
       <h2 class="govuk-heading-m">Profession Assessments</h2>
@@ -159,13 +171,6 @@
             }) }}
           </div>
         {% endif %}
-      {% endif %}
-
-      {% if standardSummary and standardSummary.aggregatedCommentary %}
-        <h2 class="govuk-heading-m">Summary</h2>
-        {{ govukInsetText({
-          html: '<p class="govuk-body">' + standardSummary.aggregatedCommentary + '</p>'
-        }) }}
       {% endif %}
 
     </div>

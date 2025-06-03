@@ -3,7 +3,8 @@ import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import {
   getProjects,
   getProjectById,
-  deleteProject
+  deleteProject,
+  createProject
 } from '~/src/server/services/projects.js'
 import { getProfessions } from '~/src/server/services/professions.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
@@ -148,26 +149,26 @@ describe('Admin controller', () => {
   })
 
   describe('seedProjectsDev', () => {
-    it('should seed projects with history and redirect', async () => {
+    it('should seed projects with assessments and redirect', async () => {
       // Arrange
       mockAuthedFetch.mockResolvedValue({ ok: true })
       getProfessions.mockResolvedValue(defaultProfessions)
+      getServiceStandards.mockResolvedValue(defaultServiceStandards)
+      createProject.mockResolvedValue({ id: 'test-project-1' })
 
       // Act
       await adminController.seedProjectsDev(mockRequest, mockH)
 
       // Assert
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/deleteAll', {
-        method: 'POST'
-      })
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Projects and history seeded (dev only)'
+        '/admin?notification=Projects and assessments seeded successfully with new system'
       )
     })
 
     it('should handle errors', async () => {
-      // Arrange
-      mockAuthedFetch.mockRejectedValue(new Error('API Error'))
+      // Arrange - Mock a failure in getProfessions to cause the main seeding logic to fail
+      mockAuthedFetch.mockResolvedValue({ ok: true }) // Let the initial seeding succeed
+      getProfessions.mockRejectedValue(new Error('API Error'))
       mockH.redirect.mockClear()
 
       // Act
@@ -175,7 +176,7 @@ describe('Admin controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Failed to seed professions (dev only)'
+        '/admin?notification=Failed to seed projects and assessments'
       )
     })
   })

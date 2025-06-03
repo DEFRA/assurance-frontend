@@ -6,7 +6,22 @@
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 {% from "status-tag.njk" import renderStatusTag %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Projects",
+        href: "/"
+      },
+      {
+        text: project.name
+      }
+    ]
+  }) }}
+{% endblock %}
 
 {% block content %}
   <div class="govuk-grid-row">
@@ -16,34 +31,36 @@
         classes: "govuk-heading-xl govuk-!-margin-bottom-2 govuk-!-word-break-word"
       }) }}
       
-      <div class="govuk-grid-row govuk-!-margin-top-4 govuk-!-margin-bottom-4">
-        <div class="govuk-grid-column-two-thirds">
-          {% if project.phase %}
-            <p class="govuk-body-m"><strong>Phase:</strong> {{ project.phase }}</p>
-          {% endif %}
-          
-          {% if project.defCode %}
-            <p class="govuk-body-m"><strong>Project ID:</strong> {{ project.defCode }}</p>
-          {% endif %}
-          
-          <h2 class="govuk-heading-m govuk-!-margin-top-4 inline-heading">
-            Current delivery status:
-            {{ renderStatusTag(project.status) }}
-          </h2>
-          
-          {% set commentaryContent %}
-            {% if project.commentary %}
-              <p class="govuk-body">{{ project.commentary }}</p>
-            {% endif %}
-            {% if project.lastUpdated %}
-              <p class="govuk-body-s govuk-!-margin-bottom-0">Last updated: {{ project.lastUpdated }}</p>
-            {% endif %}
-          {% endset %}
-          {{ govukInsetText({
-            html: commentaryContent
-          }) }}
-        </div>
+      <!-- Phase and Project ID stacked vertically -->
+      <div class="govuk-!-margin-top-2 govuk-!-margin-bottom-4">
+        {% if project.phase %}
+          <p class="govuk-body-m govuk-!-margin-bottom-1"><strong>Phase:</strong> {{ project.phase }}</p>
+        {% endif %}
+        {% if project.defCode %}
+          <p class="govuk-body-m govuk-!-margin-bottom-1"><strong>Project ID:</strong> {{ project.defCode }}</p>
+        {% endif %}
       </div>
+      
+      <!-- Current delivery status heading -->
+      <h2 class="govuk-heading-m govuk-!-margin-top-4 govuk-!-margin-bottom-3 inline-heading">
+        Current delivery status:
+        {{ renderStatusTag(project.status) }}
+      </h2>
+      
+      <!-- Full width inset -->
+      {% set commentaryContent %}
+        {% if project.commentary %}
+          <p class="govuk-body">{{ project.commentary }}</p>
+        {% endif %}
+        {% if project.lastUpdated %}
+          <p class="govuk-body-s govuk-!-margin-bottom-0">Last updated: {{ project.lastUpdated }}</p>
+        {% endif %}
+      {% endset %}
+      {% if commentaryContent.trim() %}
+        {{ govukInsetText({
+          html: commentaryContent
+        }) }}
+      {% endif %}
     </div>
   </div>
 

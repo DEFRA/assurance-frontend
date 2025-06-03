@@ -286,113 +286,400 @@ export const adminController = {
 
   seedProjectsDev: async (request, h) => {
     try {
-      // First seed professions as they are required for projects
+      request.logger.info(
+        'Starting comprehensive project seeding with new assessment system'
+      )
+
+      // First ensure we have the required data
+      await adminController.seedStandardsDev(request, h)
       await adminController.seedProfessionsDev(request, h)
 
-      // Get all professions to use in projects
-      const professions = await getProfessions(request)
+      // Get reference data
+      const [professions, serviceStandards] = await Promise.all([
+        getProfessions(request),
+        getServiceStandards(request)
+      ])
 
-      // Create projects with historic data
-      for (const project of defaultProjects) {
-        try {
-          // Add some random professions to each project
-          const allStatuses = [
-            'RED',
-            'AMBER_RED',
-            'AMBER',
-            'GREEN_AMBER',
-            'GREEN'
+      if (!professions?.length || !serviceStandards?.length) {
+        throw new Error('Required reference data not available')
+      }
+
+      // Import the profession-standard matrix
+      const { getAvailableStandards } = await import(
+        '~/src/server/services/profession-standard-matrix.js'
+      )
+
+      // Define assessment commentaries for different scenarios
+      const assessmentCommentaries = {
+        'user-centred-design': {
+          1: [
+            'Strong user research practices',
+            'User needs well understood',
+            'Comprehensive user journey mapping'
+          ],
+          2: [
+            'End-to-end user experience designed',
+            'Cross-channel consistency achieved',
+            'User problem clearly defined'
+          ],
+          3: [
+            'Consistent experience across all touchpoints',
+            'Seamless channel integration',
+            'Unified user interface'
+          ],
+          4: [
+            'Intuitive and accessible design',
+            'Simple user workflows',
+            'Clear information architecture'
+          ],
+          5: [
+            'Accessibility standards exceeded',
+            'Inclusive design principles applied',
+            'Wide range of user needs considered'
           ]
-          project.professions = professions
-            .slice(0, Math.floor(Math.random() * 3) + 1) // 1-3 professions per project
-            .map((prof) => ({
-              professionId: prof.id,
-              status:
-                allStatuses[Math.floor(Math.random() * allStatuses.length)],
-              commentary: `Initial assessment for ${prof.name}`
-            }))
+        },
+        'delivery-management': {
+          8: [
+            'Agile delivery practices in place',
+            'Regular sprint reviews conducted',
+            'Continuous improvement culture'
+          ],
+          9: [
+            'Strong iteration cycles',
+            'Frequent releases deployed',
+            'User feedback incorporated quickly'
+          ],
+          15: [
+            'Reliable service operations',
+            'Robust monitoring in place',
+            'Efficient incident response'
+          ]
+        },
+        'product-management': {
+          1: [
+            'Clear product vision defined',
+            'User needs prioritized effectively',
+            'Strong product roadmap'
+          ],
+          7: [
+            'Agile product development',
+            'Regular stakeholder engagement',
+            'Data-driven product decisions'
+          ],
+          10: [
+            'Performance metrics tracked',
+            'Success criteria defined',
+            'Regular performance reviews'
+          ]
+        },
+        'quality-assurance': {
+          5: [
+            'Comprehensive accessibility testing',
+            'Inclusive design validated',
+            'Assistive technology support'
+          ],
+          9: [
+            'Security testing completed',
+            'Privacy controls validated',
+            'Data protection measures'
+          ],
+          14: [
+            'Service reliability tested',
+            'Performance benchmarks met',
+            'Operational procedures validated'
+          ]
+        },
+        'technical-architecture': {
+          8: [
+            'Scalable architecture design',
+            'Microservices approach adopted',
+            'Cloud-native patterns'
+          ],
+          11: [
+            'Modern technology stack',
+            'Open source technologies',
+            'Standards-compliant solutions'
+          ],
+          12: [
+            'Code published on GitHub',
+            'Open source contributions',
+            'Reusable components created'
+          ],
+          13: [
+            'GDS patterns implemented',
+            'Common components utilized',
+            'Design system compliance'
+          ],
+          14: [
+            'High availability architecture',
+            'Robust monitoring',
+            'Disaster recovery planning'
+          ]
+        },
+        architecture: {
+          8: [
+            'Enterprise architecture aligned',
+            'Integration patterns defined',
+            'API-first approach'
+          ],
+          11: [
+            'Technology strategy aligned',
+            'Architecture decisions documented',
+            'Standards compliance'
+          ],
+          12: [
+            'Open architecture principles',
+            'Reusable service components',
+            'API documentation'
+          ],
+          13: [
+            'Standard patterns adopted',
+            'Common components leveraged',
+            'Architecture governance'
+          ],
+          14: [
+            'Resilient system design',
+            'Performance optimization',
+            'Scalability planning'
+          ]
+        },
+        'software-development': {
+          8: [
+            'Continuous integration setup',
+            'Automated testing pipeline',
+            'Code quality standards'
+          ],
+          11: [
+            'Modern development practices',
+            'Version control workflows',
+            'Code review processes'
+          ],
+          12: [
+            'Open source development',
+            'Public repositories maintained',
+            'Community contributions'
+          ],
+          13: [
+            'Standard libraries used',
+            'Reusable code components',
+            'Best practice adherence'
+          ],
+          14: [
+            'Production monitoring',
+            'Error tracking systems',
+            'Performance optimization'
+          ]
+        },
+        'business-analysis': {
+          7: [
+            'Requirements well documented',
+            'Stakeholder needs analyzed',
+            'Business case validated'
+          ],
+          11: [
+            'Technology requirements defined',
+            'System integration needs',
+            'Data requirements analysis'
+          ]
+        },
+        'release-management': {
+          7: [
+            'Release process documented',
+            'Deployment pipeline automated',
+            'Release planning effective'
+          ],
+          14: [
+            'Reliable deployment process',
+            'Rollback procedures tested',
+            'Production support ready'
+          ]
+        }
+      }
 
-          // Create the project
-          const createdProject = await createProject(project, request)
-          request.logger.info(
-            { projectId: createdProject.id },
-            'Created project'
+      const statuses = ['RED', 'AMBER_RED', 'AMBER', 'GREEN_AMBER', 'GREEN']
+
+      // Helper function to get random commentary
+      const getRandomCommentary = (professionId, standardNumber) => {
+        const professionCommentaries = assessmentCommentaries[professionId]
+        if (professionCommentaries?.[standardNumber]) {
+          const options = professionCommentaries[professionId][standardNumber]
+          return options[Math.floor(Math.random() * options.length)]
+        }
+        return `Assessment for standard ${standardNumber} by ${professionId}`
+      }
+
+      // Create projects with proper assessment data
+      for (const projectData of defaultProjects) {
+        try {
+          request.logger.info(`Creating project: ${projectData.name}`)
+
+          // Create the project (without old profession/standards arrays)
+          const createdProject = await createProject(
+            {
+              ...projectData,
+              professions: undefined, // Remove old professions array
+              standards: undefined // Remove old standards array
+            },
+            request
           )
 
-          // Generate historic updates for the project
-          const now = new Date()
-          const daysAgo = 180 // Generate 6 months of history
+          if (!createdProject?.id) {
+            throw new Error(`Failed to create project: ${projectData.name}`)
+          }
 
-          for (let i = daysAgo; i >= 0; i -= 10) {
-            // Update every 10 days
-            const updateDate = new Date(now)
-            updateDate.setDate(updateDate.getDate() - i)
-            const formattedDate = updateDate.toISOString()
+          request.logger.info(
+            `Created project ${projectData.name} with ID: ${createdProject.id}`
+          )
 
-            // Update project status and commentary
-            await updateProject(
-              createdProject.id,
-              {
-                status:
-                  allStatuses[Math.floor(Math.random() * allStatuses.length)],
-                commentary: `Historic update from ${formattedDate}`,
-                updateDate: formattedDate
-              },
-              request
+          // Get valid profession-standard combinations for this project's phase
+          const validCombinations = []
+
+          for (const profession of professions) {
+            const availableStandards = getAvailableStandards(
+              projectData.phase,
+              profession.id
             )
 
-            // Update each profession's status and commentary
-            for (const profession of project.professions) {
-              const professionName =
-                professions.find((p) => p.id === profession.professionId)
-                  ?.name || 'Unknown Profession'
-              // Add some randomness to the profession update dates to make them look more natural
-              const professionUpdateDate = new Date(updateDate)
-              professionUpdateDate.setHours(
-                professionUpdateDate.getHours() + Math.floor(Math.random() * 24)
+            for (const standardNumber of availableStandards) {
+              // Find the standard by number
+              const standard = serviceStandards.find(
+                (s) => s.number === standardNumber
               )
-              const professionFormattedDate = professionUpdateDate.toISOString()
-
-              // Create a new profession update with the historic date
-              const professionUpdate = {
-                professionId: profession.professionId,
-                status:
-                  allStatuses[Math.floor(Math.random() * allStatuses.length)],
-                commentary: `Historic update for ${professionName} from ${professionFormattedDate}`
+              if (standard) {
+                validCombinations.push({
+                  professionId: profession.id,
+                  professionName: profession.name,
+                  standardId: standard.id,
+                  standardNumber: standard.number
+                })
               }
+            }
+          }
 
-              // Update the project with the profession update and historic date
-              await updateProject(
-                createdProject.id,
+          request.logger.info(
+            `Found ${validCombinations.length} valid assessment combinations for ${projectData.name} (${projectData.phase})`
+          )
+
+          // Create assessments for a subset of valid combinations
+          const numberOfAssessments = Math.min(
+            validCombinations.length,
+            Math.floor(Math.random() * 8) + 5
+          ) // 5-12 assessments
+          const selectedCombinations = validCombinations
+            .sort(() => 0.5 - Math.random())
+            .slice(0, numberOfAssessments)
+
+          // Create individual assessments using the new API
+          const authedFetch = authedFetchJsonDecorator(request)
+
+          for (const combination of selectedCombinations) {
+            const status = statuses[Math.floor(Math.random() * statuses.length)]
+            const commentary = getRandomCommentary(
+              combination.professionId,
+              combination.standardNumber
+            )
+
+            try {
+              await authedFetch(
+                `/projects/${createdProject.id}/standards/${combination.standardId}/professions/${combination.professionId}/assessment`,
                 {
-                  professions: [professionUpdate],
-                  updateDate: professionFormattedDate
-                },
-                request
+                  method: 'POST',
+                  body: JSON.stringify({
+                    status,
+                    commentary
+                  })
+                }
               )
+
+              request.logger.info(
+                `Created assessment: ${combination.professionName} -> Standard ${combination.standardNumber} (${status})`
+              )
+            } catch (assessmentError) {
+              request.logger.warn(
+                `Failed to create assessment for ${combination.professionName} -> Standard ${combination.standardNumber}: ${assessmentError.message}`
+              )
+            }
+          }
+
+          // Generate historical assessments
+          const now = new Date()
+          const daysAgo = 90 // 3 months of history
+
+          for (let i = daysAgo; i >= 10; i -= 15) {
+            // Every 15 days
+            const historicDate = new Date(now)
+            historicDate.setDate(historicDate.getDate() - i)
+
+            // Update some assessments historically
+            const assessmentsToUpdate = selectedCombinations
+              .sort(() => 0.5 - Math.random())
+              .slice(0, Math.floor(Math.random() * 3) + 1) // 1-3 updates per period
+
+            for (const combination of assessmentsToUpdate) {
+              const status =
+                statuses[Math.floor(Math.random() * statuses.length)]
+              const commentary = `Historic update: ${getRandomCommentary(combination.professionId, combination.standardNumber)} (${historicDate.toDateString()})`
+
+              try {
+                await authedFetch(
+                  `/projects/${createdProject.id}/standards/${combination.standardId}/professions/${combination.professionId}/assessment`,
+                  {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      status,
+                      commentary
+                    })
+                  }
+                )
+              } catch (error) {
+                request.logger.warn(
+                  `Failed to create historic assessment: ${error.message}`
+                )
+              }
+            }
+
+            // Also create some project-level delivery updates
+            if (Math.random() > 0.5) {
+              // 50% chance of delivery update
+              const deliveryStatus =
+                statuses[Math.floor(Math.random() * statuses.length)]
+              const deliveryCommentary = `Delivery update from ${historicDate.toDateString()}: ${projectData.commentary}`
+
+              try {
+                await updateProject(
+                  createdProject.id,
+                  {
+                    status: deliveryStatus,
+                    commentary: deliveryCommentary,
+                    updateDate: historicDate.toISOString().split('T')[0]
+                  },
+                  request
+                )
+              } catch (error) {
+                request.logger.warn(
+                  `Failed to create historic delivery update: ${error.message}`
+                )
+              }
             }
           }
         } catch (error) {
           request.logger.error(
-            { error, projectName: project.name },
-            'Failed to create project or generate history'
+            `Failed to seed project ${projectData.name}: ${error.message}`
           )
-          // Continue with next project instead of failing completely
-          continue
+          continue // Continue with next project
         }
       }
 
-      request.logger.info('Projects and history seeded (dev only)')
+      request.logger.info(
+        'Projects seeded successfully with new assessment system'
+      )
       return h.redirect(
-        '/admin?notification=Projects and history seeded (dev only)'
+        '/admin?notification=Projects and assessments seeded successfully with new system'
       )
     } catch (error) {
-      request.logger.error(
-        error,
-        'Failed to seed projects and history (dev only)'
-      )
+      request.logger.error(`Failed to seed projects: ${error.message}`)
       return h.redirect(
-        '/admin?notification=Failed to seed projects and history (dev only)'
+        '/admin?notification=Failed to seed projects and assessments'
       )
     }
   }

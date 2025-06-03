@@ -233,6 +233,29 @@ export const adminController = {
   },
 
   /**
+   * Seed service standards with default data (dev only)
+   */
+  seedStandardsDev: async (request, h) => {
+    try {
+      request.logger.info('Seeding service standards (dev only)')
+
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch('/serviceStandards/seed', {
+        method: 'POST',
+        body: JSON.stringify(defaultServiceStandards)
+      })
+
+      request.logger.info('Service standards seeded successfully (dev only)')
+      return h.redirect(
+        '/admin?notification=Service standards seeded successfully'
+      )
+    } catch (error) {
+      request.logger.error(error, 'Failed to seed service standards (dev only)')
+      return h.redirect('/admin?notification=Failed to seed service standards')
+    }
+  },
+
+  /**
    * Seed professions with default data (dev only)
    */
   seedProfessionsDev: async (request, h) => {

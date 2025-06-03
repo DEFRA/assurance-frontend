@@ -8,63 +8,6 @@
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
 {% from "status-tag.njk" import renderStatusTag %}
 
-{# Create a macro for the project engagement timeline #}
-{% macro projectEngagementTimeline(history, project, isAuthenticated) %}
-  {% if history and history.length > 0 %}
-    <div class="timeline">
-      {% for change in history %}
-        <div class="timeline__event">
-          <h3 class="timeline__event-title govuk-heading-s">
-            {{ change.timestamp | formatDate }}
-          </h3>
-          <div class="govuk-body">
-            {% if change.type === 'profession' %}
-              {# Profession comment #}
-              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">{{ change.changedBy }} update</p>
-            {% elif change.changes.status and change.changes.status.to %}
-              {# Project overall status update #}
-              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">
-                Delivery status update:
-                {{ renderStatusTag(change.changes.status.to) }}
-              </p>
-            {% elif change.changes.name %}
-              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">Project name updated</p>
-            {% elif change.changes.commentary and change.type === 'project' %}
-              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">Project commentary updated</p>
-            {% else %}
-              <p class="govuk-!-font-weight-bold govuk-!-margin-bottom-1">General update</p>
-            {% endif %}
-            
-            {% if change.changes.commentary %}
-              <p>{{ change.changes.commentary.to }}</p>
-            {% endif %}
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <p class="govuk-body">No history found for this project.</p>
-  {% endif %}
-{% endmacro %}
-
-{# Create a macro for the overview tab content #}
-{% macro projectOverview(project) %}
-  <div class="govuk-grid-row">
-    <div class="govuk-grid-column-full">
-      <div class="govuk-summary-card">
-        <div class="govuk-summary-card__title-wrapper">
-          <h2 class="govuk-summary-card__title">Project Status History</h2>
-        </div>
-        <div class="govuk-summary-card__content">
-          <div style="flex: 1;">
-            <canvas id="project-history-chart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-{% endmacro %}
-
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
@@ -72,12 +15,33 @@
         text: project.name,
         classes: "govuk-heading-xl govuk-!-margin-bottom-2 govuk-!-word-break-word"
       }) }}
-      <div class="govuk-grid-row govuk-!-margin-top-4">
-        <div class="govuk-grid-column-full">
-          <h2 class="govuk-heading-m inline-heading">
+      
+      <div class="govuk-grid-row govuk-!-margin-top-4 govuk-!-margin-bottom-4">
+        <div class="govuk-grid-column-two-thirds">
+          {% if project.phase %}
+            <p class="govuk-body-m"><strong>Phase:</strong> {{ project.phase }}</p>
+          {% endif %}
+          
+          {% if project.defCode %}
+            <p class="govuk-body-m"><strong>Project ID:</strong> {{ project.defCode }}</p>
+          {% endif %}
+          
+          <h2 class="govuk-heading-m govuk-!-margin-top-4 inline-heading">
             Current delivery status:
             {{ renderStatusTag(project.status) }}
           </h2>
+          
+          {% set commentaryContent %}
+            {% if project.commentary %}
+              <p class="govuk-body">{{ project.commentary }}</p>
+            {% endif %}
+            {% if project.lastUpdated %}
+              <p class="govuk-body-s govuk-!-margin-bottom-0">Last updated: {{ project.lastUpdated }}</p>
+            {% endif %}
+          {% endset %}
+          {{ govukInsetText({
+            html: commentaryContent
+          }) }}
         </div>
       </div>
     </div>
@@ -85,93 +49,79 @@
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
-      {{ govukInsetText({
-        html: '<p class="govuk-body">' + project.commentary + '</p>'
-      }) }}
-      
-      <p class="govuk-body-s govuk-!-margin-bottom-4 govuk-!-margin-top-1">Last updated: {{ project.lastUpdated | formatDate }}</p>
-
       {% if isAuthenticated %}
-        <div class="govuk-button-group govuk-!-margin-bottom-6">
-          {{ govukButton({
-            text: "Edit project",
-            href: "/projects/" + project.id + "/edit",
-            classes: "govuk-button--secondary"
-          }) }}
-        </div>
+        <p class="govuk-body govuk-!-margin-bottom-4">
+          <a href="/projects/{{ project.id }}/manage" class="govuk-link">Manage project</a>
+          <span class="govuk-!-margin-left-4">
+            <a href="/projects/{{ project.id }}/assessment" class="govuk-link">Manage assessments</a>
+          </span>
+        </p>
       {% endif %}
 
-      {% set overviewHtml %}
-        {{ projectOverview(project) }}
-      {% endset %}
-
-      {% set engagementHtml %}
-        <h2 class="govuk-heading-m">Project update timeline</h2>
-        {{ projectEngagementTimeline(projectHistory, project, isAuthenticated) }}
-      {% endset %}
-
-      {% set professionsHtml %}
-        <h2 class="govuk-heading-m">Profession Updates</h2>
-        {% if project.professions and project.professions.length > 0 %}
+      {% set complianceTabHtml %}
+        <h2 class="govuk-heading-m">Service Standard Compliance</h2>
+        
+        {% if standards and standards.length > 0 %}
           <table class="govuk-table">
             <thead class="govuk-table__head">
               <tr class="govuk-table__row">
-                <th scope="col" class="govuk-table__header">Profession</th>
+                <th scope="col" class="govuk-table__header">Standard</th>
                 <th scope="col" class="govuk-table__header">Status</th>
-                <th scope="col" class="govuk-table__header">Commentary</th>
-                <th scope="col" class="govuk-table__header">Actions</th>
               </tr>
             </thead>
             <tbody class="govuk-table__body">
-              {% for profession in project.professions %}
+              {% for standard in standards %}
+                {% set standardSummary = null %}
+                {% for summary in project.standardsSummary %}
+                  {% if summary.standardId == standard.id %}
+                    {% set standardSummary = summary %}
+                  {% endif %}
+                {% endfor %}
+                
                 <tr class="govuk-table__row">
-                  <td class="govuk-table__cell">{{ profession.name }}</td>
-                  <td class="govuk-table__cell" style="min-width: 120px; vertical-align: middle;">
-                    {{ renderStatusTag(profession.status) }}
+                  <td class="govuk-table__cell">
+                    <a href="/projects/{{ project.id }}/standards/{{ standard.id }}" class="govuk-link">
+                      Standard {{ standard.number }}: {{ standard.name }}
+                    </a>
                   </td>
                   <td class="govuk-table__cell">
-                    {% if profession.commentary %}
-                      {{ profession.commentary | truncate(100) }}
+                    {% if standardSummary %}
+                      {{ renderStatusTag(standardSummary.aggregatedStatus or 'NOT_ASSESSED') }}
                     {% else %}
-                      <em>No commentary</em>
+                      {{ renderStatusTag('NOT_ASSESSED') }}
                     {% endif %}
-                  </td>
-                  <td class="govuk-table__cell">
-                    <a href="/projects/{{ project.id }}/professions/{{ profession.professionId }}/history" class="govuk-link">View history</a>
                   </td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         {% else %}
-          <p class="govuk-body">No profession updates have been added to this project.</p>
+          <p class="govuk-body">No service standards available.</p>
         {% endif %}
       {% endset %}
 
-      {% set tabItems = [
-        {
-          id: "project-engagement",
-          label: "Project timeline",
-          panel: {
-            html: engagementHtml
-          }
-        }
-      ] %}
-      
-      {% if isAuthenticated %}
-        {% set tabItems = tabItems.concat([
-          {
-            id: "professions",
-            label: "Profession updates",
-            panel: {
-              html: professionsHtml
-            }
-          }
-        ]) %}
-      {% endif %}
+      {% set engagementTabHtml %}
+        <h2 class="govuk-heading-m">Project Engagement</h2>
+        <p class="govuk-body">Timeline content will be added here in the future.</p>
+      {% endset %}
 
       {{ govukTabs({
-        items: tabItems
+        items: [
+          {
+            id: "compliance",
+            label: "Service Standard compliance",
+            panel: {
+              html: complianceTabHtml
+            }
+          },
+          {
+            id: "engagement",
+            label: "Project engagement",
+            panel: {
+              html: engagementTabHtml
+            }
+          }
+        ]
       }) }}
 
     </div>
@@ -205,21 +155,4 @@
     gap: 8px;
   }
 </style>
-{% endblock %}
-
-{% block bodyEnd %}
-  {{ super() }}
-  <script type="module">
-    // Initialize chart with history data
-    const chartContainer = document.getElementById('project-history-chart')
-    if (chartContainer) {
-      window.createProjectHistoryChart(chartContainer, {{ projectHistory | dump | safe }})
-    }
-    
-    // Initialize standards pie chart
-    const pieContainer = document.getElementById('standards-pie-chart')
-    if (pieContainer) {
-      window.createStandardsPieChart(pieContainer, {{ standards | dump | safe }})
-    }
-  </script>
 {% endblock %}

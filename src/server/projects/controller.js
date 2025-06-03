@@ -11,7 +11,10 @@ import {
   getProjectHistory,
   getProfessionHistory,
   archiveProjectHistoryEntry,
-  archiveProfessionHistoryEntry
+  archiveProfessionHistoryEntry,
+  updateAssessment,
+  getAssessmentHistory,
+  archiveAssessmentHistoryEntry
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
@@ -21,6 +24,10 @@ import {
   STATUS_CLASS,
   STATUS_LABEL
 } from '~/src/server/constants/status.js'
+import {
+  filterStandardsByProfessionAndPhase,
+  PROFESSION_STANDARD_MATRIX
+} from '~/src/server/services/profession-standard-matrix.js'
 
 export const NOTIFICATIONS = {
   NOT_FOUND: 'Project not found',
@@ -88,22 +95,6 @@ function getProfessionName(profession, professions, project) {
 
   // Format to title case (first letter of each word capitalized)
   return name.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
-// Helper function to map standards with details
-function mapStandardsWithDetails(projectStandards, serviceStandards) {
-  return projectStandards
-    .map((assessment) => {
-      const standard = serviceStandards.find(
-        (s) => s.number.toString() === assessment.standardId
-      )
-      return {
-        ...assessment,
-        number: standard?.number || parseInt(assessment.standardId, 10),
-        name: standard?.name
-      }
-    })
-    .sort((a, b) => (a.number || 0) - (b.number || 0))
 }
 
 // Helper function to update project status after archive
@@ -262,7 +253,6 @@ export const projectsController = {
   get: async (request, h) => {
     const { id } = request.params
     const isAuthenticated = request.auth.isAuthenticated
-    const tab = request.query.tab || 'project-engagement'
 
     try {
       // Get the project details
@@ -275,150 +265,24 @@ export const projectsController = {
 
       request.logger.info({ id }, 'Project retrieved')
 
+      // Get service standards and professions for reference data
       let standards = []
-      const professions = await getProfessions(request)
+      let professions = []
 
-      // Get service standards for reference
       try {
         standards = await getServiceStandards(request)
+        professions = await getProfessions(request)
       } catch (error) {
-        request.logger.error({ error }, 'Error fetching service standards')
-        // Continue with empty standards list if fetch fails
+        request.logger.error({ error }, 'Error fetching reference data')
       }
-
-      // Map standards to project assessments and ensure proper numeric sorting
-      if (project.standards?.length > 0) {
-        project.standards = mapStandardsWithDetails(
-          project.standards,
-          standards
-        ).sort((a, b) => a.number - b.number)
-      }
-
-      // Enhance profession data with name
-      if (project.professions?.length > 0) {
-        project.professions = project.professions.map((profession) => {
-          const professionData = professions.find(
-            (p) => p.id === profession.professionId
-          )
-          return {
-            ...profession,
-            name:
-              professionData?.name || `Profession ${profession.professionId}`
-          }
-        })
-      }
-
-      // Get project history for the timeline
-      let projectHistory = []
-
-      try {
-        // Get all project history - more efficient than multiple API calls
-        const historyEntries = await getProjectHistory(id, request)
-
-        // Start building the combined timeline
-        let combinedHistory = []
-
-        // Add project delivery updates to the timeline
-        if (historyEntries && historyEntries.length > 0) {
-          // Filter for status and commentary changes
-          const deliveryUpdates = historyEntries.filter((entry) => {
-            // Ensure entry exists and is not archived
-            if (!entry || entry.archived) {
-              return false
-            }
-            return entry.changes?.status?.to || entry.changes?.commentary?.to
-          })
-
-          combinedHistory = combinedHistory.concat(
-            deliveryUpdates.map((entry) => {
-              return {
-                ...entry,
-                changedBy: '', // Remove default changedBy for project updates
-                type: 'project',
-                historyType: 'delivery'
-              }
-            })
-          )
-        }
-
-        // Get profession history for each profession in the project
-        if (project.professions && project.professions.length > 0) {
-          // Process professions in parallel for better performance
-          const professionPromises = project.professions.map(
-            async (profession) => {
-              try {
-                const professionHistory = await getProfessionHistory(
-                  id,
-                  profession.professionId,
-                  request
-                )
-
-                if (professionHistory && professionHistory.length > 0) {
-                  // Get the profession name using our helper
-                  const professionName = getProfessionName(
-                    profession,
-                    professions,
-                    project
-                  )
-
-                  // For profession history, we only want to show commentary changes for external users
-                  // We don't show RAG status changes for professions in the timeline
-                  const commentaryUpdates = professionHistory.filter(
-                    (entry) => entry.changes?.commentary?.to && !entry.archived
-                  )
-
-                  // Return the formatted commentary updates
-                  return commentaryUpdates.map((entry) => {
-                    return {
-                      timestamp: entry.timestamp,
-                      changedBy: professionName,
-                      message: `${professionName} comment: ${entry.changes.commentary.to}`,
-                      professionName,
-                      type: 'profession',
-                      historyType: 'comment',
-                      changes: entry.changes
-                    }
-                  })
-                }
-                return []
-              } catch (err) {
-                request.logger.error(
-                  `Error fetching history for profession ${profession.professionId}:`,
-                  err
-                )
-                // Continue with other professions if one fails
-                return []
-              }
-            }
-          )
-
-          // Wait for all profession histories and flatten the result
-          const professionHistories = await Promise.all(professionPromises)
-          combinedHistory = combinedHistory.concat(professionHistories.flat())
-        }
-
-        // Sort the timeline by timestamp, most recent first
-        projectHistory = combinedHistory.sort(
-          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-        )
-      } catch (error) {
-        request.logger.error({ error }, 'Error fetching project history')
-        // Continue with empty history if fetch fails
-      }
-
-      // Extract distinct standards statuses for pie chart
-      const standardsStatuses = project.standards.map((standard) => ({
-        status: standard.status
-      }))
 
       return h.view('projects/detail/index', {
         pageTitle: `${project.name} | DDTS Assurance`,
         heading: project.name,
         project,
-        projectHistory,
-        standards: standardsStatuses,
+        standards,
+        professions,
         isAuthenticated,
-        tab,
         statusClassMap: STATUS_CLASS,
         statusLabelMap: STATUS_LABEL
       })
@@ -775,8 +639,9 @@ export const projectsController = {
         return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
-      const standard = project.standards.find(
-        (s) => s.standardId === standardId
+      // Find the standard in standardsSummary
+      const standard = project.standardsSummary?.find(
+        (s) => s.standardId === standardId || s.StandardId === standardId
       )
       if (!standard) {
         return h.redirect(`/projects/${id}?notification=Standard not found`)
@@ -811,86 +676,13 @@ export const projectsController = {
       // Fetch the project history
       const history = await getProjectHistory(id, request)
 
-      // Get the professions for name lookup
-      const professions = await getProfessions(request)
-
-      // Create a timeline with all entries
-      let timeline = []
-
-      // Add delivery status updates to the timeline (only include status and commentary changes)
-      if (history && history.length > 0) {
-        // Filter for status and commentary changes
-        const deliveryUpdates = history.filter((entry) => {
-          return (
-            (entry.changes?.status?.from !== entry.changes?.status?.to &&
-              entry.changes?.status?.to) ||
-            entry.changes?.commentary?.to
-          )
-        })
-
-        timeline = timeline.concat(
-          deliveryUpdates.map((entry) => {
-            return {
-              ...entry,
-              changedBy: '', // Remove default changedBy for project updates
-              type: 'project',
-              historyType: 'delivery'
-            }
-          })
-        )
-      }
-
-      // Get profession history for each profession in the project
-      if (project.professions && project.professions.length > 0) {
-        for (const profession of project.professions) {
-          try {
-            const professionHistory = await getProfessionHistory(
-              id,
-              profession.professionId,
-              request
-            )
-
-            if (professionHistory && professionHistory.length > 0) {
-              // Get the profession name using our helper
-              const professionName = getProfessionName(
-                profession,
-                professions,
-                project
-              )
-
-              // For profession history, we only want to show commentary changes for external users
-              // We don't show RAG status changes for professions in the timeline
-              const commentaryUpdates = professionHistory.filter((entry) => {
-                return entry.changes?.commentary?.to
-              })
-
-              // Add profession commentary updates to the timeline
-              timeline = timeline.concat(
-                commentaryUpdates.map((entry) => {
-                  return {
-                    timestamp: entry.timestamp,
-                    changedBy: professionName,
-                    message: `${professionName} comment: ${entry.changes.commentary.to}`,
-                    professionName,
-                    type: 'profession',
-                    historyType: 'comment',
-                    changes: entry.changes
-                  }
-                })
-              )
-            }
-          } catch (err) {
-            request.logger.error(
-              `Error fetching history for profession ${profession.professionId}:`,
-              err
-            )
-            // Continue with other professions if one fails
-          }
-        }
-      }
-
-      // Sort the timeline by timestamp, most recent first
-      timeline.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      // Return simplified history without complex transformations
+      const timeline = (history || []).map((entry) => ({
+        ...entry,
+        timestamp: entry.timestamp || new Date().toISOString(),
+        type: 'project',
+        historyType: 'delivery'
+      }))
 
       return h.response({ history: timeline }).code(200)
     } catch (error) {
@@ -908,21 +700,13 @@ export const projectsController = {
         return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
       }
 
-      // Get service standards to merge with project standards
+      // Get service standards for reference
       const standards = await getServiceStandards(request)
-
-      // Map standards to project assessments and ensure proper numeric sorting
-      const standardsWithDetails = mapStandardsWithDetails(
-        project.standards,
-        standards
-      )
 
       return h.view('projects/detail/standards', {
         pageTitle: `Standards Progress | ${project.name}`,
-        project: {
-          ...project,
-          standards: standardsWithDetails
-        }
+        project,
+        standards
       })
     } catch (error) {
       request.logger.error(error)
@@ -1335,6 +1119,658 @@ export const projectsController = {
       return h.redirect(
         `/projects/${id}/professions/${professionId}/history?notification=Failed to archive profession update`
       )
+    }
+  },
+
+  getAssessmentScreen: async (request, h) => {
+    const { id } = request.params
+
+    try {
+      // Fetch project, professions and service standards
+      const [project, professions, serviceStandards] = await Promise.all([
+        getProjectById(id, request),
+        getProfessions(request),
+        getServiceStandards(request)
+      ])
+
+      if (!project) {
+        return h
+          .view('projects/not-found', {
+            pageTitle: 'Project not found'
+          })
+          .code(404)
+      }
+
+      // Transform data for dropdowns
+      const professionItems = [
+        { value: '', text: 'Choose a profession' }
+      ].concat(
+        (professions || []).map((profession) => ({
+          value: profession.id,
+          text: profession.name
+        }))
+      )
+
+      // Initially show all standards, will be filtered by JavaScript
+      const standardItems = [
+        { value: '', text: 'Choose a service standard' }
+      ].concat(
+        (serviceStandards || []).map((standard) => ({
+          value: standard.id,
+          text: `${standard.number}. ${standard.name}`
+        }))
+      )
+
+      return h.view('projects/detail/assessment', {
+        assessment: null, // Always start with null for new assessments
+        projectId: id,
+        projectPhase: project.phase || 'Discovery',
+        professionItems,
+        standardItems,
+        allStandards: JSON.stringify(serviceStandards || []),
+        professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX)
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Error loading assessment screen')
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  postAssessmentScreen: async (request, h) => {
+    const { id } = request.params
+    const { professionId, standardId, status, commentary } = request.payload
+
+    try {
+      // Get project to validate phase and profession combination
+      const project = await getProjectById(id, request)
+      if (!project) {
+        return h
+          .view('projects/not-found', {
+            pageTitle: 'Project not found'
+          })
+          .code(404)
+      }
+
+      // Validate required fields
+      if (!professionId || !standardId || !status) {
+        // Get data for dropdowns when showing errors
+        const [professions, serviceStandards] = await Promise.all([
+          getProfessions(request),
+          getServiceStandards(request)
+        ])
+
+        const professionItems = [
+          { value: '', text: 'Choose a profession' }
+        ].concat(
+          (professions || []).map((profession) => ({
+            value: profession.id,
+            text: profession.name,
+            selected: profession.id === professionId
+          }))
+        )
+
+        // Filter standards based on selected profession and project phase
+        let filteredStandards = serviceStandards || []
+        if (professionId && project.phase) {
+          filteredStandards = filterStandardsByProfessionAndPhase(
+            serviceStandards,
+            project.phase,
+            professionId
+          )
+        }
+
+        const standardItems = [
+          { value: '', text: 'Choose a service standard' }
+        ].concat(
+          filteredStandards.map((standard) => ({
+            value: standard.id,
+            text: `${standard.number}. ${standard.name}`,
+            selected: standard.id === standardId
+          }))
+        )
+
+        return h.view('projects/detail/assessment', {
+          assessment: null,
+          projectId: id,
+          projectPhase: project.phase || 'Discovery',
+          professionItems,
+          standardItems,
+          selectedValues: { professionId, standardId, status, commentary },
+          error: 'Please select a profession, service standard, and status',
+          allStandards: JSON.stringify(serviceStandards || []),
+          professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX)
+        })
+      }
+
+      // Additional validation: Check if the profession can assess this standard in this phase
+      const serviceStandards = await getServiceStandards(request)
+      const selectedStandard = serviceStandards?.find(
+        (s) => s.id === standardId
+      )
+
+      if (selectedStandard && project.phase) {
+        const filteredStandards = filterStandardsByProfessionAndPhase(
+          serviceStandards,
+          project.phase,
+          professionId
+        )
+
+        const isValidCombination = filteredStandards.some(
+          (s) => s.id === standardId
+        )
+
+        if (!isValidCombination) {
+          const [professions] = await Promise.all([getProfessions(request)])
+
+          const professionItems = [
+            { value: '', text: 'Choose a profession' }
+          ].concat(
+            (professions || []).map((profession) => ({
+              value: profession.id,
+              text: profession.name,
+              selected: profession.id === professionId
+            }))
+          )
+
+          const standardItems = [
+            { value: '', text: 'Choose a service standard' }
+          ].concat(
+            filteredStandards.map((standard) => ({
+              value: standard.id,
+              text: `${standard.number}. ${standard.name}`,
+              selected: standard.id === standardId
+            }))
+          )
+
+          return h.view('projects/detail/assessment', {
+            assessment: null,
+            projectId: id,
+            projectPhase: project.phase || 'Discovery',
+            professionItems,
+            standardItems,
+            selectedValues: { professionId, standardId, status, commentary },
+            error: `This profession cannot assess the selected standard in the ${project.phase} phase. Please select a different standard.`,
+            allStandards: JSON.stringify(serviceStandards || []),
+            professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX)
+          })
+        }
+      }
+
+      // Save the assessment
+      await updateAssessment(
+        id,
+        standardId,
+        professionId,
+        {
+          status,
+          commentary: commentary || ''
+        },
+        request
+      )
+
+      request.logger.info(
+        { projectId: id, standardId, professionId },
+        'Assessment saved successfully'
+      )
+
+      // Redirect back to project page with success message
+      return h.redirect(
+        `/projects/${id}?notification=Assessment saved successfully`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Error saving assessment')
+
+      // Check if this is the known backend update issue
+      let errorMessage = 'Failed to save assessment. Please try again.'
+      if (
+        error.message?.includes('Internal Server Error') ||
+        error.message?.includes('500')
+      ) {
+        errorMessage =
+          'Unable to update existing assessment - this is a known backend issue. New assessments work correctly.'
+      }
+
+      // Get data for dropdowns when showing errors
+      const [project, professions, serviceStandards] = await Promise.all([
+        getProjectById(id, request),
+        getProfessions(request),
+        getServiceStandards(request)
+      ])
+
+      const professionItems = [
+        { value: '', text: 'Choose a profession' }
+      ].concat(
+        (professions || []).map((profession) => ({
+          value: profession.id,
+          text: profession.name,
+          selected: profession.id === professionId
+        }))
+      )
+
+      // Filter standards based on selected profession and project phase
+      let filteredStandards = serviceStandards || []
+      if (professionId && project?.phase) {
+        filteredStandards = filterStandardsByProfessionAndPhase(
+          serviceStandards,
+          project.phase,
+          professionId
+        )
+      }
+
+      const standardItems = [
+        { value: '', text: 'Choose a service standard' }
+      ].concat(
+        filteredStandards.map((standard) => ({
+          value: standard.id,
+          text: `${standard.number}. ${standard.name}`,
+          selected: standard.id === standardId
+        }))
+      )
+
+      return h.view('projects/detail/assessment', {
+        assessment: null,
+        projectId: id,
+        projectPhase: project?.phase || 'Discovery',
+        professionItems,
+        standardItems,
+        selectedValues: { professionId, standardId, status, commentary },
+        error: errorMessage,
+        allStandards: JSON.stringify(serviceStandards || []),
+        professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX)
+      })
+    }
+  },
+
+  getManageProject: async (request, h) => {
+    const { id } = request.params
+
+    try {
+      const project = await getProjectById(id, request)
+      if (!project) {
+        return h
+          .view(PROJECT_NOT_FOUND_VIEW, {
+            pageTitle: NOTIFICATIONS.NOT_FOUND
+          })
+          .code(404)
+      }
+
+      const statusOptions = [
+        { text: 'Select status', value: '' },
+        { value: 'RED', text: 'Red' },
+        { value: 'AMBER', text: 'Amber' },
+        { value: 'GREEN', text: 'Green' }
+      ]
+
+      const phaseOptions = [
+        { text: 'Select phase', value: '' },
+        { value: 'Discovery', text: 'Discovery' },
+        { value: 'Alpha', text: 'Alpha' },
+        { value: 'Private Beta', text: 'Private Beta' },
+        { value: 'Public Beta', text: 'Public Beta' },
+        { value: 'Live', text: 'Live' }
+      ]
+
+      // Mark the current values as selected
+      statusOptions.forEach((option) => {
+        if (option.value === project.status) {
+          option.selected = true
+        }
+      })
+
+      phaseOptions.forEach((option) => {
+        if (option.value === project.phase) {
+          option.selected = true
+        }
+      })
+
+      return h.view('projects/detail/manage', {
+        pageTitle: `Manage ${project.name}`,
+        project,
+        statusOptions,
+        phaseOptions,
+        values: {},
+        errors: {}
+      })
+    } catch (error) {
+      request.logger.error({ error, id }, 'Error loading manage project form')
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  postManageProject: async (request, h) => {
+    const { id } = request.params
+    const { name, phase, defCode, status, commentary } = request.payload
+
+    try {
+      const project = await getProjectById(id, request)
+      if (!project) {
+        return h
+          .view(PROJECT_NOT_FOUND_VIEW, {
+            pageTitle: NOTIFICATIONS.NOT_FOUND
+          })
+          .code(404)
+      }
+
+      // Validate required fields
+      if (!name || !phase || !defCode || !status || !commentary) {
+        const statusOptions = [
+          { text: 'Select status', value: '' },
+          { value: 'RED', text: 'Red' },
+          { value: 'AMBER', text: 'Amber' },
+          { value: 'GREEN', text: 'Green' }
+        ]
+
+        const phaseOptions = [
+          { text: 'Select phase', value: '' },
+          { value: 'Discovery', text: 'Discovery' },
+          { value: 'Alpha', text: 'Alpha' },
+          { value: 'Private Beta', text: 'Private Beta' },
+          { value: 'Public Beta', text: 'Public Beta' },
+          { value: 'Live', text: 'Live' }
+        ]
+
+        // Mark the submitted values as selected
+        statusOptions.forEach((option) => {
+          if (option.value === status) {
+            option.selected = true
+          }
+        })
+
+        phaseOptions.forEach((option) => {
+          if (option.value === phase) {
+            option.selected = true
+          }
+        })
+
+        return h.view('projects/detail/manage', {
+          pageTitle: `Manage ${project.name}`,
+          project,
+          statusOptions,
+          phaseOptions,
+          values: request.payload,
+          errors: {
+            name: !name,
+            phase: !phase,
+            defCode: !defCode,
+            status: !status,
+            commentary: !commentary
+          },
+          errorMessage: 'Please fill in all required fields'
+        })
+      }
+
+      try {
+        // Update the project
+        await updateProject(
+          id,
+          { name, phase, defCode, status, commentary },
+          request
+        )
+        request.logger.info(`Project "${name}" updated successfully`)
+        return h.redirect(
+          `/projects/${id}?notification=Project updated successfully`
+        )
+      } catch (error) {
+        request.logger.error({ error }, 'Failed to update project')
+
+        const statusOptions = [
+          { text: 'Select status', value: '' },
+          { value: 'RED', text: 'Red' },
+          { value: 'AMBER', text: 'Amber' },
+          { value: 'GREEN', text: 'Green' }
+        ]
+
+        const phaseOptions = [
+          { text: 'Select phase', value: '' },
+          { value: 'Discovery', text: 'Discovery' },
+          { value: 'Alpha', text: 'Alpha' },
+          { value: 'Private Beta', text: 'Private Beta' },
+          { value: 'Public Beta', text: 'Public Beta' },
+          { value: 'Live', text: 'Live' }
+        ]
+
+        return h.view('projects/detail/manage', {
+          pageTitle: `Manage ${project.name}`,
+          project,
+          statusOptions,
+          phaseOptions,
+          values: request.payload,
+          errors: {},
+          errorMessage: 'Failed to update project. Please try again.'
+        })
+      }
+    } catch (error) {
+      request.logger.error({ error, id }, 'Error managing project')
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  getStandardDetail: async (request, h) => {
+    const { id, standardId } = request.params
+    const { notification } = request.query
+
+    try {
+      // Fetch project, professions and service standards
+      const [project, professions, serviceStandards] = await Promise.all([
+        getProjectById(id, request),
+        getProfessions(request),
+        getServiceStandards(request)
+      ])
+
+      if (!project) {
+        return h
+          .view('projects/not-found', {
+            pageTitle: 'Project not found'
+          })
+          .code(404)
+      }
+
+      // Find the specific standard
+      const standard = serviceStandards?.find((s) => s.id === standardId)
+      if (!standard) {
+        return h.redirect(`/projects/${id}?notification=Standard not found`)
+      }
+
+      // Find the standard summary in the project
+      const standardSummary = project.standardsSummary?.find(
+        (s) => s.standardId === standardId
+      )
+
+      // Get all profession assessments for this standard
+      const professionAssessments = standardSummary?.professions || []
+
+      // Map profession assessments with profession details and get most recent history ID
+      const assessmentsWithDetails = await Promise.all(
+        professionAssessments.map(async (assessment) => {
+          const professionInfo = professions?.find(
+            (p) => p.id === assessment.professionId
+          )
+
+          // Get the most recent history entry for this profession/standard combination
+          let mostRecentHistoryId = null
+          try {
+            const history = await getAssessmentHistory(
+              id,
+              standardId,
+              assessment.professionId,
+              request
+            )
+            if (history && history.length > 0) {
+              // Get the most recent non-archived entry
+              const recentEntry = history.find((entry) => !entry.archived)
+              mostRecentHistoryId = recentEntry?.id
+            }
+          } catch (error) {
+            request.logger.warn(
+              { error },
+              'Could not fetch assessment history for archive link'
+            )
+          }
+
+          return {
+            ...assessment,
+            professionName: professionInfo?.name || assessment.professionId,
+            professionDisplayName:
+              professionInfo?.name || `Profession ${assessment.professionId}`,
+            mostRecentHistoryId
+          }
+        })
+      )
+
+      return h.view('projects/detail/standard-detail', {
+        pageTitle: `Standard ${standard.number} | ${project.name}`,
+        project,
+        standard,
+        standardSummary,
+        assessments: assessmentsWithDetails,
+        isAuthenticated: request.auth.isAuthenticated,
+        notification
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Error loading standard detail')
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  getAssessmentHistory: async (request, h) => {
+    const { id, standardId, professionId } = request.params
+    const { notification } = request.query
+
+    try {
+      // Fetch project, profession info, standard info, and history
+      const [project, professions, serviceStandards, history] =
+        await Promise.all([
+          getProjectById(id, request),
+          getProfessions(request),
+          getServiceStandards(request),
+          getAssessmentHistory(id, standardId, professionId, request)
+        ])
+
+      if (!project) {
+        return h
+          .view('projects/not-found', {
+            pageTitle: 'Project not found'
+          })
+          .code(404)
+      }
+
+      // Find the specific standard and profession
+      const standard = serviceStandards?.find((s) => s.id === standardId)
+      const profession = professions?.find((p) => p.id === professionId)
+
+      if (!standard) {
+        return h.redirect(`/projects/${id}?notification=Standard not found`)
+      }
+
+      if (!profession) {
+        return h.redirect(`/projects/${id}?notification=Profession not found`)
+      }
+
+      return h.view('projects/detail/assessment-history', {
+        pageTitle: `${profession.name} Assessment History | Standard ${standard.number} | ${project.name}`,
+        project,
+        standard,
+        profession,
+        history: history || [],
+        isAuthenticated: request.auth.isAuthenticated,
+        notification
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Error loading assessment history')
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  getArchiveAssessment: async (request, h) => {
+    const { id, standardId, professionId, historyId } = request.params
+
+    try {
+      // Fetch project, profession info, standard info, and history
+      const [project, professions, serviceStandards, history] =
+        await Promise.all([
+          getProjectById(id, request),
+          getProfessions(request),
+          getServiceStandards(request),
+          getAssessmentHistory(id, standardId, professionId, request)
+        ])
+
+      if (!project) {
+        return h
+          .view('projects/not-found', {
+            pageTitle: 'Project not found'
+          })
+          .code(404)
+      }
+
+      // Find the specific standard and profession
+      const standard = serviceStandards?.find((s) => s.id === standardId)
+      const profession = professions?.find((p) => p.id === professionId)
+
+      if (!standard || !profession) {
+        return h.redirect(
+          `/projects/${id}?notification=Standard or profession not found`
+        )
+      }
+
+      // Find the specific history entry
+      const historyEntry = history?.find((entry) => entry.id === historyId)
+      if (!historyEntry) {
+        return h.redirect(
+          `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=History entry not found`
+        )
+      }
+
+      return h.view('projects/detail/archive-assessment', {
+        pageTitle: `Archive Assessment | ${profession.name} | Standard ${standard.number} | ${project.name}`,
+        project,
+        standard,
+        profession,
+        historyEntry
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Error loading archive assessment page')
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  postArchiveAssessment: async (request, h) => {
+    const { id, standardId, professionId, historyId } = request.params
+    const { returnTo } = request.query || {}
+
+    try {
+      // Archive the assessment history entry
+      await archiveAssessmentHistoryEntry(
+        id,
+        standardId,
+        professionId,
+        historyId,
+        request
+      )
+
+      // Redirect based on where the user came from
+      if (returnTo === 'standard') {
+        return h.redirect(
+          `/projects/${id}/standards/${standardId}?notification=Assessment entry archived successfully`
+        )
+      } else {
+        // Default to assessment history
+        return h.redirect(
+          `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=Assessment entry archived successfully`
+        )
+      }
+    } catch (error) {
+      request.logger.error({ error }, 'Error archiving assessment entry')
+
+      // Redirect back with error message
+      if (returnTo === 'standard') {
+        return h.redirect(
+          `/projects/${id}/standards/${standardId}?notification=Failed to archive assessment entry`
+        )
+      } else {
+        return h.redirect(
+          `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=Failed to archive assessment entry`
+        )
+      }
     }
   }
 }

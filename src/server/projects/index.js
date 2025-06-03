@@ -69,6 +69,11 @@ export const projects = {
         },
         {
           method: 'GET',
+          path: '/projects/{id}/standards/{standardId}',
+          handler: projectsController.getStandardDetail
+        },
+        {
+          method: 'GET',
           path: '/projects/{id}/professions/{professionId}/history',
           handler: projectsController.getProfessionHistory,
           options: {
@@ -152,6 +157,55 @@ export const projects = {
           method: 'POST',
           path: '/projects/{id}/history/{historyId}/archive',
           handler: projectsController.postArchiveDelivery,
+          options: {
+            auth: {
+              mode: 'required'
+            }
+          }
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/assessment',
+          handler: projectsController.getAssessmentScreen,
+          options: { pre: [{ method: requireAuth }] }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/assessment',
+          handler: projectsController.postAssessmentScreen,
+          options: { auth: { strategy: 'session', mode: 'required' } }
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/manage',
+          handler: projectsController.getManageProject,
+          options: { auth: { strategy: 'session', mode: 'required' } }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/manage',
+          handler: projectsController.postManageProject,
+          options: { auth: { strategy: 'session', mode: 'required' } }
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/standards/{standardId}/professions/{professionId}/history',
+          handler: projectsController.getAssessmentHistory
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/standards/{standardId}/professions/{professionId}/history/{historyId}/archive',
+          handler: projectsController.getArchiveAssessment,
+          options: {
+            auth: {
+              mode: 'required'
+            }
+          }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/standards/{standardId}/professions/{professionId}/history/{historyId}/archive',
+          handler: projectsController.postArchiveAssessment,
           options: {
             auth: {
               mode: 'required'

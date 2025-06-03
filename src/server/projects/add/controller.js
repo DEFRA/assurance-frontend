@@ -1,26 +1,32 @@
 import Boom from '@hapi/boom'
 import { createProject } from '~/src/server/services/projects.js'
-import {
-  STATUS,
-  STATUS_CLASS,
-  STATUS_LABEL
-} from '~/src/server/constants/status.js'
 
 const PAGE_TITLE = 'Add Project | DDTS Assurance'
 const PAGE_HEADING = 'Add Project'
 const VIEW_TEMPLATE = 'projects/add/index'
 
-const STATUS_ORDER = [
-  STATUS.GREEN,
-  STATUS.GREEN_AMBER,
-  STATUS.AMBER,
-  STATUS.AMBER_RED,
-  STATUS.RED
+const STATUS_OPTIONS = [
+  {
+    text: 'Select status',
+    value: ''
+  },
+  { value: 'RED', text: 'Red' },
+  { value: 'AMBER_RED', text: 'Amber/Red' },
+  { value: 'AMBER', text: 'Amber' },
+  { value: 'GREEN_AMBER', text: 'Green/Amber' },
+  { value: 'GREEN', text: 'Green' }
 ]
 
-const STATUS_OPTIONS = [
-  { text: 'Select status', value: '' },
-  ...STATUS_ORDER.map((value) => ({ value, text: STATUS_LABEL[value] }))
+const PHASE_OPTIONS = [
+  {
+    text: 'Select phase',
+    value: ''
+  },
+  { value: 'Discovery', text: 'Discovery' },
+  { value: 'Alpha', text: 'Alpha' },
+  { value: 'Private Beta', text: 'Private Beta' },
+  { value: 'Public Beta', text: 'Public Beta' },
+  { value: 'Live', text: 'Live' }
 ]
 
 export const addProjectController = {
@@ -31,17 +37,16 @@ export const addProjectController = {
       values: {},
       errors: {},
       statusOptions: STATUS_OPTIONS,
-      statusClassMap: STATUS_CLASS,
-      statusLabelMap: STATUS_LABEL
+      phaseOptions: PHASE_OPTIONS
     })
   },
 
   post: async (request, h) => {
-    const { name, status, commentary } = request.payload
+    const { name, phase, defCode, status, commentary } = request.payload
 
     try {
-      // Validate required fields
-      if (!name || !status || !commentary) {
+      // Validate required fields (defCode is optional)
+      if (!name || !phase || !status || !commentary) {
         return h.view(VIEW_TEMPLATE, {
           pageTitle: PAGE_TITLE,
           heading: PAGE_HEADING,
@@ -49,17 +54,20 @@ export const addProjectController = {
           values: request.payload,
           errors: {
             name: !name,
+            phase: !phase,
             status: !status,
             commentary: !commentary
           },
           statusOptions: STATUS_OPTIONS,
-          statusClassMap: STATUS_CLASS,
-          statusLabelMap: STATUS_LABEL
+          phaseOptions: PHASE_OPTIONS
         })
       }
 
       try {
-        await createProject({ name, status, commentary }, request)
+        await createProject(
+          { name, phase, defCode, status, commentary },
+          request
+        )
         request.logger.info(`Project "${name}" created successfully`)
         return h.redirect('/?notification=Project created successfully')
       } catch (error) {
@@ -71,10 +79,9 @@ export const addProjectController = {
             pageTitle: PAGE_TITLE,
             heading: PAGE_HEADING,
             errorMessage: 'Please check your input - some fields are invalid',
-            values: { name, status, commentary },
+            values: { name, phase, defCode, status, commentary },
             statusOptions: STATUS_OPTIONS,
-            statusClassMap: STATUS_CLASS,
-            statusLabelMap: STATUS_LABEL,
+            phaseOptions: PHASE_OPTIONS,
             errors: {}
           })
         }
@@ -86,10 +93,9 @@ export const addProjectController = {
             heading: PAGE_HEADING,
             errorMessage:
               'Unable to create project: Service standards not available',
-            values: { name, status, commentary },
+            values: { name, phase, defCode, status, commentary },
             statusOptions: STATUS_OPTIONS,
-            statusClassMap: STATUS_CLASS,
-            statusLabelMap: STATUS_LABEL,
+            phaseOptions: PHASE_OPTIONS,
             errors: {}
           })
         }

@@ -1,0 +1,218 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "status-tag.njk" import renderStatusTag %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Projects",
+        href: "/"
+      },
+      {
+        text: project.name,
+        href: "/projects/" + project.id
+      },
+      {
+        text: "Standard " + standard.number,
+        href: "/projects/" + project.id + "/standards/" + standard.id
+      },
+      {
+        text: profession.name + " Assessment History"
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block content %}
+  {% if notification %}
+    <div class="govuk-notification-banner govuk-notification-banner--success" role="alert" aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+      <div class="govuk-notification-banner__header">
+        <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+          Success
+        </h2>
+      </div>
+      <div class="govuk-notification-banner__content">
+        <p class="govuk-notification-banner__heading">{{ notification }}</p>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h1 class="govuk-heading-xl">
+        {{ profession.name }} Assessment History
+      </h1>
+      
+      <div class="govuk-grid-row govuk-!-margin-bottom-4">
+        <div class="govuk-grid-column-full">
+          <h2 class="govuk-heading-m">
+            Standard {{ standard.number }}: {{ standard.name }}
+          </h2>
+          <p class="govuk-body-m">
+            Project: <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      {% if history and history.length > 0 %}
+        <div class="timeline">
+          {% for entry in history %}
+            <div class="timeline__event {% if entry.archived %}timeline__event--archived{% endif %}">
+              <div class="timeline__event-header">
+                <h3 class="timeline__event-title">
+                  {% if entry.changes.status %}
+                    Status changed to: {{ renderStatusTag(entry.changes.status.to) }}
+                  {% else %}
+                    Assessment updated
+                  {% endif %}
+                </h3>
+                
+                <div class="timeline__event-meta">
+                  <span class="govuk-tag govuk-tag--grey timeline__event-user">
+                    {{ entry.changedBy | upper }}
+                  </span>
+                  <span class="timeline__event-date">
+                    {{ entry.timestamp | formatDate }}
+                  </span>
+                  
+                  {% if entry.archived %}
+                    <span class="govuk-tag govuk-tag--red timeline__event-archived">
+                      ARCHIVED
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+              
+              {% if entry.changes.commentary and entry.changes.commentary.to %}
+                <div class="timeline__event-content">
+                  <p class="govuk-body">{{ entry.changes.commentary.to }}</p>
+                </div>
+              {% endif %}
+              
+              {% if isAuthenticated and not entry.archived %}
+                <div class="timeline__event-actions">
+                  <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ profession.id }}/history/{{ entry.id }}/archive" 
+                     class="govuk-link govuk-link--destructive">
+                    Archive this entry
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="govuk-inset-text">
+          <p class="govuk-body">No assessment history found for this profession and standard combination.</p>
+        </div>
+      {% endif %}
+
+      <div class="govuk-button-group govuk-!-margin-top-6">
+        {{ govukButton({
+          text: "Back to Standard",
+          href: "/projects/" + project.id + "/standards/" + standard.id,
+          classes: "govuk-button--secondary"
+        }) }}
+        
+        {% if isAuthenticated %}
+          {{ govukButton({
+            text: "Add New Assessment",
+            href: "/projects/" + project.id + "/assessment",
+            classes: "govuk-button--secondary"
+          }) }}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block pageStyles %}
+<style>
+  .timeline {
+    border-left: 3px solid #b1b4b6;
+    margin-left: 20px;
+    padding-left: 30px;
+  }
+
+  .timeline__event {
+    position: relative;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f3f2f1;
+  }
+
+  .timeline__event:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  .timeline__event::before {
+    content: '';
+    position: absolute;
+    left: -39px;
+    top: 8px;
+    width: 12px;
+    height: 12px;
+    background-color: #1d70b8;
+    border-radius: 50%;
+    border: 3px solid #ffffff;
+  }
+
+  .timeline__event--archived::before {
+    background-color: #d4351c;
+  }
+
+  .timeline__event-header {
+    margin-bottom: 15px;
+  }
+
+  .timeline__event-title {
+    margin: 0 0 10px 0;
+    font-size: 19px;
+    font-weight: 700;
+  }
+
+  .timeline__event-meta {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
+  .timeline__event-user {
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 3px 6px;
+  }
+
+  .timeline__event-date {
+    font-size: 14px;
+    color: #626a6e;
+  }
+
+  .timeline__event-archived {
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 3px 6px;
+  }
+
+  .timeline__event-content {
+    margin-bottom: 15px;
+  }
+
+  .timeline__event-actions {
+    margin-top: 15px;
+  }
+
+  .timeline__event--archived {
+    opacity: 0.7;
+  }
+</style>
+{% endblock %} 

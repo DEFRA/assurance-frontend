@@ -9,7 +9,7 @@
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
-      <h1 class="govuk-heading-xl">Add Assessment</h1>
+      <h1 class="govuk-heading-xl">Add Service Standard update</h1>
       
       {% if error %}
         <div class="govuk-error-summary" data-module="govuk-error-summary">
@@ -60,7 +60,7 @@
           id: "status",
           name: "status", 
           label: {
-            text: "Assessment Status",
+            text: "Service Standard status",
             classes: "govuk-label--m"
           },
           items: [
@@ -93,6 +93,11 @@
               value: "GREEN",
               text: "Green",
               selected: selectedValues and selectedValues.status === "GREEN"
+            },
+            {
+              value: "TBC",
+              text: "TBC",
+              selected: selectedValues and selectedValues.status === "TBC"
             }
           ],
           value: selectedValues.status if selectedValues else ""
@@ -106,14 +111,14 @@
             classes: "govuk-label--m"
           },
           hint: {
-            text: "Provide details about this assessment"
+            text: "Provide details about this service standard"
           },
           value: selectedValues.commentary if selectedValues else ""
         }) }}
 
         <div class="govuk-button-group">
           {{ govukButton({
-            text: "Save Assessment"
+            text: "Save update"
           }) }}
 
           {{ govukButton({

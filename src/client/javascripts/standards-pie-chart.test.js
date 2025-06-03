@@ -63,8 +63,8 @@ describe('Standards Pie Chart', () => {
     // Verify data counts
     const chartData = chart.data.datasets[0].data
 
-    // Counts for RED, AMBER, GREEN, NOT_STARTED
-    expect(chartData).toEqual([2, 1, 1, 2])
+    // Counts for RED, AMBER, GREEN, TBC, NOT_STARTED
+    expect(chartData).toEqual([2, 1, 1, 0, 2])
   })
 
   test('should handle standards with missing statuses', () => {
@@ -81,8 +81,8 @@ describe('Standards Pie Chart', () => {
     // Assert
     const chartData = chart.data.datasets[0].data
 
-    // 1 RED, 1 AMBER, 0 GREEN, 0 NOT_STARTED
-    expect(chartData).toEqual([1, 1, 0, 0])
+    // 1 RED, 1 AMBER, 0 GREEN, 0 TBC, 0 NOT_STARTED
+    expect(chartData).toEqual([1, 1, 0, 0, 0])
   })
 
   test('should handle empty standards array', () => {
@@ -92,8 +92,8 @@ describe('Standards Pie Chart', () => {
     // Assert
     const chartData = chart.data.datasets[0].data
 
-    // All zeros
-    expect(chartData).toEqual([0, 0, 0, 0])
+    // All zeros for RED, AMBER, GREEN, TBC, NOT_STARTED
+    expect(chartData).toEqual([0, 0, 0, 0, 0])
   })
 
   test('should handle unknown status values', () => {
@@ -110,7 +110,7 @@ describe('Standards Pie Chart', () => {
     const chartData = chart.data.datasets[0].data
 
     // Only the RED is counted in the expected categories
-    expect(chartData).toEqual([1, 0, 0, 0])
+    expect(chartData).toEqual([1, 0, 0, 0, 0])
   })
 
   test('should configure correct colors for each status', () => {
@@ -119,6 +119,7 @@ describe('Standards Pie Chart', () => {
       { status: 'RED' },
       { status: 'AMBER' },
       { status: 'GREEN' },
+      { status: 'TBC' },
       { status: 'NOT_STARTED' }
     ]
 
@@ -133,7 +134,8 @@ describe('Standards Pie Chart', () => {
       '#d4351c', // GDS Red
       '#f47738', // GDS Amber
       '#00703c', // GDS Green
-      '#b1b4b6' // GDS Grey
+      '#b1b4b6', // GDS Grey for TBC
+      '#b1b4b6' // GDS Grey for Not Started
     ])
   })
 })

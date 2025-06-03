@@ -26,7 +26,8 @@ export function createProjectHistoryChart(container, history) {
   const statusToValue = {
     RED: 1,
     AMBER: 2,
-    GREEN: 3
+    GREEN: 3,
+    TBC: 0 // TBC at the bottom of the scale
   }
 
   // Process history data to handle different formats
@@ -53,7 +54,7 @@ export function createProjectHistoryChart(container, history) {
 
       return {
         x: new Date(entry.timestamp),
-        y: statusToValue[status] || 2, // Default to AMBER if invalid status
+        y: statusToValue[status] || 0, // Default to TBC (0) if invalid status
         status
       }
     })
@@ -79,6 +80,8 @@ export function createProjectHistoryChart(container, history) {
                 return '#f47738' // GDS Tag Yellow
               case 'GREEN':
                 return '#00703c' // GDS Tag Green
+              case 'TBC':
+                return '#b1b4b6' // GDS Grey
               default:
                 return '#b1b4b6' // GDS Grey
             }
@@ -95,6 +98,8 @@ export function createProjectHistoryChart(container, history) {
                 return '#aa4a1d' // Darker amber for hover
               case 'GREEN':
                 return '#004e2a' // Darker green for hover
+              case 'TBC':
+                return '#505a5f' // Darker grey for hover
               default:
                 return '#505a5f' // Darker grey for hover
             }

@@ -45,7 +45,8 @@ const STATUS_OPTIONS = [
   { value: STATUS.GREEN_AMBER, text: STATUS_LABEL[STATUS.GREEN_AMBER] },
   { value: STATUS.AMBER, text: STATUS_LABEL[STATUS.AMBER] },
   { value: STATUS.AMBER_RED, text: STATUS_LABEL[STATUS.AMBER_RED] },
-  { value: STATUS.RED, text: STATUS_LABEL[STATUS.RED] }
+  { value: STATUS.RED, text: STATUS_LABEL[STATUS.RED] },
+  { value: STATUS.TBC, text: STATUS_LABEL[STATUS.TBC] }
 ]
 const PROJECT_NOT_FOUND_VIEW = 'errors/not-found'
 const HTTP_STATUS_NOT_FOUND = 404
@@ -100,45 +101,58 @@ function getProfessionName(profession, professions, project) {
 // Helper function to update project status after archive
 async function updateProjectAfterArchive(id, request) {
   try {
-    // Get the project history again to find the latest status
+    // Get the project history again to find the latest status and commentary
     const history = await getProjectHistory(id, request)
 
-    // If there's history available, find the most recent delivery update entry
     if (history && history.length > 0) {
-      // Sort by timestamp (newest first)
-      const sortedHistory = history.sort(
-        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-      )
+      // Sort by timestamp (newest first) and filter for non-archived entries with status or commentary
+      const relevantHistory = history
+        .filter(
+          (entry) =>
+            !entry.archived &&
+            (entry.changes?.status || entry.changes?.commentary)
+        )
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 
-      // Find the first active entry with status or commentary
-      const latestStatusEntry = sortedHistory.find(
-        (entry) => entry.changes?.status?.to || entry.changes?.commentary?.to
-      )
+      // Find the most recent status and commentary separately
+      let latestStatus = null
+      let latestCommentary = null
 
+      // Get the most recent status change
+      const latestStatusEntry = relevantHistory.find(
+        (entry) => entry.changes?.status?.to
+      )
       if (latestStatusEntry) {
-        // Only update if we found a valid entry
-        const updateData = {}
+        latestStatus = latestStatusEntry.changes.status.to
+      }
 
-        // Add status if available
-        if (latestStatusEntry.changes?.status?.to) {
-          updateData.status = latestStatusEntry.changes.status.to
-        }
+      // Get the most recent commentary change
+      const latestCommentaryEntry = relevantHistory.find(
+        (entry) => entry.changes?.commentary?.to
+      )
+      if (latestCommentaryEntry) {
+        latestCommentary = latestCommentaryEntry.changes.commentary.to
+      }
 
-        // Add commentary if available
-        if (latestStatusEntry.changes?.commentary?.to) {
-          updateData.commentary = latestStatusEntry.changes.commentary.to
-        }
+      // Prepare update data
+      const updateData = {}
+      if (latestStatus) {
+        updateData.status = latestStatus
+      }
+      if (latestCommentary) {
+        updateData.commentary = latestCommentary
+      }
 
-        // Only proceed with update if we have changes to make
-        if (Object.keys(updateData).length > 0) {
-          request.logger.info(
-            { projectId: id, updateData },
-            'Updating project with latest status after archive'
-          )
-          // Pass true for suppressHistory to avoid duplicate history entries
-          await updateProject(id, updateData, request, true)
-          return true
-        }
+      // Only update if we have changes to make
+      if (Object.keys(updateData).length > 0) {
+        request.logger.info(
+          { projectId: id, updateData },
+          'Updating project with latest status/commentary after archive'
+        )
+
+        // Use the services updateProject with suppressHistory to avoid creating new history
+        await updateProject(id, updateData, request, true)
+        return true
       }
     }
     return false
@@ -1058,53 +1072,6 @@ export const projectsController = {
     }
   },
 
-  getArchiveDelivery: async (request, h) => {
-    try {
-      const project = await getProjectById(request.params.id, request)
-      if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
-      }
-
-      // Add await to satisfy linter - we'll await the view operation
-      const view = await Promise.resolve('projects/detail/archive-delivery')
-      return h.view(view, {
-        pageTitle: 'Archive Delivery Update',
-        heading: 'Archive Delivery Update',
-        projectId: request.params.id,
-        historyId: request.params.historyId
-      })
-    } catch (error) {
-      request.logger.error(error)
-      throw Boom.boomify(error, { statusCode: 500 })
-    }
-  },
-
-  postArchiveDelivery: async (request, h) => {
-    const { id, historyId } = request.params
-    try {
-      await archiveProjectHistoryEntry(id, historyId, request)
-      request.logger.info(
-        { projectId: id, historyId },
-        'Project history entry archived successfully'
-      )
-
-      // Update the project status based on the latest active history entry
-      await updateProjectAfterArchive(id, request)
-
-      return h.redirect(
-        `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS.ARCHIVED}`
-      )
-    } catch (error) {
-      request.logger.error(
-        { error: error.message, projectId: id, historyId },
-        'Failed to archive project history entry'
-      )
-      return h.redirect(
-        `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS.ARCHIVE_FAILED}`
-      )
-    }
-  },
-
   getArchiveProfessionHistory: async (request, h) => {
     const { id, professionId, historyId } = request.params
     try {
@@ -1801,6 +1768,93 @@ export const projectsController = {
       } else {
         return h.redirect(
           `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=Failed to archive assessment entry`
+        )
+      }
+    }
+  },
+
+  getArchiveProjectHistory: async (request, h) => {
+    const { id, historyId } = request.params
+
+    try {
+      // Get project and history entry details
+      const project = await getProjectById(id, request)
+      if (!project) {
+        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+      }
+
+      // Get the project history to find the specific entry
+      const history = await getProjectHistory(id, request)
+      const historyEntry = history?.find((entry) => entry.id === historyId)
+
+      if (!historyEntry) {
+        return h.redirect(
+          `/projects/${id}?notification=History entry not found`
+        )
+      }
+
+      // Only allow archiving of status and commentary changes
+      if (!historyEntry.changes?.status && !historyEntry.changes?.commentary) {
+        return h.redirect(
+          `/projects/${id}?notification=Only status and commentary updates can be archived`
+        )
+      }
+
+      return h.view('projects/detail/archive-project-history', {
+        pageTitle: 'Archive Project Update',
+        project,
+        historyEntry
+      })
+    } catch (error) {
+      request.logger.error(
+        { error },
+        'Error loading archive project history page'
+      )
+      throw Boom.boomify(error, { statusCode: 500 })
+    }
+  },
+
+  postArchiveProjectHistory: async (request, h) => {
+    const { id, historyId } = request.params
+    const { returnTo } = request.query || {}
+
+    try {
+      // Archive the project history entry
+      await archiveProjectHistoryEntry(id, historyId, request)
+
+      // Update the project with the latest non-archived status and commentary
+      await updateProjectAfterArchive(id, request)
+
+      // Redirect based on where the user came from
+      if (returnTo === 'detail') {
+        return h.redirect(
+          `/projects/${id}?notification=Project update archived successfully`
+        )
+      } else if (returnTo === 'edit') {
+        return h.redirect(
+          `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS.ARCHIVED}`
+        )
+      } else {
+        // Default redirect to history page
+        return h.redirect(
+          `/projects/${id}/history?notification=Project update archived successfully`
+        )
+      }
+    } catch (error) {
+      request.logger.error({ error }, 'Error archiving project history entry')
+
+      // Redirect back with error message based on context
+      if (returnTo === 'detail') {
+        return h.redirect(
+          `/projects/${id}?notification=Failed to archive project update`
+        )
+      } else if (returnTo === 'edit') {
+        return h.redirect(
+          `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS.ARCHIVE_FAILED}`
+        )
+      } else {
+        return h.redirect(
+          `/projects/${id}/history?notification=Failed to archive project update`
         )
       }
     }

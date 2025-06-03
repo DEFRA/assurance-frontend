@@ -189,7 +189,7 @@ describe('Project History Chart', () => {
     // Assert
     const chartData = chart.data.datasets[0].data
 
-    expect(chartData[0].y).toBe(2) // Default to AMBER (2)
+    expect(chartData[0].y).toBe(0) // Default to TBC (0)
   })
 
   test('should handle empty history array', () => {

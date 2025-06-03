@@ -496,7 +496,14 @@ export const adminController = {
         }
       }
 
-      const statuses = ['RED', 'AMBER_RED', 'AMBER', 'GREEN_AMBER', 'GREEN']
+      const statuses = [
+        'RED',
+        'AMBER_RED',
+        'AMBER',
+        'GREEN_AMBER',
+        'GREEN',
+        'TBC'
+      ]
 
       // Helper function to get random commentary
       const getRandomCommentary = (professionId, standardNumber) => {

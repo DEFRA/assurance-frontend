@@ -146,7 +146,7 @@ export const projects = {
         {
           method: 'GET',
           path: '/projects/{id}/history/{historyId}/archive',
-          handler: projectsController.getArchiveDelivery,
+          handler: projectsController.getArchiveProjectHistory,
           options: {
             auth: {
               mode: 'required'
@@ -156,7 +156,7 @@ export const projects = {
         {
           method: 'POST',
           path: '/projects/{id}/history/{historyId}/archive',
-          handler: projectsController.postArchiveDelivery,
+          handler: projectsController.postArchiveProjectHistory,
           options: {
             auth: {
               mode: 'required'

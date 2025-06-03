@@ -76,14 +76,14 @@
       {% endif %}
 
       {% set complianceTabHtml %}
-        <h2 class="govuk-heading-m">Service Standard Compliance</h2>
+        <h2 class="govuk-heading-m">Service Standard compliance</h2>
         
         {% if standards and standards.length > 0 %}
           <table class="govuk-table">
             <thead class="govuk-table__head">
               <tr class="govuk-table__row">
-                <th scope="col" class="govuk-table__header">Standard</th>
-                <th scope="col" class="govuk-table__header">Status</th>
+                <th scope="col" class="govuk-table__header">Point</th>
+                <th scope="col" class="govuk-table__header">Compliance confidence</th>
               </tr>
             </thead>
             <tbody class="govuk-table__body">
@@ -98,7 +98,7 @@
                 <tr class="govuk-table__row">
                   <td class="govuk-table__cell">
                     <a href="/projects/{{ project.id }}/standards/{{ standard.id }}" class="govuk-link">
-                      Standard {{ standard.number }}: {{ standard.name }}
+                      {{ standard.number }}. {{ standard.name }}
                     </a>
                   </td>
                   <td class="govuk-table__cell">
@@ -119,7 +119,49 @@
 
       {% set engagementTabHtml %}
         <h2 class="govuk-heading-m">Project Engagement</h2>
-        <p class="govuk-body">Timeline content will be added here in the future.</p>
+        <p class="govuk-body">Timeline of key project changes and updates.</p>
+        
+        {% if projectHistory and projectHistory.length > 0 %}
+          <div class="timeline">
+            {% for entry in projectHistory %}
+              <div class="timeline__event">
+                <h3 class="timeline__event-title govuk-heading-s">
+                  {{ entry.timestamp | formatDate('d MMM yy') }}
+                </h3>
+                
+                <div class="timeline__event-content">
+                  {% if entry.changes.status and entry.changes.status.from !== entry.changes.status.to %}
+                    <p class="govuk-body govuk-!-margin-bottom-2">
+                      <strong>Delivery status updated:</strong> {{ renderStatusTag(entry.changes.status.to) }}
+                    </p>
+                  {% endif %}
+                  
+                  {% if entry.changes.name %}
+                    <p class="govuk-body govuk-!-margin-bottom-2">
+                      <strong>Project name updated:</strong> {{ entry.changes.name.to }}
+                    </p>
+                  {% endif %}
+                  
+                  {% if entry.changes.phase %}
+                    <p class="govuk-body govuk-!-margin-bottom-2">
+                      <strong>Phase updated:</strong> {{ entry.changes.phase.to }}
+                    </p>
+                  {% endif %}
+                  
+                  {% if entry.changes.commentary %}
+                    <p class="govuk-body govuk-!-margin-bottom-0">
+                      {{ entry.changes.commentary.to }}
+                    </p>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="govuk-inset-text">
+            <p class="govuk-body">No project updates found yet.</p>
+          </div>
+        {% endif %}
       {% endset %}
 
       {{ govukTabs({
@@ -170,6 +212,67 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  /* Timeline styles for engagement tab */
+  .timeline {
+    border-left: 3px solid #b1b4b6;
+    margin-left: 20px;
+    padding-left: 30px;
+  }
+
+  .timeline__event {
+    position: relative;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f3f2f1;
+  }
+
+  .timeline__event:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  .timeline__event::before {
+    content: '';
+    position: absolute;
+    left: -39px;
+    top: 8px;
+    width: 12px;
+    height: 12px;
+    background-color: #1d70b8;
+    border-radius: 50%;
+    border: 3px solid #ffffff;
+  }
+
+  .timeline__event-title {
+    margin: 0 0 10px 0;
+    font-size: 19px;
+    font-weight: 700;
+  }
+
+  .timeline__event-meta {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+  }
+
+  .timeline__event-user {
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 3px 6px;
+  }
+
+  .timeline__event-date {
+    font-size: 14px;
+    color: #626a6e;
+    font-weight: 600;
+  }
+
+  .timeline__event-content {
+    margin-top: 10px;
   }
 </style>
 {% endblock %}

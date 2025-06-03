@@ -41,29 +41,29 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
       <h1 class="govuk-heading-xl">
-        Standard {{ standard.number }}: {{ standard.name }}
+        {{ project.name }}
       </h1>
       
-      <div class="govuk-grid-row govuk-!-margin-bottom-4">
+      <h2 class="govuk-heading-l govuk-!-margin-bottom-4">
+        Standard {{ standard.number }}: {{ standard.name }}
+      </h2>
+      
+      <div class="govuk-grid-row govuk-!-margin-bottom-6">
         <div class="govuk-grid-column-two-thirds">
-          <h2 class="govuk-heading-m inline-heading">
-            Project: <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
-          </h2>
-          
           {% if standardSummary %}
-            <p class="govuk-body-m">
-              <strong>Standard {{ standard.number }} Status:</strong> 
+            <p class="govuk-body-l">
+              <strong>Compliance confidence:</strong> 
               {{ renderStatusTag(standardSummary.aggregatedStatus) }}
             </p>
             
             {% if standardSummary.lastUpdated %}
-              <p class="govuk-body-s">
+              <p class="govuk-body-s govuk-!-margin-bottom-0">
                 Last updated: {{ standardSummary.lastUpdated | formatDate }}
               </p>
             {% endif %}
           {% else %}
-            <p class="govuk-body-m">
-              <strong>Standard {{ standard.number }} Status:</strong> 
+            <p class="govuk-body-l">
+              <strong>Compliance confidence:</strong> 
               {{ renderStatusTag('NOT_ASSESSED') }}
             </p>
           {% endif %}
@@ -85,92 +85,53 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
       {% if assessments and assessments.length > 0 %}
-        {% set hasCommentary = false %}
-        {% for assessment in assessments %}
-          {% if assessment.commentary %}
-            {% set hasCommentary = true %}
-          {% endif %}
-        {% endfor %}
-        
-        {% if hasCommentary %}
-          <h2 class="govuk-heading-m">Summary</h2>
-          {{ govukInsetText({
-            html: '<div class="govuk-body">' + 
-              (assessments | selectattr("commentary") | map(attribute="professionDisplayName,commentary") | map("join", ": ") | join("<br>")) +
-              '</div>'
-          }) }}
-        {% endif %}
-      {% endif %}
-
-      <h2 class="govuk-heading-m">Profession Assessments</h2>
-      
-      {% if assessments and assessments.length > 0 %}
-        <table class="govuk-table">
-          <thead class="govuk-table__head">
-            <tr class="govuk-table__row">
-              <th scope="col" class="govuk-table__header">Profession</th>
-              <th scope="col" class="govuk-table__header">Status</th>
-              <th scope="col" class="govuk-table__header">Commentary</th>
-              <th scope="col" class="govuk-table__header">Last Updated</th>
-              {% if isAuthenticated %}
-                <th scope="col" class="govuk-table__header">Actions</th>
-              {% else %}
-                <th scope="col" class="govuk-table__header">History</th>
+        <ul class="govuk-list">
+          {% for assessment in assessments %}
+            <li class="profession-assessment govuk-!-margin-bottom-6">
+              <h3 class="govuk-heading-s govuk-!-margin-bottom-3">
+                {{ assessment.professionDisplayName }}
+              </h3>
+              
+              <div class="govuk-!-margin-bottom-2">
+                Compliance confidence: {{ renderStatusTag(assessment.status or 'NOT_UPDATED') }}
+              </div>
+              
+              {% if assessment.commentary %}
+                <div class="govuk-!-margin-bottom-2">
+                  Commentary: {{ assessment.commentary }}
+                </div>
               {% endif %}
-            </tr>
-          </thead>
-          <tbody class="govuk-table__body">
-            {% for assessment in assessments %}
-              <tr class="govuk-table__row">
-                <td class="govuk-table__cell">
-                  <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ assessment.professionId }}/history" class="govuk-link">
-                    {{ assessment.professionDisplayName }}
-                  </a>
-                </td>
-                <td class="govuk-table__cell">
-                  {{ renderStatusTag(assessment.status or 'NOT_UPDATED') }}
-                </td>
-                <td class="govuk-table__cell">
-                  {% if assessment.commentary %}
-                    {{ assessment.commentary }}
-                  {% else %}
-                    <em>No commentary provided</em>
-                  {% endif %}
-                </td>
-                <td class="govuk-table__cell">
-                  {% if assessment.lastUpdated %}
-                    {{ assessment.lastUpdated | formatDate }}
-                  {% else %}
-                    <em>Not available</em>
-                  {% endif %}
-                </td>
-                {% if isAuthenticated %}
-                  <td class="govuk-table__cell">
-                    <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ assessment.professionId }}/history" class="govuk-link govuk-!-margin-right-2">View History</a>
-                    {% if assessment.mostRecentHistoryId %}
-                      <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ assessment.professionId }}/history/{{ assessment.mostRecentHistoryId }}/archive?returnTo=standard" class="govuk-link">Archive</a>
-                    {% endif %}
-                  </td>
+              
+              <div class="govuk-body-s govuk-!-margin-bottom-2">
+                Last updated: 
+                {% if assessment.lastUpdated %}
+                  {{ assessment.lastUpdated | formatDate }}
                 {% else %}
-                  <td class="govuk-table__cell">
-                    <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ assessment.professionId }}/history" class="govuk-link">View History</a>
-                  </td>
+                  Not available
                 {% endif %}
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+              </div>
+              
+              {% if isAuthenticated and assessment.mostRecentHistoryId %}
+                <div class="profession-actions">
+                  <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ assessment.professionId }}/history/{{ assessment.mostRecentHistoryId }}/archive?returnTo=standard" class="govuk-link">Archive</a>
+                </div>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
       {% else %}
-        <p class="govuk-body">No profession assessments have been added for this standard yet.</p>
-        {% if isAuthenticated %}
-          <div class="govuk-!-margin-top-4">
-            {{ govukButton({
-              text: "Add First Assessment",
-              href: "/projects/" + project.id + "/assessment",
-              classes: "govuk-button--secondary"
-            }) }}
-          </div>
-        {% endif %}
+        <div class="govuk-inset-text">
+          <p class="govuk-body">No profession assessments have been added for this standard yet.</p>
+          {% if isAuthenticated %}
+            <div class="govuk-!-margin-top-3">
+              {{ govukButton({
+                text: "Add First Assessment",
+                href: "/projects/" + project.id + "/assessment",
+                classes: "govuk-button--secondary"
+              }) }}
+            </div>
+          {% endif %}
+        </div>
       {% endif %}
 
     </div>
@@ -184,6 +145,55 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .profession-assessment {
+    border-left: 4px solid #b1b4b6;
+    padding-left: 20px;
+    margin-left: 10px;
+    background-color: #f8f8f8;
+    padding: 20px;
+    border-radius: 4px;
+    position: relative;
+    counter-increment: profession-counter;
+    border-bottom: 1px solid #b1b4b6;
+    margin-bottom: 30px !important;
+  }
+
+  .profession-assessment:last-child {
+    border-bottom: none;
+  }
+
+  .profession-assessment::before {
+    content: counter(profession-counter);
+    position: absolute;
+    left: -15px;
+    top: 20px;
+    background: #1d70b8;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+  }
+
+  .govuk-list {
+    counter-reset: profession-counter;
+  }
+
+  .profession-assessment h3 {
+    border-bottom: 1px solid #b1b4b6;
+    padding-bottom: 8px;
+  }
+
+  .profession-actions {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e5e5;
   }
 </style>
 {% endblock %} 

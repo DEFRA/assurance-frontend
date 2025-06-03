@@ -276,12 +276,47 @@ export const projectsController = {
         request.logger.error({ error }, 'Error fetching reference data')
       }
 
+      // Get project history for the engagement timeline
+      let projectHistory = []
+      try {
+        const history = await getProjectHistory(id, request)
+        if (history && history.length > 0) {
+          // Filter for project-level changes only (name, phase, status, commentary)
+          // Exclude service standard and profession assessments
+          projectHistory = history
+            .filter((entry) => {
+              if (!entry || entry.archived) {
+                return false
+              }
+              // Include entries that have changes to core project fields
+              return (
+                entry.changes?.name ||
+                entry.changes?.phase ||
+                entry.changes?.status ||
+                entry.changes?.commentary
+              )
+            })
+            .map((entry) => ({
+              ...entry,
+              type: 'project'
+            }))
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        }
+      } catch (error) {
+        request.logger.error(
+          { error },
+          'Error fetching project history for engagement tab'
+        )
+        // Continue with empty history if fetch fails
+      }
+
       return h.view('projects/detail/index', {
         pageTitle: `${project.name} | DDTS Assurance`,
         heading: project.name,
         project,
         standards,
         professions,
+        projectHistory,
         isAuthenticated,
         statusClassMap: STATUS_CLASS,
         statusLabelMap: STATUS_LABEL

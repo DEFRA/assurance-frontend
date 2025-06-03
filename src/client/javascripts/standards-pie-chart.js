@@ -15,7 +15,7 @@ export function createStandardsPieChart(container, standards) {
   const chart = new Chart(container.getContext('2d'), {
     type: 'pie',
     data: {
-      labels: ['RED', 'AMBER', 'GREEN', 'NOT_STARTED'].map((status) =>
+      labels: ['RED', 'AMBER', 'GREEN', 'TBC', 'NOT_STARTED'].map((status) =>
         status === 'NOT_STARTED' ? 'Not Started' : status
       ),
       datasets: [
@@ -24,13 +24,15 @@ export function createStandardsPieChart(container, standards) {
             statusCounts.RED || 0,
             statusCounts.AMBER || 0,
             statusCounts.GREEN || 0,
+            statusCounts.TBC || 0,
             statusCounts.NOT_STARTED || 0
           ],
           backgroundColor: [
             '#d4351c', // GDS Red
             '#f47738', // GDS Amber
             '#00703c', // GDS Green
-            '#b1b4b6' // GDS Grey
+            '#b1b4b6', // GDS Grey for TBC
+            '#b1b4b6' // GDS Grey for Not Started
           ],
           borderWidth: 0
         }

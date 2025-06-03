@@ -36,11 +36,9 @@
       </form>
 
       {% if isAuthenticated %}
-      {{ govukButton({
-        text: "Add new project",
-        href: "/projects/add",
-        classes: "govuk-button--secondary govuk-!-margin-bottom-6"
-      }) }}
+        <p class="govuk-body govuk-!-margin-bottom-6">
+          <a href="/projects/add" class="govuk-link">Add new project</a>
+        </p>
       {% endif %}
 
       <p class="govuk-body">{{ description }}</p>

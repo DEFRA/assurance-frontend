@@ -44,9 +44,9 @@
         {{ project.name }}
       </h1>
       
-      <h2 class="govuk-heading-l govuk-!-margin-bottom-4">
+      <p class="govuk-body-l">
         Standard {{ standard.number }}: {{ standard.name }}
-      </h2>
+      </p>
       
       <div class="govuk-grid-row govuk-!-margin-bottom-6">
         <div class="govuk-grid-column-two-thirds">
@@ -67,15 +67,11 @@
               {{ renderStatusTag('NOT_ASSESSED') }}
             </p>
           {% endif %}
-        </div>
-        
-        <div class="govuk-grid-column-one-third">
+          
           {% if isAuthenticated %}
-            {{ govukButton({
-              text: "Add Assessment",
-              href: "/projects/" + project.id + "/assessment",
-              classes: "govuk-button--secondary"
-            }) }}
+            <p class="govuk-body govuk-!-margin-top-4">
+              <a href="/projects/{{ project.id }}/assessment" class="govuk-link">Add service standard update</a>
+            </p>
           {% endif %}
         </div>
       </div>
@@ -122,15 +118,6 @@
       {% else %}
         <div class="govuk-inset-text">
           <p class="govuk-body">No profession assessments have been added for this standard yet.</p>
-          {% if isAuthenticated %}
-            <div class="govuk-!-margin-top-3">
-              {{ govukButton({
-                text: "Add First Assessment",
-                href: "/projects/" + project.id + "/assessment",
-                classes: "govuk-button--secondary"
-              }) }}
-            </div>
-          {% endif %}
         </div>
       {% endif %}
 

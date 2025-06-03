@@ -1,0 +1,80 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "status-tag.njk" import renderStatusTag %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Projects",
+        href: "/"
+      },
+      {
+        text: project.name,
+        href: "/projects/" + project.id
+      },
+      {
+        text: "Archive Project Update"
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block content %}
+  {{ appHeading({
+    text: "Archive Project Update",
+    caption: project.name
+  }) }}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-m">Update Details</h2>
+      
+      <div class="govuk-summary-list">
+        <dl class="govuk-summary-list">
+          {% if historyEntry %}
+            {% if historyEntry.changes.status %}
+              <div class="govuk-summary-list__row">
+                <dt class="govuk-summary-list__key">Status Change</dt>
+                <dd class="govuk-summary-list__value">{{ renderStatusTag(historyEntry.changes.status.to) }}</dd>
+              </div>
+            {% endif %}
+            {% if historyEntry.changes.commentary %}
+              <div class="govuk-summary-list__row">
+                <dt class="govuk-summary-list__key">Commentary</dt>
+                <dd class="govuk-summary-list__value">{{ historyEntry.changes.commentary.to }}</dd>
+              </div>
+            {% endif %}
+            <div class="govuk-summary-list__row">
+              <dt class="govuk-summary-list__key">Date</dt>
+              <dd class="govuk-summary-list__value">{{ historyEntry.timestamp | formatDate }}</dd>
+            </div>
+          {% endif %}
+        </dl>
+      </div>
+
+      {{ govukWarningText({
+        text: "Archiving this project update will hide it from the project timeline. The project's current status and commentary will revert to the most recent remaining update. This action cannot be undone.",
+        iconFallbackText: "Warning"
+      }) }}
+
+      <form method="POST" novalidate>
+        <div class="govuk-button-group">
+          {{ govukButton({
+            text: "Archive Project Update",
+            classes: "govuk-button--warning"
+          }) }}
+
+          {{ govukButton({
+            text: "Cancel",
+            href: "/projects/" + project.id,
+            classes: "govuk-button--secondary"
+          }) }}
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %} 

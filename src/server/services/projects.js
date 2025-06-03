@@ -191,24 +191,28 @@ export async function updateProject(
       throw new Error('Project not found')
     }
 
-    // Update project data while preserving other fields
+    // Only send the fields that are being updated, don't overwrite backend-managed fields
     const updatedProject = {
-      ...currentProject,
+      id: currentProject.id, // Explicitly preserve the ID
       name: projectData.name || currentProject.name,
       phase: projectData.phase || currentProject.phase,
       defCode: projectData.defCode || currentProject.defCode,
       status: projectData.status || currentProject.status,
       commentary: projectData.commentary || currentProject.commentary,
-      lastUpdated: new Date().toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      })
+      // Preserve other important fields that shouldn't be overwritten
+      tags: projectData.tags || currentProject.tags
     }
 
-    // If we're updating tags, replace the entire array
-    if (projectData.tags) {
-      updatedProject.tags = projectData.tags
+    // Pass updateDate through if present
+    if (projectData.updateDate) {
+      logger.info(
+        {
+          updateDate: projectData.updateDate,
+          type: typeof projectData.updateDate
+        },
+        'Passing updateDate to backend'
+      )
+      updatedProject.updateDate = projectData.updateDate
     }
 
     // If we're updating standards, merge them with existing standards
@@ -240,18 +244,6 @@ export async function updateProject(
         { professions: updatedProject.professions },
         'Updating project professions'
       )
-    }
-
-    // Pass updateDate through if present
-    if (projectData.updateDate) {
-      logger.info(
-        {
-          updateDate: projectData.updateDate,
-          type: typeof projectData.updateDate
-        },
-        'Passing updateDate to backend'
-      )
-      updatedProject.updateDate = projectData.updateDate
     }
 
     let result

@@ -53,7 +53,7 @@
           <p class="govuk-body">{{ project.commentary }}</p>
         {% endif %}
         {% if project.lastUpdated %}
-          <p class="govuk-body-s govuk-!-margin-bottom-0">Last updated: {{ project.lastUpdated }}</p>
+          <p class="govuk-body-s govuk-!-margin-bottom-0">Last updated: {{ project.lastUpdated | formatDate }}</p>
         {% endif %}
       {% endset %}
       {% if commentaryContent.trim() %}

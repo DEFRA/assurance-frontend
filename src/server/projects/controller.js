@@ -1394,11 +1394,10 @@ export const projectsController = {
           .code(404)
       }
 
+      // Use the common STATUS_OPTIONS for 5-scale RAG system
       const statusOptions = [
         { text: 'Select status', value: '' },
-        { value: 'RED', text: 'Red' },
-        { value: 'AMBER', text: 'Amber' },
-        { value: 'GREEN', text: 'Green' }
+        ...STATUS_OPTIONS
       ]
 
       const phaseOptions = [
@@ -1453,11 +1452,10 @@ export const projectsController = {
 
       // Validate required fields
       if (!name || !phase || !defCode || !status || !commentary) {
+        // Use the common STATUS_OPTIONS for 5-scale RAG system
         const statusOptions = [
           { text: 'Select status', value: '' },
-          { value: 'RED', text: 'Red' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'GREEN', text: 'Green' }
+          ...STATUS_OPTIONS
         ]
 
         const phaseOptions = [
@@ -1513,11 +1511,10 @@ export const projectsController = {
       } catch (error) {
         request.logger.error({ error }, 'Failed to update project')
 
+        // Use the common STATUS_OPTIONS for 5-scale RAG system
         const statusOptions = [
           { text: 'Select status', value: '' },
-          { value: 'RED', text: 'Red' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'GREEN', text: 'Green' }
+          ...STATUS_OPTIONS
         ]
 
         const phaseOptions = [

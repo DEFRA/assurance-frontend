@@ -105,6 +105,8 @@ export async function createProject(projectData, request) {
     const projectWithStandards = {
       id: '', // API will generate this
       name: projectData.name,
+      phase: projectData.phase,
+      defCode: projectData.defCode,
       status: projectData.status,
       commentary: projectData.commentary,
       lastUpdated: formattedDate,
@@ -192,6 +194,9 @@ export async function updateProject(
     // Update project data while preserving other fields
     const updatedProject = {
       ...currentProject,
+      name: projectData.name || currentProject.name,
+      phase: projectData.phase || currentProject.phase,
+      defCode: projectData.defCode || currentProject.defCode,
       status: projectData.status || currentProject.status,
       commentary: projectData.commentary || currentProject.commentary,
       lastUpdated: new Date().toLocaleDateString('en-GB', {
@@ -709,6 +714,221 @@ export async function archiveProfessionHistoryEntry(
         historyId
       },
       'Failed to archive profession history entry'
+    )
+    throw error
+  }
+}
+
+// New: Get a single assessment for a standard/profession
+export async function getAssessment(
+  projectId,
+  standardId,
+  professionId,
+  request
+) {
+  const endpoint = `/projects/${projectId}/standards/${standardId}/professions/${professionId}/assessment`
+  logger.info({ endpoint }, 'Fetching assessment from API')
+
+  try {
+    let data
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      // Fall back to unauthenticated fetcher
+      data = await fetcher(endpoint)
+    }
+
+    if (!data) {
+      logger.warn({ endpoint }, 'No assessment data returned')
+      return null
+    }
+
+    logger.info({ endpoint }, 'Assessment retrieved successfully')
+    return data
+  } catch (error) {
+    // Handle 404 as expected behavior (assessment doesn't exist yet)
+    if (error.message?.includes('Not Found') || error.status === 404) {
+      logger.info({ endpoint }, 'Assessment not found - will create new one')
+      return null
+    }
+
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        endpoint
+      },
+      'Failed to fetch assessment'
+    )
+    throw error
+  }
+}
+
+// New: Update (or create) an assessment
+export async function updateAssessment(
+  projectId,
+  standardId,
+  professionId,
+  assessmentData,
+  request
+) {
+  const endpoint = `/projects/${projectId}/standards/${standardId}/professions/${professionId}/assessment`
+  logger.info({ endpoint, assessmentData }, 'Updating assessment via API')
+
+  try {
+    let result
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      result = await authedFetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(assessmentData),
+        headers: { 'Content-Type': 'application/json' }
+      })
+    } else {
+      // Fall back to unauthenticated fetcher
+      result = await fetcher(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(assessmentData),
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    logger.info({ endpoint }, 'Assessment updated successfully')
+    return result
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        endpoint,
+        assessmentData
+      },
+      'Failed to update assessment'
+    )
+    throw error
+  }
+}
+
+// New: Get assessment history for a specific profession/standard combination
+export async function getAssessmentHistory(
+  projectId,
+  standardId,
+  professionId,
+  request
+) {
+  try {
+    const endpoint = `/projects/${projectId}/standards/${standardId}/professions/${professionId}/history`
+    logger.info(
+      { projectId, standardId, professionId },
+      'Fetching assessment history from API'
+    )
+
+    let data
+    if (request) {
+      // Use authenticated fetcher if request is provided
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      // Fall back to unauthenticated fetcher
+      data = await fetcher(endpoint)
+    }
+
+    if (!data) {
+      logger.warn('No assessment history found', {
+        projectId,
+        standardId,
+        professionId
+      })
+      return []
+    }
+
+    logger.info(
+      { historyCount: data.length },
+      'Assessment history retrieved successfully'
+    )
+    return data
+  } catch (error) {
+    // Handle 404 as expected behavior (endpoint doesn't exist yet)
+    if (error.message?.includes('Not Found') || error.status === 404) {
+      logger.info(
+        { projectId, standardId, professionId },
+        'Assessment history endpoint not available yet - returning empty array'
+      )
+      return []
+    }
+
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        projectId,
+        standardId,
+        professionId
+      },
+      'Failed to fetch assessment history'
+    )
+    throw error
+  }
+}
+
+// New: Archive an assessment history entry
+export async function archiveAssessmentHistoryEntry(
+  projectId,
+  standardId,
+  professionId,
+  historyId,
+  request
+) {
+  try {
+    const endpoint = `/projects/${projectId}/standards/${standardId}/professions/${professionId}/history/${historyId}/archive`
+    logger.info(
+      { projectId, standardId, professionId, historyId },
+      'Archiving assessment history entry via API'
+    )
+
+    let result
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      result = await authedFetch(endpoint, {
+        method: 'POST'
+      })
+    } else {
+      result = await fetcher(endpoint, {
+        method: 'POST'
+      })
+    }
+
+    logger.info('Assessment history entry archived successfully')
+    return result
+  } catch (error) {
+    // Handle 404 as expected behavior (endpoint doesn't exist yet)
+    if (error.message?.includes('Not Found') || error.status === 404) {
+      logger.warn(
+        { projectId, standardId, professionId, historyId },
+        'Archive assessment endpoint not available yet'
+      )
+      throw new Error(
+        'Archive functionality is not yet available on the backend'
+      )
+    }
+
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        projectId,
+        standardId,
+        professionId,
+        historyId
+      },
+      'Failed to archive assessment history entry'
     )
     throw error
   }

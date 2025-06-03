@@ -80,6 +80,12 @@
       
       {% if not isTestEnvironment %}
       <div class="govuk-button-group">
+        <form method="POST" action="/admin/standards/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
+          <button class="govuk-button" data-module="govuk-button">
+            Add Service Standards (Dev Only)
+          </button>
+        </form>
+        
         <div class="govuk-!-display-inline">
           {{ govukButton({
             text: "Delete All Standards",

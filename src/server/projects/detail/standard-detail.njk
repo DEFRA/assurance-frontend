@@ -1,0 +1,184 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "status-tag.njk" import renderStatusTag %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Projects",
+        href: "/"
+      },
+      {
+        text: project.name,
+        href: "/projects/" + project.id
+      },
+      {
+        text: "Standard " + standard.number
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block content %}
+  {% if notification %}
+    <div class="govuk-notification-banner govuk-notification-banner--success" role="alert" aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+      <div class="govuk-notification-banner__header">
+        <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+          Success
+        </h2>
+      </div>
+      <div class="govuk-notification-banner__content">
+        <p class="govuk-notification-banner__heading">{{ notification }}</p>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h1 class="govuk-heading-xl">
+        Standard {{ standard.number }}: {{ standard.name }}
+      </h1>
+      
+      <div class="govuk-grid-row govuk-!-margin-bottom-4">
+        <div class="govuk-grid-column-two-thirds">
+          <h2 class="govuk-heading-m inline-heading">
+            Project: <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
+          </h2>
+          
+          {% if standardSummary %}
+            <p class="govuk-body-m">
+              <strong>Overall Status:</strong> 
+              {{ renderStatusTag(standardSummary.aggregatedStatus) }}
+            </p>
+            
+            {% if standardSummary.lastUpdated %}
+              <p class="govuk-body-s">
+                Last updated: {{ standardSummary.lastUpdated | formatDate }}
+              </p>
+            {% endif %}
+          {% else %}
+            <p class="govuk-body-m">
+              <strong>Overall Status:</strong> 
+              {{ renderStatusTag('NOT_ASSESSED') }}
+            </p>
+          {% endif %}
+        </div>
+        
+        <div class="govuk-grid-column-one-third">
+          {% if isAuthenticated %}
+            {{ govukButton({
+              text: "Add Assessment",
+              href: "/projects/" + project.id + "/assessment",
+              classes: "govuk-button--secondary"
+            }) }}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      {% if standard.description %}
+        {{ govukInsetText({
+          html: '<p class="govuk-body">' + standard.description + '</p>'
+        }) }}
+      {% endif %}
+
+      <h2 class="govuk-heading-m">Profession Assessments</h2>
+      
+      {% if assessments and assessments.length > 0 %}
+        <table class="govuk-table">
+          <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+              <th scope="col" class="govuk-table__header">Profession</th>
+              <th scope="col" class="govuk-table__header">Status</th>
+              <th scope="col" class="govuk-table__header">Commentary</th>
+              <th scope="col" class="govuk-table__header">Last Updated</th>
+              {% if isAuthenticated %}
+                <th scope="col" class="govuk-table__header">Actions</th>
+              {% else %}
+                <th scope="col" class="govuk-table__header">History</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body">
+            {% for assessment in assessments %}
+              <tr class="govuk-table__row">
+                <td class="govuk-table__cell">
+                  <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ assessment.professionId }}/history" class="govuk-link">
+                    {{ assessment.professionDisplayName }}
+                  </a>
+                </td>
+                <td class="govuk-table__cell">
+                  {{ renderStatusTag(assessment.status or 'NOT_UPDATED') }}
+                </td>
+                <td class="govuk-table__cell">
+                  {% if assessment.commentary %}
+                    {{ assessment.commentary }}
+                  {% else %}
+                    <em>No commentary provided</em>
+                  {% endif %}
+                </td>
+                <td class="govuk-table__cell">
+                  {% if assessment.lastUpdated %}
+                    {{ assessment.lastUpdated | formatDate }}
+                  {% else %}
+                    <em>Not available</em>
+                  {% endif %}
+                </td>
+                {% if isAuthenticated %}
+                  <td class="govuk-table__cell">
+                    <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ assessment.professionId }}/history" class="govuk-link govuk-!-margin-right-2">View History</a>
+                    {% if assessment.mostRecentHistoryId %}
+                      <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ assessment.professionId }}/history/{{ assessment.mostRecentHistoryId }}/archive?returnTo=standard" class="govuk-link">Archive</a>
+                    {% endif %}
+                  </td>
+                {% else %}
+                  <td class="govuk-table__cell">
+                    <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ assessment.professionId }}/history" class="govuk-link">View History</a>
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="govuk-body">No profession assessments have been added for this standard yet.</p>
+        {% if isAuthenticated %}
+          <div class="govuk-!-margin-top-4">
+            {{ govukButton({
+              text: "Add First Assessment",
+              href: "/projects/" + project.id + "/assessment",
+              classes: "govuk-button--secondary"
+            }) }}
+          </div>
+        {% endif %}
+      {% endif %}
+
+      {% if standardSummary and standardSummary.aggregatedCommentary %}
+        <h2 class="govuk-heading-m">Summary</h2>
+        {{ govukInsetText({
+          html: '<p class="govuk-body">' + standardSummary.aggregatedCommentary + '</p>'
+        }) }}
+      {% endif %}
+
+    </div>
+  </div>
+{% endblock %}
+
+{% block pageStyles %}
+<style>
+  .inline-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+</style>
+{% endblock %} 

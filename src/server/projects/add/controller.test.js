@@ -1,7 +1,6 @@
 import { addProjectController } from './controller.js'
 import { createProject } from '~/src/server/services/projects.js'
 import Boom from '@hapi/boom'
-import { STATUS, STATUS_LABEL } from '~/src/server/constants/status.js'
 
 jest.mock('~/src/server/services/projects.js')
 
@@ -13,7 +12,9 @@ describe('Add Project controller', () => {
     mockRequest = {
       payload: {
         name: 'New Project',
-        status: STATUS.GREEN,
+        phase: 'Discovery',
+        defCode: 'TEST001',
+        status: 'GREEN',
         commentary: 'Initial setup'
       },
       logger: {
@@ -35,11 +36,22 @@ describe('Add Project controller', () => {
       // Arrange
       const expectedStatusOptions = [
         { text: 'Select status', value: '' },
-        ...Object.entries(STATUS_LABEL).map(([value, text]) => ({
-          value,
-          text
-        }))
+        { value: 'RED', text: 'Red' },
+        { value: 'AMBER_RED', text: 'Amber/Red' },
+        { value: 'AMBER', text: 'Amber' },
+        { value: 'GREEN_AMBER', text: 'Green/Amber' },
+        { value: 'GREEN', text: 'Green' }
       ]
+
+      const expectedPhaseOptions = [
+        { text: 'Select phase', value: '' },
+        { value: 'Discovery', text: 'Discovery' },
+        { value: 'Alpha', text: 'Alpha' },
+        { value: 'Private Beta', text: 'Private Beta' },
+        { value: 'Public Beta', text: 'Public Beta' },
+        { value: 'Live', text: 'Live' }
+      ]
+
       // Act
       const result = await addProjectController.get({}, mockH)
 
@@ -52,8 +64,7 @@ describe('Add Project controller', () => {
           values: {},
           errors: {},
           statusOptions: expectedStatusOptions,
-          statusClassMap: expect.any(Object),
-          statusLabelMap: expect.any(Object)
+          phaseOptions: expectedPhaseOptions
         })
       )
       expect(result).toBe('view-response')
@@ -66,7 +77,8 @@ describe('Add Project controller', () => {
       const invalidRequest = {
         payload: {
           name: '',
-          status: 'INVALID',
+          phase: '',
+          status: '',
           commentary: ''
         },
         logger: {
@@ -82,7 +94,12 @@ describe('Add Project controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/add/index',
         expect.objectContaining({
-          errors: expect.any(Object),
+          errors: expect.objectContaining({
+            name: true,
+            phase: true,
+            status: true,
+            commentary: true
+          }),
           values: invalidRequest.payload,
           errorMessage: 'Please fill in all required fields'
         })
@@ -117,7 +134,33 @@ describe('Add Project controller', () => {
       // Act & Assert
       await expect(
         addProjectController.post(mockRequest, mockH)
-      ).rejects.toThrow(Boom.internal('Unexpected error'))
+      ).rejects.toThrow(
+        Boom.boomify(new Error('Unexpected error'), { statusCode: 500 })
+      )
+    })
+
+    test('should create project successfully', async () => {
+      // Arrange
+      createProject.mockResolvedValue({ id: '123' })
+
+      // Act
+      const result = await addProjectController.post(mockRequest, mockH)
+
+      // Assert
+      expect(createProject).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'New Project',
+          phase: 'Discovery',
+          defCode: 'TEST001',
+          status: 'GREEN',
+          commentary: 'Initial setup'
+        }),
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/?notification=Project created successfully'
+      )
+      expect(result).toBe('redirect-response')
     })
   })
 })

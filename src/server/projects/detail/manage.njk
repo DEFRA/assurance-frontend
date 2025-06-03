@@ -7,6 +7,8 @@
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% block content %}
+  <h1 class="govuk-heading-xl">Manage Project</h1>
+  
   {% if errorMessage %}
     {{ govukErrorSummary({
       titleText: "There is a problem",
@@ -26,7 +28,7 @@
       },
       id: "name",
       name: "name",
-      value: values.name,
+      value: values.name or project.name,
       errorMessage: errors.name,
       required: true
     }) }}
@@ -39,7 +41,7 @@
         classes: "govuk-label--m"
       },
       items: phaseOptions,
-      value: values.phase,
+      value: values.phase or project.phase,
       errorMessage: errors.phase,
       required: true
     }) }}
@@ -50,12 +52,13 @@
         classes: "govuk-label--m"
       },
       hint: {
-        text: "Project identifier code (optional)"
+        text: "Project identifier code"
       },
       id: "defCode",
       name: "defCode",
-      value: values.defCode,
-      errorMessage: errors.defCode
+      value: values.defCode or project.defCode,
+      errorMessage: errors.defCode,
+      required: true
     }) }}
 
     {{ govukSelect({
@@ -66,7 +69,7 @@
         classes: "govuk-label--m"
       },
       items: statusOptions,
-      value: values.status,
+      value: values.status or project.status,
       errorMessage: errors.status,
       required: true
     }) }}
@@ -78,13 +81,21 @@
         text: "Project commentary",
         classes: "govuk-label--m"
       },
-      value: values.commentary,
+      value: values.commentary or project.commentary,
       errorMessage: errors.commentary,
       required: true
     }) }}
 
-    {{ govukButton({
-      text: "Add project"
-    }) }}
+    <div class="govuk-button-group">
+      {{ govukButton({
+        text: "Save changes"
+      }) }}
+
+      {{ govukButton({
+        text: "Cancel",
+        href: "/projects/" + project.id,
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
   </form>
 {% endblock %} 

@@ -227,7 +227,7 @@ describe('Projects controller', () => {
   })
 
   describe('get', () => {
-    it('should return project details view', async () => {
+    test('should return project details view', async () => {
       // Arrange
       const mockProject = {
         id: '1',
@@ -235,10 +235,11 @@ describe('Projects controller', () => {
         standards: [{ standardId: '1', status: 'GREEN' }],
         professions: []
       }
+      const mockStandards = [{ status: 'GREEN' }]
+      const mockProfessions = []
       mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetServiceStandards.mockResolvedValue([])
-      mockGetProjectHistory.mockResolvedValue([])
-      mockGetProfessions.mockResolvedValue([])
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
+      mockGetProfessions.mockResolvedValue(mockProfessions)
 
       // Act
       await projectsController.get(
@@ -267,9 +268,8 @@ describe('Projects controller', () => {
           pageTitle: 'Test Project | DDTS Assurance',
           heading: 'Test Project',
           project: mockProject,
-          projectHistory: [],
-          standards: [{ status: 'GREEN' }],
-          tab: 'project-engagement',
+          standards: mockStandards,
+          professions: mockProfessions,
           isAuthenticated: true,
           statusClassMap: expect.any(Object),
           statusLabelMap: expect.any(Object)
@@ -814,7 +814,7 @@ describe('Projects controller', () => {
       const mockProject = {
         id: '1',
         name: 'Test Project',
-        standards: [{ standardId: '1', status: 'GREEN' }]
+        standardsSummary: [{ standardId: '1', status: 'GREEN' }]
       }
       const mockHistory = [
         { timestamp: '2024-02-15', changes: { status: { to: 'GREEN' } } }
@@ -838,7 +838,7 @@ describe('Projects controller', () => {
           pageTitle: 'Standard 1 History | Test Project',
           heading: 'Standard 1 History',
           project: mockProject,
-          standard: mockProject.standards[0],
+          standard: mockProject.standardsSummary[0],
           history: mockHistory
         }
       )
@@ -868,7 +868,7 @@ describe('Projects controller', () => {
       const mockProject = {
         id: '1',
         name: 'Test Project',
-        standards: []
+        standardsSummary: []
       }
       mockGetProjectById.mockResolvedValue(mockProject)
 
@@ -928,17 +928,8 @@ describe('Projects controller', () => {
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('projects/detail/standards', {
         pageTitle: 'Standards Progress | Test Project',
-        project: {
-          ...mockProject,
-          standards: [
-            {
-              standardId: '1',
-              status: 'GREEN',
-              number: 1,
-              name: 'Standard 1'
-            }
-          ]
-        }
+        project: mockProject,
+        standards: mockStandards
       })
     })
 

@@ -16,6 +16,7 @@
             <th scope="col" class="govuk-table__header">Service Standard</th>
             <th scope="col" class="govuk-table__header">Status</th>
             <th scope="col" class="govuk-table__header">Commentary</th>
+            <th scope="col" class="govuk-table__header">Actions</th>
           </tr>
         </thead>
         <tbody class="govuk-table__body">
@@ -44,6 +45,14 @@
               <td class="govuk-table__cell">
                 {{ standard.commentary }}
               </td>
+              <td class="govuk-table__cell">
+                {# Example: show a link for each profession to the assessment update screen #}
+                {% for profession in project.professions %}
+                  <a href="/projects/{{ project.id }}/standards/{{ standard.standardId }}/professions/{{ profession.professionId }}/assessment" class="govuk-link govuk-link--no-visited-state">
+                    Update as {{ profession.name or profession.professionId }}
+                  </a><br>
+                {% endfor %}
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -56,4 +65,4 @@
       }) }}
     </div>
   </div>
-{% endblock %} 
+{% endblock %}

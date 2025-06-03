@@ -1,0 +1,185 @@
+{% extends "layouts/page.njk" %}
+
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-message/macro.njk" import govukErrorMessage %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Add Assessment</h1>
+      
+      {% if error %}
+        <div class="govuk-error-summary" data-module="govuk-error-summary">
+          <div role="alert">
+            <h2 class="govuk-error-summary__title">There is a problem</h2>
+            <div class="govuk-error-summary__body">
+              <ul class="govuk-list govuk-error-summary__list">
+                <li><a href="#professionId">{{ error }}</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      {{ govukInsetText({
+        text: "Standards available in the dropdown will be filtered based on your selected profession and the project's current phase (" + projectPhase + ")."
+      }) }}
+
+      <form method="POST" action="/projects/{{ projectId }}/assessment" novalidate>
+        
+        {{ govukSelect({
+          id: "professionId",
+          name: "professionId",
+          label: {
+            text: "Select Profession",
+            classes: "govuk-label--m"
+          },
+          items: professionItems,
+          value: selectedValues.professionId if selectedValues else "",
+          errorMessage: { text: error } if error else false
+        }) }}
+
+        {{ govukSelect({
+          id: "standardId", 
+          name: "standardId",
+          label: {
+            text: "Select Service Standard",
+            classes: "govuk-label--m"
+          },
+          items: standardItems,
+          value: selectedValues.standardId if selectedValues else "",
+          hint: {
+            text: "Only standards relevant to the selected profession in this project phase are shown."
+          }
+        }) }}
+
+        {{ govukSelect({
+          id: "status",
+          name: "status", 
+          label: {
+            text: "Assessment Status",
+            classes: "govuk-label--m"
+          },
+          items: [
+            {
+              value: "",
+              text: "Choose status",
+              selected: not (selectedValues and selectedValues.status)
+            },
+            {
+              value: "RED",
+              text: "Red",
+              selected: selectedValues and selectedValues.status === "RED"
+            },
+            {
+              value: "AMBER_RED", 
+              text: "Amber/Red",
+              selected: selectedValues and selectedValues.status === "AMBER_RED"
+            },
+            {
+              value: "AMBER",
+              text: "Amber", 
+              selected: selectedValues and selectedValues.status === "AMBER"
+            },
+            {
+              value: "GREEN_AMBER",
+              text: "Green/Amber",
+              selected: selectedValues and selectedValues.status === "GREEN_AMBER"
+            },
+            {
+              value: "GREEN",
+              text: "Green",
+              selected: selectedValues and selectedValues.status === "GREEN"
+            }
+          ],
+          value: selectedValues.status if selectedValues else ""
+        }) }}
+
+        {{ govukTextarea({
+          name: "commentary",
+          id: "commentary",
+          label: {
+            text: "Commentary",
+            classes: "govuk-label--m"
+          },
+          hint: {
+            text: "Provide details about this assessment"
+          },
+          value: selectedValues.commentary if selectedValues else ""
+        }) }}
+
+        <div class="govuk-button-group">
+          {{ govukButton({
+            text: "Save Assessment"
+          }) }}
+
+          {{ govukButton({
+            text: "Cancel",
+            href: "/projects/" + projectId,
+            classes: "govuk-button--secondary"
+          }) }}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Pass data from server to client
+    const allStandards = {{ allStandards | safe }};
+    const projectPhase = "{{ projectPhase }}";
+    const professionStandardMatrix = {{ professionStandardMatrix | safe }};
+
+    // Get DOM elements
+    const professionSelect = document.getElementById('professionId');
+    const standardSelect = document.getElementById('standardId');
+
+    // Function to update standards dropdown based on selected profession
+    function updateStandardsDropdown() {
+      const selectedProfession = professionSelect.value;
+      
+      // Clear current options
+      standardSelect.innerHTML = '<option value="">Choose a service standard</option>';
+      
+      if (!selectedProfession || !projectPhase) {
+        return;
+      }
+
+      // Get available standards for this profession and phase
+      const availableStandardNumbers = professionStandardMatrix[projectPhase]?.[selectedProfession] || [];
+      
+      // Filter and add standards
+      const filteredStandards = allStandards.filter(standard => {
+        const standardNumber = standard.number || parseInt(standard.name?.match(/^\d+/)?.[0]);
+        return availableStandardNumbers.includes(standardNumber);
+      });
+
+      // Add filtered standards to dropdown
+      filteredStandards.forEach(standard => {
+        const option = document.createElement('option');
+        option.value = standard.id;
+        option.textContent = `${standard.number}. ${standard.name}`;
+        standardSelect.appendChild(option);
+      });
+
+      // If no standards available, show message
+      if (filteredStandards.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No standards available for this profession in this phase';
+        option.disabled = true;
+        standardSelect.appendChild(option);
+      }
+    }
+
+    // Add event listener to profession dropdown
+    professionSelect.addEventListener('change', updateStandardsDropdown);
+
+    // Initialize on page load if profession is pre-selected
+    if (professionSelect.value) {
+      updateStandardsDropdown();
+    }
+  </script>
+{% endblock %}

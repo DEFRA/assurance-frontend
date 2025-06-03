@@ -102,6 +102,18 @@ export const admin = {
             },
             pre: [{ method: requireRole('admin') }]
           }
+        },
+        {
+          method: 'POST',
+          path: '/admin/standards/seed-dev',
+          handler: adminController.seedStandardsDev,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
         }
       ]
 

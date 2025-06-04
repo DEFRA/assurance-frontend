@@ -4,6 +4,7 @@
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "status-tag.njk" import renderStatusTag %}
 
 {% block beforeContent %}
@@ -79,108 +80,119 @@
   </div>
 
   <div class="govuk-grid-row">
-    <div class="govuk-grid-column-full">
+    <div class="govuk-grid-column-one-half">
       {% if assessments and assessments.length > 0 %}
-        <ul class="govuk-list">
-          {% for assessment in assessments %}
-            <li class="profession-assessment govuk-!-margin-bottom-6">
-              <h3 class="govuk-heading-s govuk-!-margin-bottom-3">
-                {{ assessment.professionDisplayName }}
-              </h3>
-              
-              <div class="govuk-!-margin-bottom-2">
-                Compliance confidence: {{ renderStatusTag(assessment.status or 'NOT_UPDATED') }}
-              </div>
-              
-              {% if assessment.commentary %}
-                <div class="govuk-!-margin-bottom-2">
-                  Commentary: {{ assessment.commentary }}
-                </div>
-              {% endif %}
-              
-              <div class="govuk-body-s govuk-!-margin-bottom-2">
-                Last updated: 
-                {% if assessment.lastUpdated %}
-                  {{ assessment.lastUpdated | formatDate }}
-                {% else %}
-                  Not available
-                {% endif %}
-              </div>
-              
-              {% if isAuthenticated and assessment.mostRecentHistoryId %}
-                <div class="profession-actions">
-                  <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ assessment.professionId }}/history/{{ assessment.mostRecentHistoryId }}/archive?returnTo=standard" class="govuk-link">Archive</a>
-                </div>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
+        {% for assessment in assessments %}
+          <div class="govuk-!-margin-bottom-6">
+            {{ govukSummaryList({
+              card: {
+                title: {
+                  text: assessment.professionDisplayName
+                },
+                actions: {
+                  items: [
+                    {
+                      href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history/" + assessment.mostRecentHistoryId + "/archive?returnTo=standard",
+                      text: "Archive",
+                      visuallyHiddenText: "assessment for " + assessment.professionDisplayName
+                    }
+                  ] if (isAuthenticated and assessment.mostRecentHistoryId) else []
+                }
+              },
+              rows: [
+                {
+                  key: { text: "Compliance confidence" },
+                  value: { html: renderStatusTag(assessment.status or 'NOT_UPDATED') }
+                },
+                {
+                  key: { text: "Commentary" },
+                  value: { text: assessment.commentary or "No commentary provided" }
+                },
+                {
+                  key: { text: "Last updated" },
+                  value: { text: (assessment.lastUpdated | formatDate) if assessment.lastUpdated else "Not available" }
+                }
+              ]
+            }) }}
+          </div>
+        {% endfor %}
       {% else %}
-        <div class="govuk-inset-text">
-          <p class="govuk-body">No profession assessments have been added for this standard yet.</p>
-        </div>
+        {{ govukInsetText({
+          text: "No profession assessments have been added for this standard yet."
+        }) }}
       {% endif %}
-
     </div>
   </div>
 {% endblock %}
 
 {% block pageStyles %}
 <style>
-  .inline-heading {
+  /* Ensure compliance confidence displays on a single line */
+  .govuk-summary-list__row {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-wrap: nowrap;
   }
-
-  .profession-assessment {
-    border-left: 4px solid #b1b4b6;
-    padding-left: 20px;
-    margin-left: 10px;
-    background-color: #f8f8f8;
-    padding: 20px;
-    border-radius: 4px;
-    position: relative;
-    counter-increment: profession-counter;
-    border-bottom: 1px solid #b1b4b6;
-    margin-bottom: 30px !important;
+  
+  .govuk-summary-list__key {
+    flex: 0 0 auto;
+    min-width: 160px;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-
-  .profession-assessment:last-child {
-    border-bottom: none;
+  
+  .govuk-summary-list__value {
+    flex: 1;
+    margin-left: 20px;
+    min-width: 0;
   }
-
-  .profession-assessment::before {
-    content: counter(profession-counter);
-    position: absolute;
-    left: -15px;
-    top: 20px;
-    background: #1d70b8;
-    color: white;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 16px;
+  
+  /* Ensure status tags don't wrap */
+  .govuk-tag {
+    white-space: nowrap;
   }
-
-  .govuk-list {
-    counter-reset: profession-counter;
+  
+  /* Override GOV.UK default summary list responsive behavior */
+  @media (min-width: 769px) {
+    .govuk-summary-list__key {
+      border-bottom: 0;
+      padding-bottom: 0;
+      width: auto;
+      flex: 0 0 160px;
+    }
+    
+    .govuk-summary-list__value {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
   }
-
-  .profession-assessment h3 {
-    border-bottom: 1px solid #b1b4b6;
-    padding-bottom: 8px;
-  }
-
-  .profession-actions {
-    margin-top: 15px;
-    padding-top: 10px;
-    border-top: 1px solid #e5e5e5;
+  
+  /* Responsive adjustments for smaller screens */
+  @media (max-width: 768px) {
+    .govuk-grid-column-one-half {
+      width: 100%;
+    }
+    
+    .govuk-summary-list__row {
+      flex-wrap: wrap;
+    }
+    
+    .govuk-summary-list__key {
+      width: 100%;
+      margin-bottom: 5px;
+      min-width: auto;
+      max-width: none;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: initial;
+    }
+    
+    .govuk-summary-list__value {
+      width: 100%;
+      margin-left: 0;
+    }
   }
 </style>
 {% endblock %} 

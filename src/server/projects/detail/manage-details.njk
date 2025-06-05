@@ -1,0 +1,99 @@
+{% extends "layouts/page.njk" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Projects",
+        href: "/"
+      },
+      {
+        text: project.name,
+        href: "/projects/" + project.id
+      },
+      {
+        text: "Manage project",
+        href: "/projects/" + project.id + "/manage"
+      },
+      {
+        text: "Update project details"
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block content %}
+  <h1 class="govuk-heading-xl">Update Project Details</h1>
+  <p class="govuk-body-l">{{ project.name }}</p>
+  
+  {% if errorMessage %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: [
+        {
+          text: errorMessage
+        }
+      ]
+    }) }}
+  {% endif %}
+
+  <form method="POST" novalidate>
+    {{ govukInput({
+      label: {
+        text: "Project name",
+        classes: "govuk-label--m"
+      },
+      id: "name",
+      name: "name",
+      value: values.name or project.name,
+      errorMessage: errors.name,
+      required: true
+    }) }}
+
+    {{ govukSelect({
+      id: "phase",
+      name: "phase",
+      label: {
+        text: "GDS Phase",
+        classes: "govuk-label--m"
+      },
+      items: phaseOptions,
+      value: values.phase or project.phase,
+      errorMessage: errors.phase,
+      required: true
+    }) }}
+
+    {{ govukInput({
+      label: {
+        text: "Project ID",
+        classes: "govuk-label--m"
+      },
+      hint: {
+        text: "Project identifier code"
+      },
+      id: "defCode",
+      name: "defCode",
+      value: values.defCode or project.defCode,
+      errorMessage: errors.defCode,
+      required: true
+    }) }}
+
+    <div class="govuk-button-group">
+      {{ govukButton({
+        text: "Save changes"
+      }) }}
+
+      {{ govukButton({
+        text: "Cancel",
+        href: "/projects/" + project.id,
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
+  </form>
+{% endblock %} 

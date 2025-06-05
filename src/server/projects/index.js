@@ -211,6 +211,30 @@ export const projects = {
               mode: 'required'
             }
           }
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/manage/status',
+          handler: projectsController.getManageProjectStatus,
+          options: { auth: { strategy: 'session', mode: 'required' } }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/manage/status',
+          handler: projectsController.postManageProjectStatus,
+          options: { auth: { strategy: 'session', mode: 'required' } }
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/manage/details',
+          handler: projectsController.getManageProjectDetails,
+          options: { auth: { strategy: 'session', mode: 'required' } }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/manage/details',
+          handler: projectsController.postManageProjectDetails,
+          options: { auth: { strategy: 'session', mode: 'required' } }
         }
       ])
     }

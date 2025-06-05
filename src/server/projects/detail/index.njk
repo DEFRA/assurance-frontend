@@ -50,7 +50,7 @@
       <!-- Full width inset -->
       {% set commentaryContent %}
         {% if project.commentary %}
-          <p class="govuk-body">{{ project.commentary }}</p>
+          <div class="govuk-body" style="white-space: pre-wrap;">{{ project.commentary }}</div>
         {% endif %}
         {% if project.lastUpdated %}
           <p class="govuk-body-s govuk-!-margin-bottom-0">Last updated: {{ project.lastUpdated | formatDate }}</p>
@@ -149,9 +149,23 @@
                   {% endif %}
                   
                   {% if entry.changes.commentary %}
-                    <p class="govuk-body govuk-!-margin-bottom-2">
-                      {{ entry.changes.commentary.to }}
-                    </p>
+                    {% set displayCommentary = entry.changes.commentary.to %}
+                    {% if "Path to green:" in displayCommentary %}
+                      {% set parts = displayCommentary.split("Path to green:") %}
+                      {% set issue = parts[0].trim() if parts[0] else "" %}
+                      {% set path = parts[1].trim() if parts[1] else "" %}
+                      
+                      {% if issue and path %}
+                        {% set displayCommentary = issue + "\r\n\r\n" + path %}
+                      {% elif issue %}
+                        {% set displayCommentary = issue %}
+                      {% elif path %}
+                        {% set displayCommentary = path %}
+                      {% endif %}
+                    {% endif %}
+                    <div class="govuk-body govuk-!-margin-bottom-2" style="white-space: pre-wrap;">
+                      {{ displayCommentary }}
+                    </div>
                   {% endif %}
                   
                   {% if isAuthenticated and (entry.changes.status or entry.changes.commentary) %}
@@ -255,26 +269,6 @@
     margin: 0 0 10px 0;
     font-size: 19px;
     font-weight: 700;
-  }
-
-  .timeline__event-meta {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    flex-wrap: wrap;
-    margin-bottom: 15px;
-  }
-
-  .timeline__event-user {
-    font-size: 12px;
-    line-height: 1.2;
-    padding: 3px 6px;
-  }
-
-  .timeline__event-date {
-    font-size: 14px;
-    color: #626a6e;
-    font-weight: 600;
   }
 
   .timeline__event-content {

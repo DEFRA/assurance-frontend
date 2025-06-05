@@ -103,18 +103,68 @@
           value: selectedValues.status if selectedValues else ""
         }) }}
 
-        {{ govukTextarea({
-          name: "commentary",
-          id: "commentary",
-          label: {
-            text: "Commentary",
-            classes: "govuk-label--m"
-          },
-          hint: {
-            text: "Provide details about this service standard"
-          },
-          value: selectedValues.commentary if selectedValues else ""
-        }) }}
+        <!-- Green status commentary -->
+        <div id="green-commentary" class="govuk-form-group" style="display: none;">
+          {{ govukTextarea({
+            name: "green-text",
+            id: "commentary-green",
+            label: {
+              text: "What's in place or being worked on?",
+              classes: "govuk-label--m"
+            },
+            hint: {
+              text: "What's in place or being worked on that demonstrates compliance"
+            },
+            value: (selectedValues.commentary if (selectedValues and selectedValues.status === "GREEN") else ""),
+            rows: 5
+          }) }}
+        </div>
+
+        <!-- Non-green status commentary (two fields) -->
+        <div id="non-green-commentary" class="govuk-form-group" style="display: none;">
+          {% set issueValue = "" %}
+          {% set pathValue = "" %}
+          {% if selectedValues and selectedValues.commentary and selectedValues.status !== "GREEN" %}
+            {% set commentaryParts = selectedValues.commentary.split('\n\nPath to green: ') %}
+            {% if commentaryParts.length > 1 %}
+              {% set issueValue = commentaryParts[0] %}
+              {% set pathValue = commentaryParts[1] %}
+            {% else %}
+              {% set issueValue = selectedValues.commentary %}
+            {% endif %}
+          {% endif %}
+          
+          {{ govukTextarea({
+            name: "issue-text",
+            id: "issue-description",
+            label: {
+              text: "Describe the issue",
+              classes: "govuk-label--m"
+            },
+            hint: {
+              text: "Describe the issue. Example: 'Team lacks content designer.'"
+            },
+            value: issueValue,
+            rows: 3
+          }) }}
+
+          {{ govukTextarea({
+            name: "path-text",
+            id: "path-to-green",
+            label: {
+              text: "Path to green",
+              classes: "govuk-label--m"
+            },
+            hint: {
+              text: "Path to green. Example: 'borrow content designer from Defra DDTS'"
+            },
+            value: pathValue,
+            rows: 3
+          }) }}
+        </div>
+
+        <!-- Hidden field for the actual commentary that gets sent to backend -->
+        <input type="hidden" name="commentary" id="final-commentary" value="{{ selectedValues.commentary if selectedValues else '' }}">
 
         <div class="govuk-button-group">
           {{ govukButton({
@@ -140,6 +190,10 @@
     // Get DOM elements
     const professionSelect = document.getElementById('professionId');
     const standardSelect = document.getElementById('standardId');
+    const statusSelect = document.getElementById('status');
+    const greenCommentary = document.getElementById('green-commentary');
+    const nonGreenCommentary = document.getElementById('non-green-commentary');
+    const form = document.querySelector('form');
 
     // Function to update standards dropdown based on selected profession
     function updateStandardsDropdown() {
@@ -179,12 +233,71 @@
       }
     }
 
-    // Add event listener to profession dropdown
-    professionSelect.addEventListener('change', updateStandardsDropdown);
+    // Function to show/hide commentary fields based on status
+    function updateCommentaryFields() {
+      const selectedStatus = statusSelect.value;
+      
+      if (selectedStatus === 'GREEN') {
+        greenCommentary.style.display = 'block';
+        nonGreenCommentary.style.display = 'none';
+      } else if (selectedStatus && selectedStatus !== '') {
+        greenCommentary.style.display = 'none';
+        nonGreenCommentary.style.display = 'block';
+      } else {
+        greenCommentary.style.display = 'none';
+        nonGreenCommentary.style.display = 'none';
+      }
+    }
 
-    // Initialize on page load if profession is pre-selected
+    // Function to combine commentary fields before submission
+    function combineCommentaryFields() {
+      const selectedStatus = statusSelect.value;
+      const finalCommentaryField = document.getElementById('final-commentary');
+      
+      if (selectedStatus === 'GREEN') {
+        // For green status, use the single commentary field
+        const greenText = document.getElementById('commentary-green').value;
+        finalCommentaryField.value = greenText;
+      } else if (selectedStatus && selectedStatus !== '') {
+        // For non-green status, combine the two fields
+        const issueText = document.getElementById('issue-description').value;
+        const pathText = document.getElementById('path-to-green').value;
+        
+        let combinedText = '';
+        if (issueText.trim()) {
+          combinedText += issueText.trim();
+        }
+        if (pathText.trim()) {
+          if (combinedText) combinedText += '\n\nPath to green: ';
+          else combinedText += 'Path to green: ';
+          combinedText += pathText.trim();
+        }
+        
+        finalCommentaryField.value = combinedText;
+      }
+    }
+
+    // Function to update commentary field in real-time as user types
+    function updateCommentaryField() {
+      combineCommentaryFields();
+    }
+
+    // Add event listeners
+    professionSelect.addEventListener('change', updateStandardsDropdown);
+    statusSelect.addEventListener('change', updateCommentaryFields);
+    form.addEventListener('submit', combineCommentaryFields);
+
+    // Add real-time update listeners for commentary fields
+    document.getElementById('commentary-green').addEventListener('input', updateCommentaryField);
+    document.getElementById('issue-description').addEventListener('input', updateCommentaryField);
+    document.getElementById('path-to-green').addEventListener('input', updateCommentaryField);
+
+    // Initialize on page load
     if (professionSelect.value) {
       updateStandardsDropdown();
+    }
+    if (statusSelect.value) {
+      updateCommentaryFields();
     }
   </script>
 {% endblock %}

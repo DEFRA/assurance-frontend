@@ -94,7 +94,21 @@
               {% endif %}
               
               {% if change.changes.commentary %}
-                <p>{{ change.changes.commentary.to }}</p>
+                {% set displayCommentary = change.changes.commentary.to %}
+                {% if "Path to green:" in displayCommentary %}
+                  {% set parts = displayCommentary.split("Path to green:") %}
+                  {% set issue = parts[0].trim() if parts[0] else "" %}
+                  {% set path = parts[1].trim() if parts[1] else "" %}
+                  
+                  {% if issue and path %}
+                    {% set displayCommentary = issue + "\r\n\r\n" + path %}
+                  {% elif issue %}
+                    {% set displayCommentary = issue %}
+                  {% elif path %}
+                    {% set displayCommentary = path %}
+                  {% endif %}
+                {% endif %}
+                <div style="white-space: pre-wrap;">{{ displayCommentary }}</div>
               {% endif %}
               <p class="govuk-body-s">
                 <a href="/projects/{{ project.id }}/history/{{ change.id }}/archive?returnTo=edit" class="govuk-link govuk-link--no-visited-state">Archive this update</a>
@@ -191,7 +205,21 @@
               </p>
               
               {% if change.changes.commentary %}
-                <p>{{ change.changes.commentary.to }}</p>
+                {% set displayCommentary = change.changes.commentary.to %}
+                {% if "Path to green:" in displayCommentary %}
+                  {% set parts = displayCommentary.split("Path to green:") %}
+                  {% set issue = parts[0].trim() if parts[0] else "" %}
+                  {% set path = parts[1].trim() if parts[1] else "" %}
+                  
+                  {% if issue and path %}
+                    {% set displayCommentary = issue + "\r\n\r\n" + path %}
+                  {% elif issue %}
+                    {% set displayCommentary = issue %}
+                  {% elif path %}
+                    {% set displayCommentary = path %}
+                  {% endif %}
+                {% endif %}
+                <div style="white-space: pre-wrap;">{{ displayCommentary }}</div>
               {% endif %}
               <p class="govuk-body-s">
                 <a href="/projects/{{ project.id }}/professions/{{ change.professionId }}/history/{{ change.id }}/archive" class="govuk-link govuk-link--no-visited-state">Archive this update</a>

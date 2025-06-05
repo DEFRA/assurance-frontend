@@ -1,0 +1,87 @@
+{% extends "layouts/page.njk" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Projects",
+        href: "/"
+      },
+      {
+        text: project.name,
+        href: "/projects/" + project.id
+      },
+      {
+        text: "Manage project"
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block content %}
+  <h1 class="govuk-heading-xl">Manage Project</h1>
+  <p class="govuk-body-l">{{ project.name }}</p>
+  
+  {% if errorMessage %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: [
+        {
+          text: errorMessage
+        }
+      ]
+    }) }}
+  {% endif %}
+
+  <form method="POST" novalidate>
+    {{ govukRadios({
+      idPrefix: "updateType",
+      name: "updateType",
+      fieldset: {
+        legend: {
+          text: "What would you like to update?",
+          isPageHeading: false,
+          classes: "govuk-fieldset__legend--m"
+        }
+      },
+      hint: {
+        text: "Choose the type of update you want to make to this project"
+      },
+      items: [
+        {
+          value: "status",
+          text: "Update the project status and commentary", 
+          hint: {
+            text: "Change the current RAG status and add progress commentary. View standards requiring attention."
+          }
+        },
+        {
+          value: "details",
+          text: "Update project name, phase or ID",
+          hint: {
+            text: "Change the project name, GDS delivery phase, or project identifier code."
+          }
+        }
+      ],
+      value: values.updateType,
+      errorMessage: errors.updateType
+    }) }}
+
+    <div class="govuk-button-group">
+      {{ govukButton({
+        text: "Continue"
+      }) }}
+
+      {{ govukButton({
+        text: "Cancel",
+        href: "/projects/" + project.id,
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
+  </form>
+{% endblock %} 

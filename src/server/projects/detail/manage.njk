@@ -1,13 +1,38 @@
 {% extends "layouts/page.njk" %}
 
-{% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/select/macro.njk" import govukSelect %}
 {% from "govuk/components/textarea/macro.njk" import govukTextarea %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "status-tag.njk" import renderStatusTag %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Projects",
+        href: "/"
+      },
+      {
+        text: project.name,
+        href: "/projects/" + project.id
+      },
+      {
+        text: "Manage project",
+        href: "/projects/" + project.id + "/manage"
+      },
+      {
+        text: "Update status and commentary"
+      }
+    ]
+  }) }}
+{% endblock %}
 
 {% block content %}
-  <h1 class="govuk-heading-xl">Manage Project</h1>
+  <h1 class="govuk-heading-xl">Update Project Status and Commentary</h1>
+  <p class="govuk-body-l">{{ project.name }}</p>
   
   {% if errorMessage %}
     {{ govukErrorSummary({
@@ -21,46 +46,6 @@
   {% endif %}
 
   <form method="POST" novalidate>
-    {{ govukInput({
-      label: {
-        text: "Project name",
-        classes: "govuk-label--m"
-      },
-      id: "name",
-      name: "name",
-      value: values.name or project.name,
-      errorMessage: errors.name,
-      required: true
-    }) }}
-
-    {{ govukSelect({
-      id: "phase",
-      name: "phase",
-      label: {
-        text: "GDS Phase",
-        classes: "govuk-label--m"
-      },
-      items: phaseOptions,
-      value: values.phase or project.phase,
-      errorMessage: errors.phase,
-      required: true
-    }) }}
-
-    {{ govukInput({
-      label: {
-        text: "Project ID",
-        classes: "govuk-label--m"
-      },
-      hint: {
-        text: "Project identifier code"
-      },
-      id: "defCode",
-      name: "defCode",
-      value: values.defCode or project.defCode,
-      errorMessage: errors.defCode,
-      required: true
-    }) }}
-
     {{ govukSelect({
       id: "status",
       name: "status",
@@ -74,6 +59,81 @@
       required: true
     }) }}
 
+    {# Generate suggested update from standards at risk #}
+    {% set suggestedUpdate = "" %}
+    {% if standardsAtRisk and standardsAtRisk.length > 0 %}
+      {% set issues = [] %}
+      {% set paths = [] %}
+      
+      {# Process each comment to extract issue and path parts #}
+      {% for standard in standardsAtRisk %}
+        {% if standard.professionComments and standard.professionComments.length > 0 %}
+          {% for comment in standard.professionComments %}
+            {% if comment.commentary %}
+              {% if "Path to green:" in comment.commentary %}
+                {% set parts = comment.commentary.split("Path to green:") %}
+                {% if parts[0] %}
+                  {% set issue = parts[0] | trim %}
+                  {% if issue %}
+                    {# Remove trailing period to avoid double periods #}
+                    {% if issue.endsWith(".") %}
+                      {% set issue = issue.slice(0, -1) %}
+                    {% endif %}
+                    {% set issues = (issues.push(issue), issues) %}
+                  {% endif %}
+                {% endif %}
+                {% if parts[1] %}
+                  {% set path = parts[1] | trim %}
+                  {% if path %}
+                    {% set paths = (paths.push(path), paths) %}
+                  {% endif %}
+                {% endif %}
+              {% else %}
+                {# If no "Path to green:", treat whole commentary as issue #}
+                {% set cleanComment = comment.commentary | trim %}
+                {% if cleanComment.endsWith(".") %}
+                  {% set cleanComment = cleanComment.slice(0, -1) %}
+                {% endif %}
+                {% set issues = (issues.push(cleanComment), issues) %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+      
+      {# Build the suggested update text #}
+      {% if issues.length > 0 or paths.length > 0 %}
+        {% if issues.length > 0 %}
+          {% set suggestedUpdate = issues.join(". ") %}
+          {% if not suggestedUpdate.endsWith(".") %}
+            {% set suggestedUpdate = suggestedUpdate + "." %}
+          {% endif %}
+        {% endif %}
+        
+        {% if paths.length > 0 %}
+          {% if suggestedUpdate %}
+            {% set suggestedUpdate = suggestedUpdate + "<br><br>" %}
+          {% endif %}
+          {% for path in paths %}
+            {% set suggestedUpdate = suggestedUpdate + "• " + path %}
+            {% if not loop.last %}
+              {% set suggestedUpdate = suggestedUpdate + "<br>" %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      {% endif %}
+    {% endif %}
+
+    {# Build hint text in parts to avoid complex expression #}
+    {% set baseHint = "Update on project progress, challenges, and key developments. Consider addressing any concerning standards listed below.<br><br><strong>Formatting tips:</strong><br>• Type bullet points using • or -<br>• Press Enter to create line breaks<br>• Press Enter twice for paragraph spacing" %}
+    {% set suggestedHint = "" %}
+    {% if suggestedUpdate and suggestedUpdate != "" %}
+      {% set suggestedHint = "<br><br><strong>Suggested update based on concerning standards:</strong><br><br><em>" + suggestedUpdate + "</em>" %}
+    {% endif %}
+    
+    {# Build complete hint text #}
+    {% set completeHint = baseHint + suggestedHint %}
+
     {{ govukTextarea({
       name: "commentary",
       id: "commentary",
@@ -81,9 +141,13 @@
         text: "Project commentary",
         classes: "govuk-label--m"
       },
+      hint: {
+        html: completeHint
+      },
       value: values.commentary or project.commentary,
       errorMessage: errors.commentary,
-      required: true
+      required: true,
+      rows: 10
     }) }}
 
     <div class="govuk-button-group">
@@ -98,4 +162,115 @@
       }) }}
     </div>
   </form>
+
+  {# Standards at risk section #}
+  {% if standardsAtRisk and standardsAtRisk.length > 0 %}
+    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+    
+    <h2 class="govuk-heading-m">Standards Requiring Attention</h2>
+    <p class="govuk-body">The following standards have concerning assessments that you may want to address in your project commentary:</p>
+    
+    {# Build table data structure more simply #}
+    <div class="govuk-table-responsive">
+      <table class="govuk-table standards-at-risk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header">Service Standard</th>
+            <th scope="col" class="govuk-table__header">Status</th>
+            <th scope="col" class="govuk-table__header">Profession</th>
+            <th scope="col" class="govuk-table__header">Assessment Commentary</th>
+            <th scope="col" class="govuk-table__header">Last Updated</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for standard in standardsAtRisk %}
+            {% if standard.professionComments.length > 0 %}
+              {% for comment in standard.professionComments %}
+                <tr class="govuk-table__row">
+                  <td class="govuk-table__cell">
+                    <strong>Standard {{ standard.number }}</strong><br>{{ standard.name }}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {{ renderStatusTag(standard.status) }}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {{ comment.professionName }}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if comment.commentary %}
+                      {% if "Path to green:" in comment.commentary %}
+                        {% set parts = comment.commentary.split("Path to green:") %}
+                        {% set issue = parts[0].trim() if parts[0] else "" %}
+                        {% set path = parts[1].trim() if parts[1] else "" %}
+                        
+                        {% if issue and path %}
+                          {{ issue + "\r\n\r\n" + path }}
+                        {% elif issue %}
+                          {{ issue }}
+                        {% elif path %}
+                          {{ path }}
+                        {% endif %}
+                      {% else %}
+                        {{ comment.commentary }}
+                      {% endif %}
+                    {% else %}
+                      No commentary
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {{ (standard.lastUpdated | formatDate) if standard.lastUpdated else "Not available" }}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr class="govuk-table__row">
+                <td class="govuk-table__cell">
+                  <strong>Standard {{ standard.number }}</strong><br>{{ standard.name }}
+                </td>
+                <td class="govuk-table__cell">
+                  {{ renderStatusTag(standard.status) }}
+                </td>
+                <td class="govuk-table__cell" colspan="2">
+                  <span class="govuk-hint govuk-!-font-size-14">No assessments</span>
+                </td>
+                <td class="govuk-table__cell">
+                  {{ (standard.lastUpdated | formatDate) if standard.lastUpdated else "Not available" }}
+                </td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block pageStyles %}
+<style>
+  .standards-at-risk-table td {
+    vertical-align: top;
+  }
+  
+  /* Make the table more compact */
+  .standards-at-risk-table td,
+  .standards-at-risk-table th {
+    padding: 10px 20px 10px 0;
+  }
+  
+  .standards-at-risk-table th:last-child,
+  .standards-at-risk-table td:last-child {
+    padding-right: 0;
+  }
+  
+  /* Preserve line breaks in commentary */
+  .standards-at-risk-table td:nth-child(4) {
+    white-space: pre-wrap;
+  }
+</style>
+{% endblock %}
+
+{% block bodyEnd %}
+<script nonce="{{nonce}}">
+  // Simple script block - no complex template logic
+</script>
 {% endblock %} 

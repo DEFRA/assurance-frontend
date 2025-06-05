@@ -80,9 +80,28 @@
   </div>
 
   <div class="govuk-grid-row">
-    <div class="govuk-grid-column-one-half">
+    <div class="govuk-grid-column-two-thirds">
       {% if assessments and assessments.length > 0 %}
         {% for assessment in assessments %}
+          {% set displayCommentary = "No commentary provided" %}
+          {% if assessment.commentary %}
+            {% if "Path to green:" in assessment.commentary %}
+              {% set parts = assessment.commentary.split("Path to green:") %}
+              {% set issue = parts[0].trim() if parts[0] else "" %}
+              {% set path = parts[1].trim() if parts[1] else "" %}
+              
+              {% if issue and path %}
+                {% set displayCommentary = issue + "\r\n\r\n" + path %}
+              {% elif issue %}
+                {% set displayCommentary = issue %}
+              {% elif path %}
+                {% set displayCommentary = path %}
+              {% endif %}
+            {% else %}
+              {% set displayCommentary = assessment.commentary %}
+            {% endif %}
+          {% endif %}
+          
           <div class="govuk-!-margin-bottom-6">
             {{ govukSummaryList({
               card: {
@@ -106,7 +125,9 @@
                 },
                 {
                   key: { text: "Commentary" },
-                  value: { text: assessment.commentary or "No commentary provided" }
+                  value: { 
+                    html: displayCommentary
+                  }
                 },
                 {
                   key: { text: "Last updated" },

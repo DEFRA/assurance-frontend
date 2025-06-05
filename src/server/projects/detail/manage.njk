@@ -6,6 +6,7 @@
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
 {% from "status-tag.njk" import renderStatusTag %}
 
 {% block beforeContent %}
@@ -124,15 +125,8 @@
       {% endif %}
     {% endif %}
 
-    {# Build hint text in parts to avoid complex expression #}
+    {# Build hint text without the suggested update #}
     {% set baseHint = "Update on project progress, challenges, and key developments. Consider addressing any concerning standards listed below." %}
-    {% set suggestedHint = "" %}
-    {% if suggestedUpdate and suggestedUpdate != "" %}
-      {% set suggestedHint = "<br><br><strong>Suggested update based on concerning standards:</strong><br><br><em>" + suggestedUpdate + "</em>" %}
-    {% endif %}
-    
-    {# Build complete hint text #}
-    {% set completeHint = baseHint + suggestedHint %}
 
     {{ govukTextarea({
       name: "commentary",
@@ -142,13 +136,21 @@
         classes: "govuk-label--m"
       },
       hint: {
-        html: completeHint
+        html: baseHint
       },
       value: values.commentary or project.commentary,
       errorMessage: errors.commentary,
       required: true,
       rows: 10
     }) }}
+
+    {# Add Details component for suggested update if there is one #}
+    {% if suggestedUpdate and suggestedUpdate != "" %}
+      {{ govukDetails({
+        summaryText: "Suggested update based on concerning standards",
+        html: "<div style='font-style: italic;'>" + suggestedUpdate + "</div>"
+      }) }}
+    {% endif %}
 
     <div class="govuk-button-group">
       {{ govukButton({

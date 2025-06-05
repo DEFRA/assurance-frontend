@@ -125,7 +125,7 @@
     {% endif %}
 
     {# Build hint text in parts to avoid complex expression #}
-    {% set baseHint = "Update on project progress, challenges, and key developments. Consider addressing any concerning standards listed below.<br><br><strong>Formatting tips:</strong><br>• Type bullet points using • or -<br>• Press Enter to create line breaks<br>• Press Enter twice for paragraph spacing" %}
+    {% set baseHint = "Update on project progress, challenges, and key developments. Consider addressing any concerning standards listed below." %}
     {% set suggestedHint = "" %}
     {% if suggestedUpdate and suggestedUpdate != "" %}
       {% set suggestedHint = "<br><br><strong>Suggested update based on concerning standards:</strong><br><br><em>" + suggestedUpdate + "</em>" %}
@@ -200,8 +200,8 @@
                     {% if comment.commentary %}
                       {% if "Path to green:" in comment.commentary %}
                         {% set parts = comment.commentary.split("Path to green:") %}
-                        {% set issue = parts[0].trim() if parts[0] else "" %}
-                        {% set path = parts[1].trim() if parts[1] else "" %}
+                        {% set issue = parts[0] | trim if parts[0] else "" %}
+                        {% set path = parts[1] | trim if parts[1] else "" %}
                         
                         {% if issue and path %}
                           {{ issue + "\r\n\r\n" + path }}

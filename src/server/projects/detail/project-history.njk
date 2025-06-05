@@ -41,16 +41,18 @@
                 {% set displayCommentary = change.changes.commentary.to %}
                 {% if "Path to green:" in displayCommentary %}
                   {% set parts = displayCommentary.split("Path to green:") %}
-                  {% set issue = parts[0].trim() if parts[0] else "" %}
-                  {% set path = parts[1].trim() if parts[1] else "" %}
+                  {% set issue = parts[0] | trim if parts[0] else "" %}
+                  {% set path = parts[1] | trim if parts[1] else "" %}
                   
                   {% if issue and path %}
-                    {% set displayCommentary = issue + "\r\n\r\n" + path %}
+                    {% set displayCommentary = (issue + "\r\n\r\n" + path) | trim %}
                   {% elif issue %}
-                    {% set displayCommentary = issue %}
+                    {% set displayCommentary = issue | trim %}
                   {% elif path %}
-                    {% set displayCommentary = path %}
+                    {% set displayCommentary = path | trim %}
                   {% endif %}
+                {% else %}
+                  {% set displayCommentary = displayCommentary | trim %}
                 {% endif %}
                 <div class="govuk-body" style="white-space: pre-wrap;">{{ displayCommentary }}</div>
               {% endif %}

@@ -149,23 +149,25 @@
                   {% endif %}
                   
                   {% if entry.changes.commentary %}
-                    {% set displayCommentary = entry.changes.commentary.to %}
+                    {% set displayCommentary = entry.changes.commentary.to | trim %}
                     {% if "Path to green:" in displayCommentary %}
                       {% set parts = displayCommentary.split("Path to green:") %}
-                      {% set issue = parts[0].trim() if parts[0] else "" %}
-                      {% set path = parts[1].trim() if parts[1] else "" %}
+                      {% set issue = parts[0] | trim if parts[0] else "" %}
+                      {% set path = parts[1] | trim if parts[1] else "" %}
                       
                       {% if issue and path %}
-                        {% set displayCommentary = issue + "\r\n\r\n" + path %}
+                        {% set displayCommentary = (issue + "\r\n\r\n" + path) %}
                       {% elif issue %}
                         {% set displayCommentary = issue %}
                       {% elif path %}
                         {% set displayCommentary = path %}
                       {% endif %}
                     {% endif %}
-                    <div class="govuk-body govuk-!-margin-bottom-2" style="white-space: pre-wrap;">
-                      {{ displayCommentary }}
-                    </div>
+                    
+                    {# Comprehensive trimming to remove all leading/trailing whitespace #}
+                    {% set displayCommentary = displayCommentary | trim %}
+                    
+                    <div class="govuk-body govuk-!-margin-bottom-2" style="white-space: pre-wrap;">{{ displayCommentary }}</div>
                   {% endif %}
                   
                   {% if isAuthenticated and (entry.changes.status or entry.changes.commentary) %}

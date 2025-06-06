@@ -29,7 +29,7 @@
       {% endif %}
 
       {{ govukInsetText({
-        text: "Standards available in the dropdown will be filtered based on your selected profession and the project's current phase (" + projectPhase + ")."
+        text: "Standards available in the dropdown will be filtered based on your selected profession and the project's current phase" + (" (" + (projectPhase if projectPhase else "not set") + ")") + "."
       }) }}
 
       <form method="POST" action="/projects/{{ projectId }}/assessment" novalidate>
@@ -206,12 +206,13 @@
       // Clear current options
       standardSelect.innerHTML = '<option value="">Choose a service standard</option>';
       
-      if (!selectedProfession || !projectPhase) {
+      if (!selectedProfession || !projectPhase || projectPhase === '') {
         return;
       }
 
       // Get available standards for this profession and phase
-      const availableStandardNumbers = professionStandardMatrix[projectPhase]?.[selectedProfession] || [];
+      const phaseMatrix = professionStandardMatrix[projectPhase];
+      const availableStandardNumbers = phaseMatrix?.[selectedProfession] || [];
       
       // Filter and add standards
       const filteredStandards = allStandards.filter(standard => {

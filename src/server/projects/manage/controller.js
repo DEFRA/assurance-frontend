@@ -10,11 +10,17 @@ import {
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
 import { STATUS, STATUS_LABEL } from '~/src/server/constants/status.js'
+import {
+  NOTIFICATIONS,
+  VIEW_TEMPLATES,
+  MANAGE_NOTIFICATIONS,
+  LOG_MESSAGES
+} from '~/src/server/constants/notifications.js'
 
-export const NOTIFICATIONS = {
-  NOT_FOUND: 'Project not found',
-  UPDATE_SUCCESS: 'Project updated successfully',
-  GENERAL_ERROR: 'Failed to update project. Please try again.'
+export const NOTIFICATIONS_LEGACY = {
+  NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND,
+  UPDATE_SUCCESS: NOTIFICATIONS.PROJECT_UPDATED_SUCCESSFULLY,
+  GENERAL_ERROR: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT
 }
 
 // Constants for repeated literals
@@ -26,7 +32,6 @@ const STATUS_OPTIONS = [
   { value: STATUS.RED, text: STATUS_LABEL[STATUS.RED] },
   { value: STATUS.TBC, text: STATUS_LABEL[STATUS.TBC] }
 ]
-const PROJECT_NOT_FOUND_VIEW = 'errors/not-found'
 
 export const manageController = {
   getManageProject: async (request, h) => {
@@ -37,13 +42,13 @@ export const manageController = {
 
       if (!project) {
         return h
-          .view(PROJECT_NOT_FOUND_VIEW, {
-            pageTitle: NOTIFICATIONS.NOT_FOUND
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
 
-      return h.view('projects/manage/views/select', {
+      return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_SELECT, {
         pageTitle: `Manage ${project.name}`,
         project,
         values: {},
@@ -66,15 +71,15 @@ export const manageController = {
       const project = await getProjectById(id, request)
       if (!project) {
         return h
-          .view(PROJECT_NOT_FOUND_VIEW, {
-            pageTitle: NOTIFICATIONS.NOT_FOUND
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
 
       // Validate selection
       if (!updateType) {
-        return h.view('projects/manage/views/select', {
+        return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_SELECT, {
           pageTitle: `Manage ${project.name}`,
           project,
           values: request.payload,
@@ -92,7 +97,7 @@ export const manageController = {
         return h.redirect(`/projects/${id}/manage/details`)
       } else {
         // Invalid selection
-        return h.view('projects/manage/views/select', {
+        return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_SELECT, {
           pageTitle: `Manage ${project.name}`,
           project,
           values: request.payload,
@@ -124,8 +129,8 @@ export const manageController = {
 
       if (!project) {
         return h
-          .view(PROJECT_NOT_FOUND_VIEW, {
-            pageTitle: NOTIFICATIONS.NOT_FOUND
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
@@ -236,18 +241,19 @@ export const manageController = {
           })
       }
 
-      return h.view('projects/manage/views/status', {
+      return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS, {
         pageTitle: `Update Status and Commentary | ${project.name}`,
         project,
         statusOptions,
+        standardsAtRisk,
+        professionMap,
         values: {},
-        errors: {},
-        standardsAtRisk
+        errors: {}
       })
     } catch (error) {
       request.logger.error(
         { error, id },
-        'Error loading manage project status form'
+        'Error loading project status management'
       )
       throw Boom.boomify(error, { statusCode: 500 })
     }
@@ -261,8 +267,8 @@ export const manageController = {
       const project = await getProjectById(id, request)
       if (!project) {
         return h
-          .view(PROJECT_NOT_FOUND_VIEW, {
-            pageTitle: NOTIFICATIONS.NOT_FOUND
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
@@ -356,17 +362,18 @@ export const manageController = {
             })
         }
 
-        return h.view('projects/manage/views/status', {
+        return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS, {
           pageTitle: `Update Status and Commentary | ${project.name}`,
           project,
           statusOptions,
+          standardsAtRisk,
+          professionMap,
           values: request.payload,
           errors: {
             status: !status,
             commentary: !commentary
           },
-          errorMessage: 'Please fill in all required fields',
-          standardsAtRisk
+          errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT
         })
       }
 
@@ -377,10 +384,13 @@ export const manageController = {
           `Project status and commentary updated successfully`
         )
         return h.redirect(
-          `/projects/${id}?notification=Project status and commentary updated successfully`
+          `/projects/${id}?notification=${MANAGE_NOTIFICATIONS.PROJECT_STATUS_UPDATED_SUCCESSFULLY}`
         )
       } catch (error) {
-        request.logger.error({ error }, 'Failed to update project status')
+        request.logger.error(
+          { error },
+          LOG_MESSAGES.FAILED_TO_UPDATE_PROJECT_STATUS
+        )
 
         // Re-fetch data for display on error
         const [serviceStandards, professions] = await Promise.all([
@@ -461,14 +471,15 @@ export const manageController = {
             })
         }
 
-        return h.view('projects/manage/views/status', {
+        return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS, {
           pageTitle: `Update Status and Commentary | ${project.name}`,
           project,
           statusOptions,
+          standardsAtRisk,
+          professionMap,
           values: request.payload,
           errors: {},
-          errorMessage: 'Failed to update project. Please try again.',
-          standardsAtRisk
+          errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT
         })
       }
     } catch (error) {
@@ -485,8 +496,8 @@ export const manageController = {
 
       if (!project) {
         return h
-          .view(PROJECT_NOT_FOUND_VIEW, {
-            pageTitle: NOTIFICATIONS.NOT_FOUND
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
@@ -507,7 +518,7 @@ export const manageController = {
         }
       })
 
-      return h.view('projects/manage/views/details', {
+      return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
         pageTitle: `Update Project Details | ${project.name}`,
         project,
         phaseOptions,
@@ -517,7 +528,7 @@ export const manageController = {
     } catch (error) {
       request.logger.error(
         { error, id },
-        'Error loading manage project details form'
+        'Error loading project details management'
       )
       throw Boom.boomify(error, { statusCode: 500 })
     }
@@ -531,8 +542,8 @@ export const manageController = {
       const project = await getProjectById(id, request)
       if (!project) {
         return h
-          .view(PROJECT_NOT_FOUND_VIEW, {
-            pageTitle: NOTIFICATIONS.NOT_FOUND
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
@@ -555,7 +566,7 @@ export const manageController = {
           }
         })
 
-        return h.view('projects/manage/views/details', {
+        return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
           pageTitle: `Update Project Details | ${project.name}`,
           project,
           phaseOptions,
@@ -572,12 +583,15 @@ export const manageController = {
       try {
         // Update the project
         await updateProject(id, { name, phase, defCode }, request)
-        request.logger.info(`Project details updated successfully`)
+        request.logger.info(LOG_MESSAGES.PROJECT_DETAILS_UPDATED)
         return h.redirect(
-          `/projects/${id}?notification=Project details updated successfully`
+          `/projects/${id}?notification=${MANAGE_NOTIFICATIONS.PROJECT_DETAILS_UPDATED_SUCCESSFULLY}`
         )
       } catch (error) {
-        request.logger.error({ error }, 'Failed to update project details')
+        request.logger.error(
+          { error },
+          LOG_MESSAGES.FAILED_TO_UPDATE_PROJECT_DETAILS
+        )
 
         const phaseOptions = [
           { text: 'Select phase', value: '' },
@@ -588,13 +602,13 @@ export const manageController = {
           { value: 'Live', text: 'Live' }
         ]
 
-        return h.view('projects/manage/views/details', {
+        return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
           pageTitle: `Update Project Details | ${project.name}`,
           project,
           phaseOptions,
           values: request.payload,
           errors: {},
-          errorMessage: 'Failed to update project. Please try again.'
+          errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT
         })
       }
     } catch (error) {

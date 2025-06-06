@@ -94,25 +94,37 @@ export const admin = {
         {
           method: 'POST',
           path: '/admin/professions/seed-dev',
-          handler: adminController.seedProfessionsDev,
+          handler: adminController.seedProfessions,
           options: {
-            auth: {
-              strategy: 'session',
-              mode: 'required'
-            },
             pre: [{ method: requireRole('admin') }]
           }
         },
         {
           method: 'POST',
           path: '/admin/standards/seed-dev',
-          handler: adminController.seedStandardsDev,
+          handler: adminController.seedStandards,
+          options: {
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/standards/seed',
+          handler: adminController.seedStandards,
           options: {
             auth: {
-              strategy: 'session',
               mode: 'required'
-            },
-            pre: [{ method: requireRole('admin') }]
+            }
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/professions/seed',
+          handler: adminController.seedProfessions,
+          options: {
+            auth: {
+              mode: 'required'
+            }
           }
         }
       ]

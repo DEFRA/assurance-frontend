@@ -4,7 +4,8 @@ import {
   getProjects,
   getProjectById,
   deleteProject,
-  createProject
+  createProject,
+  updateProject
 } from '~/src/server/services/projects.js'
 import { getProfessions } from '~/src/server/services/professions.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
@@ -117,37 +118,6 @@ describe('Admin controller', () => {
     })
   })
 
-  describe('seedProfessionsDev', () => {
-    it('should seed professions and redirect', async () => {
-      // Arrange
-      mockAuthedFetch.mockResolvedValue({ ok: true })
-
-      // Act
-      await adminController.seedProfessionsDev(mockRequest, mockH)
-
-      // Assert
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/deleteAll', {
-        method: 'POST'
-      })
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Professions seeded (dev only)'
-      )
-    })
-
-    it('should handle errors', async () => {
-      // Arrange
-      mockAuthedFetch.mockRejectedValue(new Error('API Error'))
-
-      // Act
-      await adminController.seedProfessionsDev(mockRequest, mockH)
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Failed to seed professions (dev only)'
-      )
-    })
-  })
-
   describe('seedProjectsDev', () => {
     it('should seed projects with assessments and redirect', async () => {
       // Arrange
@@ -155,6 +125,11 @@ describe('Admin controller', () => {
       getProfessions.mockResolvedValue(defaultProfessions)
       getServiceStandards.mockResolvedValue(defaultServiceStandards)
       createProject.mockResolvedValue({ id: 'test-project-1' })
+      updateProject.mockResolvedValue({ id: 'test-project-1' })
+
+      // Mock the missing seedStandardsDev and seedProfessionsDev methods
+      adminController.seedStandardsDev = jest.fn().mockResolvedValue()
+      adminController.seedProfessionsDev = jest.fn().mockResolvedValue()
 
       // Act
       await adminController.seedProjectsDev(mockRequest, mockH)
@@ -163,13 +138,22 @@ describe('Admin controller', () => {
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Projects and assessments seeded successfully with new system'
       )
+
+      // Cleanup
+      delete adminController.seedStandardsDev
+      delete adminController.seedProfessionsDev
     })
 
     it('should handle errors', async () => {
       // Arrange - Mock a failure in getProfessions to cause the main seeding logic to fail
       mockAuthedFetch.mockResolvedValue({ ok: true }) // Let the initial seeding succeed
       getProfessions.mockRejectedValue(new Error('API Error'))
+      updateProject.mockResolvedValue({ id: 'test-project-1' })
       mockH.redirect.mockClear()
+
+      // Mock the missing seedStandardsDev and seedProfessionsDev methods
+      adminController.seedStandardsDev = jest.fn().mockResolvedValue()
+      adminController.seedProfessionsDev = jest.fn().mockResolvedValue()
 
       // Act
       await adminController.seedProjectsDev(mockRequest, mockH)
@@ -178,6 +162,10 @@ describe('Admin controller', () => {
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Failed to seed projects and assessments'
       )
+
+      // Cleanup
+      delete adminController.seedStandardsDev
+      delete adminController.seedProfessionsDev
     })
   })
 
@@ -391,6 +379,40 @@ describe('Admin controller', () => {
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Professions deleted successfully'
+      )
+    })
+  })
+
+  describe('seedProfessions', () => {
+    it('should seed professions and redirect', async () => {
+      // Arrange
+      config.get.mockReturnValue('development') // Override the default 'test' value
+      mockAuthedFetch.mockResolvedValue({ ok: true })
+
+      // Act
+      await adminController.seedProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/seed', {
+        method: 'POST',
+        body: JSON.stringify(defaultProfessions)
+      })
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Professions seeded (dev only)'
+      )
+    })
+
+    it('should handle errors', async () => {
+      // Arrange
+      config.get.mockReturnValue('development') // Override the default 'test' value
+      mockAuthedFetch.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.seedProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to seed professions (dev only)'
       )
     })
   })

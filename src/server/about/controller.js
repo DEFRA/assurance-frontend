@@ -3,20 +3,17 @@
  * Provided as an example, remove or modify as required.
  * @satisfies {Partial<ServerRoute>}
  */
+import {
+  PAGE_TITLES,
+  VIEW_TEMPLATES
+} from '~/src/server/constants/notifications.js'
+
 export const aboutController = {
-  handler(_request, h) {
-    return h.view('about/index', {
-      pageTitle: 'About',
-      heading: 'About',
-      breadcrumbs: [
-        {
-          text: 'Home',
-          href: '/'
-        },
-        {
-          text: 'About'
-        }
-      ]
+  handler: (request, h) => {
+    return h.view(VIEW_TEMPLATES.ABOUT_INDEX, {
+      pageTitle: PAGE_TITLES.ABOUT,
+      heading: PAGE_TITLES.ABOUT,
+      isAuthenticated: request.auth.isAuthenticated
     })
   }
 }

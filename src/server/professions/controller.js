@@ -5,37 +5,47 @@
 import Boom from '@hapi/boom'
 import { getProfessions } from '~/src/server/services/professions.js'
 import { getProjects } from '~/src/server/services/projects.js'
+import {
+  PAGE_TITLES,
+  VIEW_TEMPLATES
+} from '~/src/server/constants/notifications.js'
+
+// Helper function to format profession name to title case
+function formatDisplayName(name) {
+  if (!name) return 'Unknown'
+  return name
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
 
 export const professionsController = {
   getAll: async (request, h) => {
     try {
-      // Get all professions
       const professions = await getProfessions(request)
 
+      // Handle empty or null professions
       if (!professions || professions.length === 0) {
-        return h.view('professions/index', {
-          pageTitle: 'Professions',
-          heading: 'Professions',
+        return h.view(VIEW_TEMPLATES.PROFESSIONS_INDEX, {
+          pageTitle: PAGE_TITLES.PROFESSIONS,
+          heading: PAGE_TITLES.PROFESSIONS,
           professions: [],
-          message:
-            'No professions found. Please add professions through the Admin interface.'
+          message: 'No professions found. Please contact an administrator.',
+          isAuthenticated: request.auth.isAuthenticated
         })
       }
 
-      // Format profession names for display (Title Case)
+      // Add displayName to each profession
       const formattedProfessions = professions.map((profession) => ({
         ...profession,
-        displayName: profession.name
-          ? profession.name
-              .toLowerCase()
-              .replace(/\b\w/g, (char) => char.toUpperCase())
-          : 'Unknown Profession'
+        displayName: formatDisplayName(profession.name)
       }))
 
-      return h.view('professions/index', {
-        pageTitle: 'Professions',
-        heading: 'Professions',
-        professions: formattedProfessions
+      return h.view(VIEW_TEMPLATES.PROFESSIONS_INDEX, {
+        pageTitle: PAGE_TITLES.PROFESSIONS,
+        heading: PAGE_TITLES.PROFESSIONS,
+        professions: formattedProfessions,
+        isAuthenticated: request.auth.isAuthenticated
       })
     } catch (error) {
       request.logger.error('Error fetching professions')
@@ -43,102 +53,102 @@ export const professionsController = {
     }
   },
 
-  getById: async (request, h) => {
+  get: async (request, h) => {
     const { id } = request.params
 
     try {
-      // Get all professions to find the one requested
-      const professions = await getProfessions(request)
-      const profession = professions.find((p) => p.id === id)
+      const [professions, projects] = await Promise.all([
+        getProfessions(request),
+        getProjects(request)
+      ])
+
+      const profession = professions?.find((p) => p.id === id)
 
       if (!profession) {
+        request.logger.warn({ professionId: id }, 'Profession not found')
         return h
-          .view('errors/not-found', {
-            pageTitle: 'Profession Not Found'
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: PAGE_TITLES.PROFESSION_NOT_FOUND
           })
           .code(404)
       }
 
-      // Format profession name for display (Title Case)
+      // Format the profession data for display
       const formattedProfession = {
         ...profession,
-        displayName: profession.name
-          ? profession.name
-              .toLowerCase()
-              .replace(/\b\w/g, (char) => char.toUpperCase())
-          : 'Unknown Profession'
+        displayName: formatDisplayName(profession.name),
+        name: profession.name || `Profession ${id}`
       }
 
-      // Get all projects to find assessments for this profession
-      const projects = await getProjects(request)
+      // Filter projects that have assessments for this profession
+      const relevantProjects = []
+      const statusPriority = {
+        RED: 0,
+        AMBER_RED: 1,
+        AMBER: 2,
+        GREEN_AMBER: 3,
+        GREEN: 4,
+        TBC: 5
+      }
 
-      // Filter projects to only those that have this profession
-      const projectsWithProfession = projects
-        .filter((project) =>
-          project.professions?.some((p) => p.professionId === id)
-        )
-        .map((project) => {
-          // Find the profession assessment for this project
-          const professionAssessment = project.professions.find(
-            (p) => p.professionId === id
-          )
+      // Initialize summary counters
+      const summary = {
+        total: 0,
+        red: 0,
+        amberRed: 0,
+        amber: 0,
+        amberGreen: 0,
+        green: 0,
+        notUpdated: 0
+      }
 
-          return {
-            id: project.id,
-            name: project.name,
-            status: project.status, // Overall project status
-            lastUpdated: project.lastUpdated,
-            professionAssessment: {
-              status: professionAssessment?.status || 'NOT_UPDATED',
-              commentary:
-                professionAssessment?.commentary || 'No update provided'
+      if (projects && Array.isArray(projects)) {
+        for (const project of projects) {
+          if (project.professions && Array.isArray(project.professions)) {
+            const professionAssessment = project.professions.find(
+              (p) => p.professionId === id
+            )
+
+            if (professionAssessment) {
+              relevantProjects.push({
+                ...project,
+                professionAssessment
+              })
+
+              // Update summary counts
+              summary.total++
+              const status = professionAssessment.status
+              if (status === 'RED') summary.red++
+              else if (status === 'AMBER_RED') summary.amberRed++
+              else if (status === 'AMBER') summary.amber++
+              else if (status === 'GREEN_AMBER') summary.amberGreen++
+              else if (status === 'GREEN') summary.green++
+              else summary.notUpdated++
             }
           }
-        })
-        // Sort by status (RED first, then AMBER_RED, AMBER, GREEN_AMBER, GREEN)
-        .sort((a, b) => {
-          const statusOrder = {
-            RED: 0,
-            AMBER_RED: 1,
-            AMBER: 2,
-            GREEN_AMBER: 3,
-            GREEN: 4,
-            NOT_UPDATED: 5
-          }
-          const statusA = statusOrder[a.professionAssessment.status] ?? 5
-          const statusB = statusOrder[b.professionAssessment.status] ?? 5
-          return statusA - statusB
-        })
+        }
+      }
 
-      return h.view('professions/detail', {
+      // Sort projects by status priority (RED first, GREEN last)
+      relevantProjects.sort((a, b) => {
+        const statusA = a.professionAssessment?.status || 'TBC'
+        const statusB = b.professionAssessment?.status || 'TBC'
+        return statusPriority[statusA] - statusPriority[statusB]
+      })
+
+      return h.view(VIEW_TEMPLATES.PROFESSIONS_DETAIL, {
         pageTitle: `${formattedProfession.displayName} overview`,
         heading: formattedProfession.displayName,
         profession: formattedProfession,
-        projects: projectsWithProfession,
-        summary: {
-          total: projectsWithProfession.length,
-          red: projectsWithProfession.filter(
-            (p) => p.professionAssessment.status === 'RED'
-          ).length,
-          amberRed: projectsWithProfession.filter(
-            (p) => p.professionAssessment.status === 'AMBER_RED'
-          ).length,
-          amber: projectsWithProfession.filter(
-            (p) => p.professionAssessment.status === 'AMBER'
-          ).length,
-          amberGreen: projectsWithProfession.filter(
-            (p) => p.professionAssessment.status === 'GREEN_AMBER'
-          ).length,
-          green: projectsWithProfession.filter(
-            (p) => p.professionAssessment.status === 'GREEN'
-          ).length,
-          notUpdated: projectsWithProfession.filter(
-            (p) => p.professionAssessment.status === 'NOT_UPDATED'
-          ).length
-        }
+        projects: relevantProjects,
+        summary,
+        isAuthenticated: request.auth.isAuthenticated
       })
     } catch (error) {
-      request.logger.error('Error fetching profession details')
+      request.logger.error(
+        { error, professionId: id },
+        'Error fetching profession details'
+      )
       throw Boom.boomify(error, { statusCode: 500 })
     }
   }

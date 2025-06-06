@@ -1,4 +1,7 @@
-import { projectsController, NOTIFICATIONS } from './controller.js'
+import {
+  projectsController,
+  NOTIFICATIONS_LEGACY as NOTIFICATIONS
+} from './controller.js'
 
 const mockGetProjects = jest.fn()
 const mockGetProjectById = jest.fn()

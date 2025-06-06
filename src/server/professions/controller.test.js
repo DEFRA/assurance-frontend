@@ -42,20 +42,25 @@ describe('Professions Controller', () => {
       id: 'prof-2',
       name: 'software engineering',
       description: 'Software Engineering professionals'
+    },
+    {
+      id: 'test-profession-id',
+      name: 'test profession',
+      description: 'Test profession for testing'
     }
   ]
 
   const sampleProjects = [
     {
       id: 'project-1',
-      name: 'Project Alpha',
+      name: 'Project 1',
       status: 'GREEN',
       lastUpdated: '2023-01-01',
       professions: [
         {
-          professionId: 'prof-1',
+          professionId: 'test-profession-id',
           status: 'RED',
-          commentary: 'Delivery Management issues'
+          commentary: 'Needs attention'
         },
         {
           professionId: 'prof-2',
@@ -66,23 +71,29 @@ describe('Professions Controller', () => {
     },
     {
       id: 'project-2',
-      name: 'Project Beta',
+      name: 'Project 2',
       status: 'AMBER',
       lastUpdated: '2023-01-02',
       professions: [
         {
-          professionId: 'prof-1',
-          status: 'GREEN',
-          commentary: 'Good delivery progress'
+          professionId: 'test-profession-id',
+          status: 'AMBER_RED',
+          commentary: 'Some delivery issues'
         }
       ]
     },
     {
       id: 'project-3',
-      name: 'Project Gamma',
+      name: 'Project 3',
       status: 'RED',
       lastUpdated: '2023-01-03',
-      professions: [] // No professions
+      professions: [
+        {
+          professionId: 'test-profession-id',
+          status: 'AMBER',
+          commentary: 'Minor issues'
+        }
+      ]
     }
   ]
 
@@ -101,8 +112,9 @@ describe('Professions Controller', () => {
 
     // Set up request mock
     mockRequest = {
-      params: {},
-      logger: mockLogger
+      logger: mockLogger,
+      auth: { isAuthenticated: true },
+      params: { id: 'test-profession-id' }
     }
 
     // Default mock implementations
@@ -184,184 +196,127 @@ describe('Professions Controller', () => {
     })
   })
 
-  describe('getById', () => {
-    beforeEach(() => {
-      mockRequest.params = { id: 'prof-1' }
-    })
-
+  describe('get', () => {
     it('should return profession details with projects', async () => {
       // Act
-      await professionsController.getById(mockRequest, mockH)
+      await professionsController.get(mockRequest, mockH)
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
         'professions/detail',
         expect.objectContaining({
+          pageTitle: 'Test Profession overview',
+          heading: 'Test Profession',
           profession: expect.objectContaining({
-            id: 'prof-1',
-            displayName: 'Delivery Management'
+            id: 'test-profession-id',
+            name: 'test profession',
+            displayName: 'Test Profession'
           }),
           projects: expect.arrayContaining([
             expect.objectContaining({
               id: 'project-1',
+              name: 'Project 1',
               professionAssessment: expect.objectContaining({
-                status: 'RED'
-              })
-            }),
-            expect.objectContaining({
-              id: 'project-2',
-              professionAssessment: expect.objectContaining({
-                status: 'GREEN'
+                status: 'RED',
+                commentary: 'Needs attention'
               })
             })
           ]),
           summary: expect.objectContaining({
-            total: 2,
+            total: 3,
             red: 1,
-            green: 1
+            amberRed: 1,
+            amber: 1,
+            amberGreen: 0,
+            green: 0,
+            notUpdated: 0
           })
         })
       )
     })
 
     it('should sort projects based on the profession status', async () => {
-      // Update the test to just verify that sorting happens,
-      // without specifying exact order which may change
-
-      // Arrange
-      const mockData = [
-        {
+      // Arrange - projects should be sorted by status (RED first, then AMBER_RED, etc.)
+      const expectedOrder = [
+        expect.objectContaining({
           id: 'project-1',
-          name: 'Project with any status',
-          status: 'GREEN',
-          professions: [
-            {
-              professionId: 'prof-1',
-              status: 'GREEN'
-            }
-          ]
-        },
-        {
+          professionAssessment: expect.objectContaining({ status: 'RED' })
+        }),
+        expect.objectContaining({
           id: 'project-2',
-          name: 'Project with any status',
-          status: 'RED',
-          professions: [
-            {
-              professionId: 'prof-1',
-              status: 'RED'
-            }
-          ]
-        },
-        {
+          professionAssessment: expect.objectContaining({ status: 'AMBER_RED' })
+        }),
+        expect.objectContaining({
           id: 'project-3',
-          name: 'Project with any status',
-          status: 'AMBER',
-          professions: [
-            {
-              professionId: 'prof-1',
-              status: 'AMBER'
-            }
-          ]
-        }
+          professionAssessment: expect.objectContaining({ status: 'AMBER' })
+        })
       ]
 
-      mockGetProjects.mockResolvedValue(mockData)
-
       // Act
-      await professionsController.getById(mockRequest, mockH)
+      await professionsController.get(mockRequest, mockH)
 
       // Assert
       const viewArgs = mockH.view.mock.calls[0][1]
-
-      // Verify that the projects are present and sorted (in some order)
-      expect(viewArgs.projects).toHaveLength(3)
-
-      // Verify that the statuses are not in alphabetical/random order
-      const statusOrder = viewArgs.projects.map(
-        (p) => p.professionAssessment.status
-      )
-
-      // The controller uses the statusOrder object to sort, we can verify the general behavior
-      // without being tied to a specific order which might change in the implementation
-      expect(Array.isArray(statusOrder)).toBe(true)
-      expect(statusOrder).toContain('RED')
-      expect(statusOrder).toContain('AMBER')
-      expect(statusOrder).toContain('GREEN')
-
-      // Verify that the array is sorted (we don't check the specific order)
-      expect(statusOrder).not.toEqual(['GREEN', 'AMBER', 'RED']) // Not alphabetical
-      expect(statusOrder).not.toEqual(['GREEN', 'RED', 'AMBER']) // Not random
+      expect(viewArgs.projects).toEqual(expectedOrder)
     })
 
     it('should handle profession not found', async () => {
       // Arrange
-      mockRequest.params = { id: 'non-existent-profession' }
+      mockGetProfessions.mockResolvedValue([])
 
       // Act
-      await professionsController.getById(mockRequest, mockH)
+      await professionsController.get(mockRequest, mockH)
 
       // Assert
-      expect(mockH.view).toHaveBeenCalledWith(
-        'errors/not-found',
-        expect.objectContaining({
-          pageTitle: 'Profession Not Found'
-        })
-      )
-      expect(mockH.code).toHaveBeenCalledWith(404)
+      expect(mockH.view).toHaveBeenCalledWith('errors/not-found', {
+        pageTitle: 'Profession Not Found'
+      })
+      expect(mockH.view().code).toHaveBeenCalledWith(404)
     })
 
     it('should handle projects with missing professions array', async () => {
       // Arrange
-      const projectsWithMissingData = [
-        { id: 'project-x', name: 'Bad Data Project' } // No professions array
-      ]
-      mockGetProjects.mockResolvedValue(projectsWithMissingData)
+      mockGetProjects.mockResolvedValue([
+        { id: 'project-1', name: 'Project 1' } // No professions array
+      ])
 
       // Act
-      await professionsController.getById(mockRequest, mockH)
+      await professionsController.get(mockRequest, mockH)
 
       // Assert
       const viewArgs = mockH.view.mock.calls[0][1]
       expect(viewArgs.projects).toEqual([])
-      expect(viewArgs.summary.total).toBe(0)
     })
 
     it('should handle projects with no matching profession assessments', async () => {
       // Arrange
-      mockRequest.params = { id: 'prof-3' } // A profession ID that doesn't exist in any project
-      // Add a mock profession to ensure the test can find a profession but not projects
-      mockGetProfessions.mockResolvedValue([
-        ...sampleProfessions,
+      mockGetProjects.mockResolvedValue([
         {
-          id: 'prof-3',
-          name: 'data science',
-          description: 'Data Science professionals'
+          id: 'project-1',
+          name: 'Project 1',
+          professions: [
+            { professionId: 'different-profession-id', status: 'GREEN' }
+          ]
         }
       ])
 
       // Act
-      await professionsController.getById(mockRequest, mockH)
+      await professionsController.get(mockRequest, mockH)
 
       // Assert
       // Get the arguments from the view call
       const viewArgs = mockH.view.mock.calls[0][1]
-
-      // We shouldn't get a 404 since we added the profession to our mock data
-      expect(mockH.code).not.toHaveBeenCalledWith(404)
-
-      // We should get an empty projects array and zero count
-      expect(viewArgs.projects).toHaveLength(0)
-      expect(viewArgs.summary.total).toBe(0)
+      expect(viewArgs.projects).toEqual([])
     })
 
     it('should handle API errors', async () => {
       // Arrange
-      const testError = new Error('API failure')
+      const testError = new Error('API Error')
       mockGetProfessions.mockRejectedValue(testError)
 
       // Act & Assert
       await expect(
-        professionsController.getById(mockRequest, mockH)
+        professionsController.get(mockRequest, mockH)
       ).rejects.toHaveProperty('isBoom', true)
 
       expect(mockLogger.error).toHaveBeenCalled()
@@ -370,12 +325,11 @@ describe('Professions Controller', () => {
 
     it('should handle errors when fetching projects', async () => {
       // Arrange
-      const testError = new Error('Projects API failure')
-      mockGetProjects.mockRejectedValue(testError)
+      mockGetProjects.mockRejectedValue(new Error('Projects API Error'))
 
       // Act & Assert
       await expect(
-        professionsController.getById(mockRequest, mockH)
+        professionsController.get(mockRequest, mockH)
       ).rejects.toHaveProperty('isBoom', true)
 
       expect(mockLogger.error).toHaveBeenCalled()

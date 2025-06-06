@@ -16,9 +16,13 @@ import {
   filterStandardsByProfessionAndPhase,
   PROFESSION_STANDARD_MATRIX
 } from '~/src/server/services/profession-standard-matrix.js'
+import {
+  NOTIFICATIONS,
+  VIEW_TEMPLATES
+} from '~/src/server/constants/notifications.js'
 
-export const NOTIFICATIONS = {
-  NOT_FOUND: 'Project not found'
+export const NOTIFICATIONS_LEGACY = {
+  NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND
 }
 
 export const standardsController = {
@@ -28,13 +32,13 @@ export const standardsController = {
     try {
       const project = await getProjectById(id, request)
       if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
       }
 
       // Get service standards for reference
       const standards = await getServiceStandards(request)
 
-      return h.view('projects/standards/views/list', {
+      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_LIST, {
         pageTitle: `Standards Progress | ${project.name}`,
         project,
         standards
@@ -60,7 +64,7 @@ export const standardsController = {
       if (!project) {
         return h
           .view('projects/not-found', {
-            pageTitle: 'Project not found'
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
@@ -68,7 +72,9 @@ export const standardsController = {
       // Find the specific standard
       const standard = serviceStandards?.find((s) => s.id === standardId)
       if (!standard) {
-        return h.redirect(`/projects/${id}?notification=Standard not found`)
+        return h.redirect(
+          `/projects/${id}?notification=${NOTIFICATIONS.STANDARD_NOT_FOUND}`
+        )
       }
 
       // Find the standard summary in the project
@@ -117,7 +123,7 @@ export const standardsController = {
         })
       )
 
-      return h.view('projects/standards/views/detail', {
+      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_DETAIL, {
         pageTitle: `Standard ${standard.number} | ${project.name}`,
         project,
         standard,
@@ -138,7 +144,7 @@ export const standardsController = {
     try {
       const project = await getProjectById(id, request)
       if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
       }
 
       // Find the standard in standardsSummary
@@ -146,12 +152,14 @@ export const standardsController = {
         (s) => s.standardId === standardId || s.StandardId === standardId
       )
       if (!standard) {
-        return h.redirect(`/projects/${id}?notification=Standard not found`)
+        return h.redirect(
+          `/projects/${id}?notification=${NOTIFICATIONS.STANDARD_NOT_FOUND}`
+        )
       }
 
       const history = await getStandardHistory(id, standardId, request)
 
-      return h.view('projects/standards/views/history', {
+      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_HISTORY, {
         pageTitle: `Standard ${standardId} History | ${project.name}`,
         heading: `Standard ${standardId} History`,
         project,
@@ -178,7 +186,7 @@ export const standardsController = {
       if (!project) {
         return h
           .view('projects/not-found', {
-            pageTitle: 'Project not found'
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
@@ -203,14 +211,26 @@ export const standardsController = {
         }))
       )
 
-      return h.view('projects/standards/views/assessment', {
-        assessment: null, // Always start with null for new assessments
-        projectId: id,
-        projectPhase: project.phase || 'Discovery',
+      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, {
+        pageTitle: `Assess Standards | ${project.name}`,
+        project,
+        projectId: project.id,
+        projectPhase: project.phase || '',
+        allStandards: JSON.stringify(serviceStandards || []),
         professionItems,
         standardItems,
-        allStandards: JSON.stringify(serviceStandards || []),
-        professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX)
+        statusOptions: [
+          { value: '', text: 'Choose a status' },
+          { value: 'GREEN', text: 'Green' },
+          { value: 'GREEN_AMBER', text: 'Green Amber' },
+          { value: 'AMBER', text: 'Amber' },
+          { value: 'AMBER_RED', text: 'Amber Red' },
+          { value: 'RED', text: 'Red' },
+          { value: 'TBC', text: 'TBC' }
+        ],
+        professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX),
+        values: {},
+        errors: {}
       })
     } catch (error) {
       request.logger.error({ error }, 'Error loading assessment screen')
@@ -228,7 +248,7 @@ export const standardsController = {
       if (!project) {
         return h
           .view('projects/not-found', {
-            pageTitle: 'Project not found'
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
@@ -271,16 +291,28 @@ export const standardsController = {
           }))
         )
 
-        return h.view('projects/standards/views/assessment', {
-          assessment: null,
-          projectId: id,
-          projectPhase: project.phase || 'Discovery',
+        return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, {
+          pageTitle: `Assess Standards | ${project.name}`,
+          project,
+          projectId: project.id,
+          projectPhase: project.phase || '',
+          allStandards: JSON.stringify(serviceStandards || []),
           professionItems,
           standardItems,
           selectedValues: { professionId, standardId, status, commentary },
           error: 'Please select a profession, service standard, and status',
-          allStandards: JSON.stringify(serviceStandards || []),
-          professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX)
+          statusOptions: [
+            { value: '', text: 'Choose a status' },
+            { value: 'GREEN', text: 'Green' },
+            { value: 'GREEN_AMBER', text: 'Green Amber' },
+            { value: 'AMBER', text: 'Amber' },
+            { value: 'AMBER_RED', text: 'Amber Red' },
+            { value: 'RED', text: 'Red' },
+            { value: 'TBC', text: 'TBC' }
+          ],
+          professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX),
+          values: {},
+          errors: {}
         })
       }
 
@@ -324,16 +356,30 @@ export const standardsController = {
             }))
           )
 
-          return h.view('projects/standards/views/assessment', {
-            assessment: null,
-            projectId: id,
-            projectPhase: project.phase || 'Discovery',
+          return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, {
+            pageTitle: `Assess Standards | ${project.name}`,
+            project,
+            projectId: project.id,
+            projectPhase: project.phase || '',
+            allStandards: JSON.stringify(serviceStandards || []),
             professionItems,
             standardItems,
             selectedValues: { professionId, standardId, status, commentary },
             error: `This profession cannot assess the selected standard in the ${project.phase} phase. Please select a different standard.`,
-            allStandards: JSON.stringify(serviceStandards || []),
-            professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX)
+            statusOptions: [
+              { value: '', text: 'Choose a status' },
+              { value: 'GREEN', text: 'Green' },
+              { value: 'GREEN_AMBER', text: 'Green Amber' },
+              { value: 'AMBER', text: 'Amber' },
+              { value: 'AMBER_RED', text: 'Amber Red' },
+              { value: 'RED', text: 'Red' },
+              { value: 'TBC', text: 'TBC' }
+            ],
+            professionStandardMatrix: JSON.stringify(
+              PROFESSION_STANDARD_MATRIX
+            ),
+            values: {},
+            errors: {}
           })
         }
       }
@@ -352,18 +398,19 @@ export const standardsController = {
 
       request.logger.info(
         { projectId: id, standardId, professionId },
-        'Assessment saved successfully'
+        NOTIFICATIONS.ASSESSMENT_SAVED_SUCCESSFULLY
       )
 
       // Redirect back to project page with success message
       return h.redirect(
-        `/projects/${id}?notification=Assessment saved successfully`
+        `/projects/${id}?notification=${NOTIFICATIONS.ASSESSMENT_SAVED_SUCCESSFULLY}`
       )
     } catch (error) {
       request.logger.error({ error }, 'Error saving assessment')
 
+      let errorMessage = NOTIFICATIONS.FAILED_TO_SAVE_ASSESSMENT
+
       // Check if this is the known backend update issue
-      let errorMessage = 'Failed to save assessment. Please try again.'
       if (
         error.message?.includes('Internal Server Error') ||
         error.message?.includes('500')
@@ -409,23 +456,34 @@ export const standardsController = {
         }))
       )
 
-      return h.view('projects/standards/views/assessment', {
-        assessment: null,
-        projectId: id,
-        projectPhase: project?.phase || 'Discovery',
+      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, {
+        pageTitle: `Assess Standards | ${project.name}`,
+        project,
+        projectId: project.id,
+        projectPhase: project.phase || '',
+        allStandards: JSON.stringify(serviceStandards || []),
         professionItems,
         standardItems,
         selectedValues: { professionId, standardId, status, commentary },
         error: errorMessage,
-        allStandards: JSON.stringify(serviceStandards || []),
-        professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX)
+        statusOptions: [
+          { value: '', text: 'Choose a status' },
+          { value: 'GREEN', text: 'Green' },
+          { value: 'GREEN_AMBER', text: 'Green Amber' },
+          { value: 'AMBER', text: 'Amber' },
+          { value: 'AMBER_RED', text: 'Amber Red' },
+          { value: 'RED', text: 'Red' },
+          { value: 'TBC', text: 'TBC' }
+        ],
+        professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX),
+        values: {},
+        errors: {}
       })
     }
   },
 
   getAssessmentHistory: async (request, h) => {
     const { id, standardId, professionId } = request.params
-    const { notification } = request.query
 
     try {
       // Fetch project, profession info, standard info, and history
@@ -440,7 +498,7 @@ export const standardsController = {
       if (!project) {
         return h
           .view('projects/not-found', {
-            pageTitle: 'Project not found'
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
@@ -450,21 +508,23 @@ export const standardsController = {
       const profession = professions?.find((p) => p.id === professionId)
 
       if (!standard) {
-        return h.redirect(`/projects/${id}?notification=Standard not found`)
+        return h.redirect(
+          `/projects/${id}?notification=${NOTIFICATIONS.STANDARD_NOT_FOUND}`
+        )
       }
 
       if (!profession) {
-        return h.redirect(`/projects/${id}?notification=Profession not found`)
+        return h.redirect(
+          `/projects/${id}?notification=${NOTIFICATIONS.PROFESSION_NOT_FOUND}`
+        )
       }
 
-      return h.view('projects/standards/views/assessment-history', {
+      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT_HISTORY, {
         pageTitle: `${profession.name} Assessment History | Standard ${standard.number} | ${project.name}`,
         project,
         standard,
         profession,
-        history: history || [],
-        isAuthenticated: request.auth.isAuthenticated,
-        notification
+        history
       })
     } catch (error) {
       request.logger.error({ error }, 'Error loading assessment history')
@@ -488,7 +548,7 @@ export const standardsController = {
       if (!project) {
         return h
           .view('projects/not-found', {
-            pageTitle: 'Project not found'
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
           .code(404)
       }
@@ -499,7 +559,7 @@ export const standardsController = {
 
       if (!standard || !profession) {
         return h.redirect(
-          `/projects/${id}?notification=Standard or profession not found`
+          `/projects/${id}?notification=${NOTIFICATIONS.STANDARD_OR_PROFESSION_NOT_FOUND}`
         )
       }
 
@@ -507,11 +567,11 @@ export const standardsController = {
       const historyEntry = history?.find((entry) => entry.id === historyId)
       if (!historyEntry) {
         return h.redirect(
-          `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=History entry not found`
+          `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=${NOTIFICATIONS.HISTORY_ENTRY_NOT_FOUND}`
         )
       }
 
-      return h.view('projects/standards/views/archive-assessment', {
+      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ARCHIVE_ASSESSMENT, {
         pageTitle: `Archive Assessment | ${profession.name} | Standard ${standard.number} | ${project.name}`,
         project,
         standard,
@@ -539,27 +599,27 @@ export const standardsController = {
       )
 
       // Redirect based on where the user came from
-      if (returnTo === 'standard') {
+      if (returnTo === 'detail') {
         return h.redirect(
-          `/projects/${id}/standards/${standardId}?notification=Assessment entry archived successfully`
+          `/projects/${id}/standards/${standardId}?notification=${NOTIFICATIONS.ASSESSMENT_ARCHIVED_SUCCESSFULLY}`
         )
       } else {
-        // Default to assessment history
+        // Default redirect to assessment history page
         return h.redirect(
-          `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=Assessment entry archived successfully`
+          `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=${NOTIFICATIONS.ASSESSMENT_ARCHIVED_SUCCESSFULLY}`
         )
       }
     } catch (error) {
       request.logger.error({ error }, 'Error archiving assessment entry')
 
-      // Redirect back with error message
-      if (returnTo === 'standard') {
+      // Redirect back with error message based on context
+      if (returnTo === 'detail') {
         return h.redirect(
-          `/projects/${id}/standards/${standardId}?notification=Failed to archive assessment entry`
+          `/projects/${id}/standards/${standardId}?notification=${NOTIFICATIONS.FAILED_TO_ARCHIVE_ASSESSMENT}`
         )
       } else {
         return h.redirect(
-          `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=Failed to archive assessment entry`
+          `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=${NOTIFICATIONS.FAILED_TO_ARCHIVE_ASSESSMENT}`
         )
       }
     }

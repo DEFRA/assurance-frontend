@@ -13,6 +13,14 @@ import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProjects } from '~/src/server/data/projects.js'
 import { defaultProfessions } from '~/src/server/data/professions.js'
 import { config } from '~/src/config/config.js'
+import {
+  NOTIFICATIONS,
+  PAGE_TITLES,
+  HEADINGS,
+  VIEW_TEMPLATES,
+  ADMIN_NOTIFICATIONS,
+  LOG_MESSAGES
+} from '~/src/server/constants/notifications.js'
 
 export const adminController = {
   get: async (request, h) => {
@@ -55,9 +63,9 @@ export const adminController = {
         ? config.get('env') === 'development'
         : false
 
-      return h.view('admin/index', {
-        pageTitle: 'Data Management',
-        heading: 'Data Management',
+      return h.view(VIEW_TEMPLATES.ADMIN_INDEX, {
+        pageTitle: PAGE_TITLES.DATA_MANAGEMENT,
+        heading: HEADINGS.DATA_MANAGEMENT,
         standardsCount: standards?.length || 0,
         projectsCount: projects?.length || 0,
         professionsCount: professions?.length || 0,
@@ -74,7 +82,7 @@ export const adminController = {
 
   deleteStandards: async (request, h) => {
     try {
-      request.logger.info('Deleting all standards')
+      request.logger.info(LOG_MESSAGES.STANDARDS_DELETED)
 
       const authedFetch = authedFetchJsonDecorator(request)
       await authedFetch('/serviceStandards/seed', {
@@ -82,11 +90,15 @@ export const adminController = {
         body: JSON.stringify([])
       })
 
-      request.logger.info('Standards deleted successfully')
-      return h.redirect('/admin?notification=Standards deleted successfully')
+      request.logger.info(LOG_MESSAGES.STANDARDS_DELETED)
+      return h.redirect(
+        `/admin?notification=${ADMIN_NOTIFICATIONS.STANDARDS_DELETED_SUCCESSFULLY}`
+      )
     } catch (error) {
-      request.logger.error({ error }, 'Failed to delete standards')
-      return h.redirect('/admin?notification=Failed to delete standards')
+      request.logger.error({ error }, LOG_MESSAGES.FAILED_TO_DELETE_STANDARDS)
+      return h.redirect(
+        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_DELETE_STANDARDS}`
+      )
     }
   },
 
@@ -99,15 +111,21 @@ export const adminController = {
       const result = await deleteProject(id, request)
 
       if (!result) {
-        request.logger.warn({ id }, 'Project not found for deletion')
-        return h.redirect('/admin?notification=Project not found')
+        request.logger.warn({ id }, LOG_MESSAGES.PROJECT_NOT_FOUND_FOR_DELETION)
+        return h.redirect(
+          `/admin?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+        )
       }
 
-      request.logger.info({ id }, 'Project deleted successfully')
-      return h.redirect('/admin?notification=Project deleted successfully')
+      request.logger.info({ id }, LOG_MESSAGES.PROJECT_DELETED)
+      return h.redirect(
+        `/admin?notification=${ADMIN_NOTIFICATIONS.PROJECT_DELETED_SUCCESSFULLY}`
+      )
     } catch (error) {
-      request.logger.error({ error }, 'Failed to delete project')
-      return h.redirect('/admin?notification=Failed to delete project')
+      request.logger.error({ error }, LOG_MESSAGES.FAILED_TO_DELETE_PROJECT)
+      return h.redirect(
+        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_DELETE_PROJECT}`
+      )
     }
   },
 
@@ -136,18 +154,21 @@ export const adminController = {
         // Continue with generic name if project fetch fails
       }
 
-      return h.view('admin/confirm-delete', {
-        pageTitle: 'Confirm Project Deletion',
-        heading: 'Delete Project',
+      return h.view(VIEW_TEMPLATES.ADMIN_CONFIRM_DELETE, {
+        pageTitle: PAGE_TITLES.CONFIRM_PROJECT_DELETION,
+        heading: HEADINGS.DELETE_PROJECT,
         message: `Are you sure you want to delete the project "${projectName}"?`,
         confirmUrl: `/admin/projects/${id}/delete`,
         cancelUrl: id ? `/projects/${id}` : '/admin',
         backLink: id ? `/projects/${id}` : '/admin'
       })
     } catch (error) {
-      request.logger.error({ error }, 'Failed to show delete confirmation')
+      request.logger.error(
+        { error },
+        LOG_MESSAGES.FAILED_TO_SHOW_DELETE_CONFIRMATION
+      )
       return h.redirect(
-        '/admin?notification=Failed to show delete confirmation'
+        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SHOW_DELETE_CONFIRMATION}`
       )
     }
   },
@@ -160,9 +181,9 @@ export const adminController = {
       }
 
       // Otherwise show confirmation page
-      return h.view('admin/confirm-delete', {
-        pageTitle: 'Confirm Delete All Standards',
-        heading: 'Delete All Standards',
+      return h.view(VIEW_TEMPLATES.ADMIN_CONFIRM_DELETE, {
+        pageTitle: PAGE_TITLES.CONFIRM_DELETE_ALL_STANDARDS,
+        heading: HEADINGS.DELETE_ALL_STANDARDS,
         message:
           'Are you sure you want to delete ALL service standards? This will remove all standard definitions from the system.',
         confirmUrl: '/admin/standards/delete',
@@ -170,9 +191,12 @@ export const adminController = {
         backLink: '/admin'
       })
     } catch (error) {
-      request.logger.error({ error }, 'Failed to show delete confirmation')
+      request.logger.error(
+        { error },
+        LOG_MESSAGES.FAILED_TO_SHOW_DELETE_CONFIRMATION
+      )
       return h.redirect(
-        '/admin?notification=Failed to show delete confirmation'
+        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SHOW_DELETE_CONFIRMATION}`
       )
     }
   },
@@ -185,9 +209,9 @@ export const adminController = {
       }
 
       // Otherwise show confirmation page
-      return h.view('admin/confirm-delete', {
-        pageTitle: 'Confirm Delete All Professions',
-        heading: 'Delete All Professions',
+      return h.view(VIEW_TEMPLATES.ADMIN_CONFIRM_DELETE, {
+        pageTitle: PAGE_TITLES.CONFIRM_DELETE_ALL_PROFESSIONS,
+        heading: HEADINGS.DELETE_ALL_PROFESSIONS,
         message:
           'Are you sure you want to delete ALL professions? This will remove all profession definitions from the system.',
         confirmUrl: '/admin/professions/delete',
@@ -195,16 +219,17 @@ export const adminController = {
         backLink: '/admin'
       })
     } catch (error) {
-      request.logger.error({ error }, 'Failed to show delete confirmation')
+      request.logger.error(
+        { error },
+        LOG_MESSAGES.FAILED_TO_SHOW_DELETE_CONFIRMATION
+      )
       return h.redirect(
-        '/admin?notification=Failed to show delete confirmation'
+        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SHOW_DELETE_CONFIRMATION}`
       )
     }
   },
 
   deleteProfessions: async (request, h) => {
-    request.logger.info('Deleting all professions')
-
     try {
       // Use the correct endpoint and HTTP method for the backend API
       const result = await authedFetchJsonDecorator(request)(
@@ -219,67 +244,59 @@ export const adminController = {
         'Delete professions result'
       )
 
-      return h.redirect('/admin?notification=Professions deleted successfully')
-    } catch (error) {
-      request.logger.warn(
-        {
-          error: error.message
-        },
-        'Error deleting professions'
+      return h.redirect(
+        `/admin?notification=${ADMIN_NOTIFICATIONS.PROFESSIONS_DELETED_SUCCESSFULLY}`
       )
-
-      return h.redirect('/admin?notification=Failed to delete professions')
+    } catch (error) {
+      request.logger.error({ error }, 'Error deleting professions')
+      // Continue to admin page even if there's an error
+      return h.redirect(
+        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_DELETE_PROFESSIONS}`
+      )
     }
   },
 
-  /**
-   * Seed service standards with default data (dev only)
-   */
-  seedStandardsDev: async (request, h) => {
+  seedStandards: async (request, h) => {
     try {
-      request.logger.info('Seeding service standards (dev only)')
-
       const authedFetch = authedFetchJsonDecorator(request)
+
       await authedFetch('/serviceStandards/seed', {
         method: 'POST',
         body: JSON.stringify(defaultServiceStandards)
       })
 
-      request.logger.info('Service standards seeded successfully (dev only)')
+      request.logger.info(LOG_MESSAGES.SERVICE_STANDARDS_SEEDED)
       return h.redirect(
-        '/admin?notification=Service standards seeded successfully'
+        `/admin?notification=${ADMIN_NOTIFICATIONS.SERVICE_STANDARDS_SEEDED_SUCCESSFULLY}`
       )
     } catch (error) {
-      request.logger.error(error, 'Failed to seed service standards (dev only)')
-      return h.redirect('/admin?notification=Failed to seed service standards')
+      request.logger.error(error, LOG_MESSAGES.FAILED_TO_SEED_SERVICE_STANDARDS)
+      return h.redirect(
+        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SEED_SERVICE_STANDARDS}`
+      )
     }
   },
 
-  /**
-   * Seed professions with default data (dev only)
-   */
-  seedProfessionsDev: async (request, h) => {
+  seedProfessions: async (request, h) => {
     try {
-      // Delete existing professions first
-      const authedFetch = authedFetchJsonDecorator(request)
-      await authedFetch('/professions/deleteAll', {
-        method: 'POST'
-      })
-
-      // Create each profession individually
-      for (const profession of defaultProfessions) {
-        await authedFetch('/professions', {
-          method: 'POST',
-          body: JSON.stringify(profession)
-        })
+      if (config.get('env') !== 'development') {
+        throw new Error('Only available in development environment')
       }
 
-      request.logger.info('Professions seeded (dev only)')
-      return h.redirect('/admin?notification=Professions seeded (dev only)')
-    } catch (error) {
-      request.logger.error(error, 'Failed to seed professions (dev only)')
+      const authedFetch = authedFetchJsonDecorator(request)
+
+      await authedFetch('/professions/seed', {
+        method: 'POST',
+        body: JSON.stringify(defaultProfessions)
+      })
+
       return h.redirect(
-        '/admin?notification=Failed to seed professions (dev only)'
+        `/admin?notification=${ADMIN_NOTIFICATIONS.PROFESSIONS_SEEDED_SUCCESSFULLY}`
+      )
+    } catch (error) {
+      request.logger.error(error, LOG_MESSAGES.FAILED_TO_SEED_PROFESSIONS)
+      return h.redirect(
+        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SEED_PROFESSIONS}`
       )
     }
   },

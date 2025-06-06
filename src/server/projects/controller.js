@@ -18,15 +18,22 @@ import {
   STATUS_CLASS,
   STATUS_LABEL
 } from '~/src/server/constants/status.js'
+import {
+  NOTIFICATIONS,
+  PAGE_TITLES,
+  VIEW_TEMPLATES,
+  LOG_MESSAGES,
+  DDTS_ASSURANCE_SUFFIX
+} from '~/src/server/constants/notifications.js'
 
-export const NOTIFICATIONS = {
-  NOT_FOUND: 'Project not found',
-  UPDATE_SUCCESS: 'Project updated successfully',
-  VALIDATION_ERROR: 'Please check your input - some fields are invalid',
+export const NOTIFICATIONS_LEGACY = {
+  NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND,
+  UPDATE_SUCCESS: NOTIFICATIONS.PROJECT_UPDATED_SUCCESSFULLY,
+  VALIDATION_ERROR: NOTIFICATIONS.VALIDATION_ERROR,
   STANDARDS_ERROR: 'Unable to update project: Service standards not available',
-  GENERAL_ERROR: 'Failed to update project. Please try again.',
-  ARCHIVED: 'Delivery update successfully archived',
-  ARCHIVE_FAILED: 'Failed to archive delivery update'
+  GENERAL_ERROR: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT,
+  ARCHIVED: NOTIFICATIONS.DELIVERY_UPDATE_ARCHIVED,
+  ARCHIVE_FAILED: NOTIFICATIONS.FAILED_TO_ARCHIVE_DELIVERY_UPDATE
 }
 
 // Constants for repeated literals
@@ -38,7 +45,6 @@ const STATUS_OPTIONS = [
   { value: STATUS.RED, text: STATUS_LABEL[STATUS.RED] },
   { value: STATUS.TBC, text: STATUS_LABEL[STATUS.TBC] }
 ]
-const PROJECT_NOT_FOUND_VIEW = 'errors/not-found'
 
 // Helper to get profession name from either the professions array or project data
 function getProfessionName(profession, professions, project) {
@@ -149,7 +155,7 @@ async function updateProjectAfterArchive(id, request) {
     // Log the error but don't fail the archive operation
     request.logger.error(
       { error: updateError.message, projectId: id },
-      'Failed to update project after archiving'
+      LOG_MESSAGES.FAILED_TO_UPDATE_PROJECT_AFTER_ARCHIVING
     )
     return false
   }
@@ -214,9 +220,9 @@ export const projectsController = {
       const projects = await getProjects(request)
       const isAuthenticated = request.auth.isAuthenticated
 
-      return h.view('projects/views/index', {
-        pageTitle: 'Projects',
-        heading: 'Projects',
+      return h.view(VIEW_TEMPLATES.PROJECTS_INDEX, {
+        pageTitle: PAGE_TITLES.PROJECTS,
+        heading: PAGE_TITLES.PROJECTS,
         projects,
         isAuthenticated
       })
@@ -235,8 +241,8 @@ export const projectsController = {
       const project = await getProjectById(id, request)
 
       if (!project) {
-        request.logger.error(NOTIFICATIONS.NOT_FOUND, { id })
-        return h.redirect('/?notification=Project not found')
+        request.logger.error(NOTIFICATIONS.PROJECT_NOT_FOUND, { id })
+        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
       }
 
       request.logger.info({ id }, 'Project retrieved')
@@ -286,8 +292,8 @@ export const projectsController = {
         // Continue with empty history if fetch fails
       }
 
-      return h.view('projects/detail/views/index', {
-        pageTitle: `${project.name} | DDTS Assurance`,
+      return h.view(VIEW_TEMPLATES.PROJECTS_DETAIL_INDEX, {
+        pageTitle: `${project.name}${DDTS_ASSURANCE_SUFFIX}`,
         heading: project.name,
         project,
         standards,
@@ -309,7 +315,7 @@ export const projectsController = {
     try {
       const project = await getProjectById(id, request)
       if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
       }
 
       // Get project history for recent delivery updates
@@ -421,8 +427,8 @@ export const projectsController = {
           .slice(0, 20) // Limit to 20 most recent entries
       }
 
-      return h.view('projects/detail/views/edit', {
-        pageTitle: `Edit ${project.name} | DDTS Assurance`,
+      return h.view(VIEW_TEMPLATES.PROJECTS_DETAIL_EDIT, {
+        pageTitle: `Edit ${project.name}${DDTS_ASSURANCE_SUFFIX}`,
         heading: `Edit ${project.name}`,
         project,
         professions: professions || [],
@@ -465,7 +471,7 @@ export const projectsController = {
       // Get current project to modify
       const currentProject = await getProjectById(id, request)
       if (!currentProject) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
       }
 
       // Initialize the project data that will be updated
@@ -600,7 +606,7 @@ export const projectsController = {
         const redirectTab =
           updateType === 'profession' ? '?tab=professions' : ''
         return h.redirect(
-          `/projects/${id}${redirectTab}${redirectTab ? '&' : '?'}notification=${NOTIFICATIONS.UPDATE_SUCCESS}`
+          `/projects/${id}${redirectTab}${redirectTab ? '&' : '?'}notification=${NOTIFICATIONS.PROJECT_UPDATED_SUCCESSFULLY}`
         )
       } catch (updateError) {
         request.logger.error(
@@ -608,7 +614,7 @@ export const projectsController = {
             error: updateError,
             payload: request.payload
           },
-          'Failed to update project'
+          LOG_MESSAGES.FAILED_TO_UPDATE_PROJECT
         )
 
         // Check for validation errors
@@ -625,7 +631,7 @@ export const projectsController = {
         }
 
         return h.redirect(
-          `/projects/${id}/edit?notification=${NOTIFICATIONS.GENERAL_ERROR}`
+          `/projects/${id}/edit?notification=${NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT}`
         )
       }
     } catch (error) {
@@ -656,9 +662,11 @@ export const projectsController = {
       const project = await getProjectById(id, request)
 
       if (!project) {
-        request.logger.error(`${NOTIFICATIONS.NOT_FOUND} with ID: ${id}`)
-        return h.view(PROJECT_NOT_FOUND_VIEW, {
-          pageTitle: NOTIFICATIONS.NOT_FOUND
+        request.logger.error(
+          `${NOTIFICATIONS.PROJECT_NOT_FOUND} with ID: ${id}`
+        )
+        return h.view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+          pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
         })
       }
 
@@ -711,7 +719,7 @@ export const projectsController = {
         (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
       )
 
-      return h.view('projects/detail/views/project-history', {
+      return h.view(VIEW_TEMPLATES.PROJECTS_DETAIL_HISTORY, {
         pageTitle: `Project History: ${project.name}`,
         project,
         history: combinedHistory,
@@ -733,7 +741,7 @@ export const projectsController = {
     try {
       const project = await getProjectById(id, request)
       if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
       }
 
       const profession = project.professions?.find(
@@ -741,7 +749,7 @@ export const projectsController = {
       )
       if (!profession) {
         return h.redirect(
-          `/projects/${id}?notification=Profession not found in this project`
+          `/projects/${id}?notification=${NOTIFICATIONS.PROFESSION_NOT_FOUND_IN_PROJECT}`
         )
       }
 
@@ -759,7 +767,7 @@ export const projectsController = {
       const sortedHistory = history.sort(
         (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
       )
-      return h.view('projects/detail/views/profession-history', {
+      return h.view(VIEW_TEMPLATES.PROJECTS_DETAIL_PROFESSION_HISTORY, {
         pageTitle: `${professionName} Update History | ${project.name}`,
         heading: `${professionName} Update History`,
         project,
@@ -782,7 +790,7 @@ export const projectsController = {
       // Get project and history entry details
       const project = await getProjectById(id, request)
       if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
+        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
       }
 
       // Get the project history to find the specific entry
@@ -791,19 +799,19 @@ export const projectsController = {
 
       if (!historyEntry) {
         return h.redirect(
-          `/projects/${id}?notification=History entry not found`
+          `/projects/${id}?notification=${NOTIFICATIONS.HISTORY_ENTRY_NOT_FOUND}`
         )
       }
 
       // Only allow archiving of status and commentary changes
       if (!historyEntry.changes?.status && !historyEntry.changes?.commentary) {
         return h.redirect(
-          `/projects/${id}?notification=Only status and commentary updates can be archived`
+          `/projects/${id}?notification=${NOTIFICATIONS.ONLY_STATUS_COMMENTARY_CAN_BE_ARCHIVED}`
         )
       }
 
-      return h.view('projects/detail/views/archive-project-history', {
-        pageTitle: 'Archive Project Update',
+      return h.view(VIEW_TEMPLATES.PROJECTS_DETAIL_ARCHIVE_HISTORY, {
+        pageTitle: PAGE_TITLES.ARCHIVE_PROJECT_UPDATE,
         project,
         historyEntry
       })
@@ -830,16 +838,16 @@ export const projectsController = {
       // Redirect based on where the user came from
       if (returnTo === 'detail') {
         return h.redirect(
-          `/projects/${id}?notification=Project update archived successfully`
+          `/projects/${id}?notification=${NOTIFICATIONS.PROJECT_UPDATE_ARCHIVED_SUCCESSFULLY}`
         )
       } else if (returnTo === 'edit') {
         return h.redirect(
-          `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS.ARCHIVED}`
+          `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS_LEGACY.ARCHIVED}`
         )
       } else {
         // Default redirect to history page
         return h.redirect(
-          `/projects/${id}/history?notification=Project update archived successfully`
+          `/projects/${id}/history?notification=${NOTIFICATIONS.PROJECT_UPDATE_ARCHIVED_SUCCESSFULLY}`
         )
       }
     } catch (error) {
@@ -848,15 +856,15 @@ export const projectsController = {
       // Redirect back with error message based on context
       if (returnTo === 'detail') {
         return h.redirect(
-          `/projects/${id}?notification=Failed to archive project update`
+          `/projects/${id}?notification=${NOTIFICATIONS.FAILED_TO_ARCHIVE_PROJECT_UPDATE}`
         )
       } else if (returnTo === 'edit') {
         return h.redirect(
-          `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS.ARCHIVE_FAILED}`
+          `/projects/${id}/edit?tab=delivery&notification=${NOTIFICATIONS_LEGACY.ARCHIVE_FAILED}`
         )
       } else {
         return h.redirect(
-          `/projects/${id}/history?notification=Failed to archive project update`
+          `/projects/${id}/history?notification=${NOTIFICATIONS.FAILED_TO_ARCHIVE_PROJECT_UPDATE}`
         )
       }
     }

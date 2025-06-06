@@ -1,8 +1,4 @@
-import {
-  projectsController,
-  NOTIFICATIONS,
-  addProfessionHistoryToTimeline
-} from './controller.js'
+import { projectsController, NOTIFICATIONS } from './controller.js'
 
 const mockGetProjects = jest.fn()
 const mockGetProjectById = jest.fn()
@@ -117,7 +113,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockGetProjects).toHaveBeenCalledWith(request)
-      expect(mockH.view).toHaveBeenCalledWith('projects/index', {
+      expect(mockH.view).toHaveBeenCalledWith('projects/views/index', {
         pageTitle: 'Projects',
         heading: 'Projects',
         projects,
@@ -183,7 +179,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/index',
+        'projects/detail/views/index',
         expect.objectContaining({
           pageTitle: 'Test Project | DDTS Assurance',
           heading: 'Test Project',
@@ -227,7 +223,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/index',
+        'projects/detail/views/index',
         expect.objectContaining({
           pageTitle: 'Test Project | DDTS Assurance',
           heading: 'Test Project',
@@ -277,7 +273,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/index',
+        'projects/detail/views/index',
         expect.objectContaining({
           project: mockProject
         })
@@ -318,7 +314,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/index',
+        'projects/detail/views/index',
         expect.objectContaining({
           project: mockProject
         })
@@ -373,7 +369,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/edit',
+        'projects/detail/views/edit',
         expect.objectContaining({
           pageTitle: 'Edit Test Project | DDTS Assurance',
           heading: 'Edit Test Project',
@@ -681,167 +677,6 @@ describe('Projects controller', () => {
     })
   })
 
-  describe('getStandardHistory', () => {
-    it('should render standard history view when project and standard are found', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project',
-        standardsSummary: [{ standardId: '1', status: 'GREEN' }]
-      }
-      const mockHistory = [
-        { timestamp: '2024-02-15', changes: { status: { to: 'GREEN' } } }
-      ]
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetStandardHistory.mockResolvedValue(mockHistory)
-
-      // Act
-      await projectsController.getStandardHistory(
-        {
-          params: { id: '1', standardId: '1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/standard-history',
-        {
-          pageTitle: 'Standard 1 History | Test Project',
-          heading: 'Standard 1 History',
-          project: mockProject,
-          standard: mockProject.standardsSummary[0],
-          history: mockHistory
-        }
-      )
-    })
-
-    it('should redirect if project not found', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue(null)
-
-      // Act
-      await projectsController.getStandardHistory(
-        {
-          params: { id: '1', standardId: '1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
-      )
-    })
-
-    it('should redirect if standard not found', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project',
-        standardsSummary: []
-      }
-      mockGetProjectById.mockResolvedValue(mockProject)
-
-      // Act
-      await projectsController.getStandardHistory(
-        {
-          params: { id: '1', standardId: '999' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1?notification=Standard not found'
-      )
-    })
-
-    it('should handle errors', async () => {
-      // Arrange
-      mockGetProjectById.mockRejectedValue(new Error('Database error'))
-
-      // Act & Assert
-      await expect(
-        projectsController.getStandardHistory(
-          {
-            params: { id: '1', standardId: '1' },
-            logger: { error: jest.fn() }
-          },
-          mockH
-        )
-      ).rejects.toThrow()
-    })
-  })
-
-  describe('getStandards', () => {
-    it('should render standards view with mapped standards', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project',
-        standards: [{ standardId: '1', status: 'GREEN' }]
-      }
-      const mockStandards = [{ number: 1, name: 'Standard 1' }]
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetServiceStandards.mockResolvedValue(mockStandards)
-
-      // Act
-      await projectsController.getStandards(
-        {
-          params: { id: '1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith('projects/detail/standards', {
-        pageTitle: 'Standards Progress | Test Project',
-        project: mockProject,
-        standards: mockStandards
-      })
-    })
-
-    it('should redirect if project not found', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue(null)
-
-      // Act
-      await projectsController.getStandards(
-        {
-          params: { id: '1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
-      )
-    })
-
-    it('should handle errors', async () => {
-      // Arrange
-      mockGetProjectById.mockRejectedValue(new Error('Database error'))
-
-      // Act & Assert
-      await expect(
-        projectsController.getStandards(
-          {
-            params: { id: '1' },
-            logger: { error: jest.fn() }
-          },
-          mockH
-        )
-      ).rejects.toThrow()
-    })
-  })
-
   describe('getProfessionHistory', () => {
     it('should render profession history view when project and profession are found', async () => {
       // Arrange
@@ -869,7 +704,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/profession-history',
+        'projects/detail/views/profession-history',
         {
           pageTitle: 'Test Profession Update History | Test Project',
           heading: 'Test Profession Update History',
@@ -943,193 +778,6 @@ describe('Projects controller', () => {
     })
   })
 
-  describe('getEditProfession', () => {
-    it('should render edit profession view when project and profession are found', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project',
-        professions: [{ professionId: '1', status: 'GREEN' }]
-      }
-      const mockProfessions = [{ id: '1', name: 'Test Profession' }]
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockGetProfessions.mockResolvedValue(mockProfessions)
-
-      // Act
-      await projectsController.getEditProfession(
-        {
-          params: { id: '1', professionId: '1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/edit-profession',
-        expect.objectContaining({
-          pageTitle: 'Edit Test Profession Update | Test Project',
-          heading: 'Edit Test Profession Update',
-          project: mockProject,
-          profession: expect.objectContaining({
-            professionId: '1',
-            name: 'Test Profession'
-          })
-        })
-      )
-    })
-
-    it('should redirect if project not found', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue(null)
-
-      // Act
-      await projectsController.getEditProfession(
-        {
-          params: { id: '1', professionId: '1' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
-      )
-    })
-
-    it('should redirect if profession not found', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project',
-        professions: []
-      }
-      mockGetProjectById.mockResolvedValue(mockProject)
-
-      // Act
-      await projectsController.getEditProfession(
-        {
-          params: { id: '1', professionId: '999' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1?notification=Profession not found in this project'
-      )
-    })
-
-    it('should handle errors', async () => {
-      // Arrange
-      mockGetProjectById.mockRejectedValue(new Error('Database error'))
-
-      // Act & Assert
-      await expect(
-        projectsController.getEditProfession(
-          {
-            params: { id: '1', professionId: '1' },
-            logger: { error: jest.fn() }
-          },
-          mockH
-        )
-      ).rejects.toThrow()
-    })
-  })
-
-  describe('postEditProfession', () => {
-    it('should update profession and redirect on success', async () => {
-      // Arrange
-      const mockProject = {
-        id: '1',
-        name: 'Test Project',
-        professions: [{ professionId: '1', status: 'GREEN' }]
-      }
-      mockGetProjectById.mockResolvedValue(mockProject)
-      mockUpdateProject.mockResolvedValue({
-        ...mockProject,
-        professions: [
-          { professionId: '1', status: 'RED', commentary: 'Updated' }
-        ]
-      })
-
-      // Act
-      await projectsController.postEditProfession(
-        {
-          params: { id: '1', professionId: '1' },
-          payload: { status: 'RED', commentary: 'Updated' },
-          logger: { error: jest.fn(), info: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockUpdateProject).toHaveBeenCalledWith(
-        '1',
-        expect.objectContaining({
-          professions: expect.arrayContaining([
-            expect.objectContaining({
-              professionId: '1',
-              status: 'RED',
-              commentary: 'Updated'
-            })
-          ])
-        }),
-        expect.any(Object)
-      )
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1?tab=professions&notification=Project updated successfully'
-      )
-    })
-
-    it('should redirect if project not found', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue(null)
-
-      // Act
-      await projectsController.postEditProfession(
-        {
-          params: { id: '1', professionId: '1' },
-          payload: { status: 'RED', commentary: 'Updated' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
-      )
-    })
-
-    it('should handle errors', async () => {
-      // Arrange
-      mockGetProjectById.mockResolvedValue({
-        id: '1',
-        name: 'Test Project',
-        professions: [{ professionId: '1', status: 'GREEN' }]
-      })
-      mockUpdateProject.mockRejectedValue(new Error('Update failed'))
-
-      // Act
-      await projectsController.postEditProfession(
-        {
-          params: { id: '1', professionId: '1' },
-          payload: { status: 'RED', commentary: 'Updated' },
-          logger: { error: jest.fn() }
-        },
-        mockH
-      )
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1/edit/profession/1?notification=Failed to update project. Please try again.'
-      )
-    })
-  })
-
   describe('getHistory', () => {
     it('should render project history view when project exists', async () => {
       // Arrange
@@ -1187,7 +835,7 @@ describe('Projects controller', () => {
         expect.any(Object)
       )
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/project-history',
+        'projects/detail/views/project-history',
         expect.objectContaining({
           pageTitle: expect.stringContaining('Project History'),
           project: mockProject,
@@ -1296,113 +944,12 @@ describe('Projects controller', () => {
 
       // Assert - should continue despite profession history error
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/detail/project-history',
+        'projects/detail/views/project-history',
         expect.objectContaining({
           pageTitle: expect.stringContaining('Project History'),
           project: mockProject
         })
       )
-    })
-  })
-
-  describe('addProfessionHistoryToTimeline', () => {
-    const logger = { error: jest.fn() }
-    const getProfessionName = jest.fn(() => 'Test Profession')
-    const id = '1'
-    const request = {}
-
-    beforeEach(() => {
-      jest.clearAllMocks()
-    })
-
-    it('should do nothing if project.professions is undefined', async () => {
-      const combinedHistory = []
-      await addProfessionHistoryToTimeline({
-        project: {},
-        professions: [],
-        id,
-        request,
-        combinedHistory,
-        getProfessionHistory: jest.fn(),
-        getProfessionName,
-        logger
-      })
-      expect(combinedHistory).toEqual([])
-    })
-
-    it('should continue if getProfessionHistory throws', async () => {
-      const combinedHistory = []
-      await addProfessionHistoryToTimeline({
-        project: { professions: [{ professionId: '1' }] },
-        professions: [],
-        id,
-        request,
-        combinedHistory,
-        getProfessionHistory: jest.fn().mockRejectedValue(new Error('fail')),
-        getProfessionName,
-        logger
-      })
-      expect(combinedHistory).toEqual([])
-      expect(logger.error).toHaveBeenCalled()
-    })
-
-    it('should continue if professionHistory is empty', async () => {
-      const combinedHistory = []
-      await addProfessionHistoryToTimeline({
-        project: { professions: [{ professionId: '1' }] },
-        professions: [],
-        id,
-        request,
-        combinedHistory,
-        getProfessionHistory: jest.fn().mockResolvedValue([]),
-        getProfessionName,
-        logger
-      })
-      expect(combinedHistory).toEqual([])
-    })
-
-    it('should not add entries if no commentary updates', async () => {
-      const combinedHistory = []
-      await addProfessionHistoryToTimeline({
-        project: { professions: [{ professionId: '1' }] },
-        professions: [],
-        id,
-        request,
-        combinedHistory,
-        getProfessionHistory: jest
-          .fn()
-          .mockResolvedValue([{ changes: { status: { to: 'GREEN' } } }]),
-        getProfessionName,
-        logger
-      })
-      expect(combinedHistory).toEqual([])
-    })
-
-    it('should add entries for commentary updates', async () => {
-      const combinedHistory = []
-      const commentaryEntry = {
-        id: 'abc',
-        timestamp: '2024-01-01',
-        changes: { commentary: { to: 'A comment' } }
-      }
-      await addProfessionHistoryToTimeline({
-        project: { professions: [{ professionId: '1' }] },
-        professions: [],
-        id,
-        request,
-        combinedHistory,
-        getProfessionHistory: jest.fn().mockResolvedValue([commentaryEntry]),
-        getProfessionName,
-        logger
-      })
-      expect(combinedHistory).toHaveLength(1)
-      expect(combinedHistory[0]).toMatchObject({
-        ...commentaryEntry,
-        professionName: 'Test Profession',
-        type: 'profession',
-        historyType: 'comment',
-        changedBy: 'Test Profession'
-      })
     })
   })
 })

@@ -58,7 +58,7 @@ describe('Add Project controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/add/index',
+        'projects/add/views/index',
         expect.objectContaining({
           pageTitle: 'Add Project | DDTS Assurance',
           heading: 'Add Project',
@@ -93,7 +93,7 @@ describe('Add Project controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/add/index',
+        'projects/add/views/index',
         expect.objectContaining({
           errors: expect.objectContaining({
             name: true,
@@ -117,7 +117,7 @@ describe('Add Project controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/add/index',
+        'projects/add/views/index',
         expect.objectContaining({
           errorMessage:
             'Unable to create project: Service standards not available',

@@ -3,7 +3,7 @@ import { createProject } from '~/src/server/services/projects.js'
 
 const PAGE_TITLE = 'Add Project | DDTS Assurance'
 const PAGE_HEADING = 'Add Project'
-const VIEW_TEMPLATE = 'projects/add/index'
+const VIEW_TEMPLATE = 'projects/add/views/index'
 
 const STATUS_OPTIONS = [
   {

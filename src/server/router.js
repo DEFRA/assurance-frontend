@@ -1,11 +1,11 @@
 import inert from '@hapi/inert'
-import { health } from '~/src/server/health/index.js'
-import { home } from '~/src/server/home/index.js'
-import { serveStaticFiles } from '~/src/server/common/helpers/serve-static-files.js'
-import { about } from '~/src/server/about/index.js'
-import { admin } from '~/src/server/admin/index.js'
-import { projects } from '~/src/server/projects/index.js'
-import { professions } from '~/src/server/professions/index.js'
+import { health } from './health/index.js'
+import { home } from './home/index.js'
+import { about } from './about/index.js'
+import { admin } from './admin/index.js'
+import { projectsRoutes } from './projects/index.js'
+import { professions } from './professions/index.js'
+import { serveStaticFiles } from './common/helpers/serve-static-files.js'
 /**
  * @satisfies {ServerRegisterPluginObject<void>}
  */
@@ -19,7 +19,7 @@ export const router = {
       await server.register([health])
 
       // Application specific routes, add your own routes here
-      await server.register([home, about, admin, projects, professions])
+      await server.register([home, about, admin, projectsRoutes, professions])
 
       // Static assets
       await server.register([serveStaticFiles])

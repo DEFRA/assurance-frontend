@@ -28,18 +28,6 @@
       <h2 class="govuk-heading-m">Projects</h2>
       <p class="govuk-body">Currently {{ projectsCount }} projects loaded</p>
       
-      {% if not isTestEnvironment %}
-      <div class="govuk-button-group">
-        {% if isDevelopment %}
-        <form method="POST" action="/admin/projects/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
-          <button class="govuk-button" data-module="govuk-button">
-            Add Sample Projects with History (Dev Only)
-          </button>
-        </form>
-        {% endif %}
-      </div>
-      {% endif %}
-      
       {% if projects and projects.length > 0 %}
         <table class="govuk-table">
           <thead class="govuk-table__head">
@@ -70,7 +58,7 @@
           </tbody>
         </table>
       {% else %}
-        <p class="govuk-body">No projects available. Use the "Add Sample Projects" button to create some.</p>
+        <p class="govuk-body">No projects available.</p>
       {% endif %}
       
       <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
@@ -137,7 +125,6 @@
         <li>Delete all existing data</li>
         <li>Seed service standards</li>
         <li>Seed professions</li>
-        <li>Seed sample projects</li>
       </ol>
       
       <div class="govuk-warning-text">

@@ -18,7 +18,6 @@ import {
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
-import { config } from '~/src/config/config.js'
 import {
   STATUS,
   STATUS_CLASS,
@@ -49,7 +48,6 @@ const STATUS_OPTIONS = [
   { value: STATUS.TBC, text: STATUS_LABEL[STATUS.TBC] }
 ]
 const PROJECT_NOT_FOUND_VIEW = 'errors/not-found'
-const HTTP_STATUS_NOT_FOUND = 404
 
 // Helper to get profession name from either the professions array or project data
 function getProfessionName(profession, professions, project) {
@@ -235,31 +233,6 @@ export const projectsController = {
       })
     } catch (error) {
       request.logger.error('Error fetching projects')
-      throw Boom.boomify(error, { statusCode: 500 })
-    }
-  },
-
-  getById: async (request, h) => {
-    const { id } = request.params
-
-    try {
-      const project = await getProjectById(id, request)
-
-      if (!project) {
-        return h
-          .view(PROJECT_NOT_FOUND_VIEW, {
-            pageTitle: NOTIFICATIONS.NOT_FOUND
-          })
-          .code(HTTP_STATUS_NOT_FOUND)
-      }
-
-      return h.view('projects/detail/index', {
-        pageTitle: project.name,
-        project,
-        isTestEnvironment: config.get('env') === 'test'
-      })
-    } catch (error) {
-      request.logger.error('Error fetching project')
       throw Boom.boomify(error, { statusCode: 500 })
     }
   },
@@ -711,35 +684,6 @@ export const projectsController = {
     }
   },
 
-  getProjectHistory: async (request, h) => {
-    try {
-      const { id } = request.params
-
-      // Fetch project and history
-      const project = await getProjectById(id, request)
-
-      if (!project) {
-        return h.response({ error: NOTIFICATIONS.NOT_FOUND }).code(404)
-      }
-
-      // Fetch the project history
-      const history = await getProjectHistory(id, request)
-
-      // Return simplified history without complex transformations
-      const timeline = (history || []).map((entry) => ({
-        ...entry,
-        timestamp: entry.timestamp || new Date().toISOString(),
-        type: 'project',
-        historyType: 'delivery'
-      }))
-
-      return h.response({ history: timeline }).code(200)
-    } catch (error) {
-      request.logger.error('Error fetching project history:', error)
-      return h.response({ error: 'Failed to fetch project history' }).code(500)
-    }
-  },
-
   getStandards: async (request, h) => {
     const { id } = request.params
 
@@ -759,76 +703,6 @@ export const projectsController = {
       })
     } catch (error) {
       request.logger.error(error)
-      throw Boom.boomify(error, { statusCode: 500 })
-    }
-  },
-
-  edit: async (request, h) => {
-    const { id } = request.params
-    const isNew = !id
-
-    try {
-      let project = null
-      let standards = []
-
-      if (!isNew) {
-        project = await getProjectById(id, request)
-        if (!project) {
-          return h
-            .view(PROJECT_NOT_FOUND_VIEW, {
-              pageTitle: NOTIFICATIONS.NOT_FOUND
-            })
-            .code(404)
-        }
-      }
-
-      try {
-        standards = await getServiceStandards(request)
-      } catch (error) {
-        request.logger.error({ error }, 'Error fetching service standards')
-        throw Boom.boomify(error, { statusCode: 500 })
-      }
-
-      return h.view('projects/edit/index', {
-        pageTitle: isNew ? 'Create Project' : `Edit ${project.name}`,
-        project,
-        standards,
-        formAction: isNew ? '/projects/new' : `/projects/${id}/edit`,
-        cancelUrl: isNew ? '/projects' : `/projects/${id}`,
-        errors: request.pre.errors,
-        isTestEnvironment: config.get('env') === 'test'
-      })
-    } catch (error) {
-      request.logger.error({ error, id }, 'Error preparing project edit form')
-      throw Boom.boomify(error, { statusCode: 500 })
-    }
-  },
-
-  update: async (request, h) => {
-    const { id } = request.params
-    const payload = request.payload
-
-    try {
-      // Get the existing project
-      const existingProject = await getProjectById(id, request)
-      if (!existingProject) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.NOT_FOUND}`)
-      }
-
-      // Update the project with the new data
-      const result = await updateProject(id, payload, request)
-
-      if (!result) {
-        return h.redirect(
-          `/projects/${id}?notification=Failed to update project`
-        )
-      }
-
-      return h.redirect(
-        `/projects/${id}?notification=Project updated successfully`
-      )
-    } catch (error) {
-      request.logger.error({ error, id }, 'Error updating project')
       throw Boom.boomify(error, { statusCode: 500 })
     }
   },

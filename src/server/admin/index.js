@@ -1,6 +1,5 @@
 import { adminController } from './controller.js'
 import { requireRole } from '~/src/server/auth/middleware.js'
-import { config } from '~/src/config/config.js'
 
 export const admin = {
   plugin: {
@@ -94,45 +93,42 @@ export const admin = {
         {
           method: 'POST',
           path: '/admin/professions/seed-dev',
-          handler: adminController.seedProfessionsDev,
+          handler: adminController.seedProfessions,
           options: {
-            auth: {
-              strategy: 'session',
-              mode: 'required'
-            },
             pre: [{ method: requireRole('admin') }]
           }
         },
         {
           method: 'POST',
           path: '/admin/standards/seed-dev',
-          handler: adminController.seedStandardsDev,
+          handler: adminController.seedStandards,
+          options: {
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/standards/seed',
+          handler: adminController.seedStandards,
           options: {
             auth: {
-              strategy: 'session',
               mode: 'required'
-            },
-            pre: [{ method: requireRole('admin') }]
+            }
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/professions/seed',
+          handler: adminController.seedProfessions,
+          options: {
+            auth: {
+              mode: 'required'
+            }
           }
         }
       ]
 
-      // Add dev-only routes if in development mode
-      if (config.get('env') === 'development') {
-        routes.push({
-          method: 'POST',
-          path: '/admin/projects/seed-dev',
-          handler: adminController.seedProjectsDev,
-          options: {
-            auth: {
-              strategy: 'session',
-              mode: 'required'
-            },
-            pre: [{ method: requireRole('admin') }]
-          }
-        })
-      }
-
+      // Routes are defined above - no additional dev routes needed
       server.route(routes)
     }
   }

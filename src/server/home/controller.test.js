@@ -202,7 +202,7 @@ describe('Home Controller', () => {
 
         const viewArgs = mockH.view.mock.calls[0][1]
         expect(viewArgs.projects).toEqual([])
-        expect(viewArgs.description).toContain('Unable to load projects')
+        expect(viewArgs.error).toContain('Unable to load projects')
       })
 
       it('should handle unexpected API response format', async () => {

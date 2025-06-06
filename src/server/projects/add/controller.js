@@ -1,9 +1,12 @@
-import Boom from '@hapi/boom'
 import { createProject } from '~/src/server/services/projects.js'
+import {
+  NOTIFICATIONS,
+  VIEW_TEMPLATES,
+  DDTS_ASSURANCE_SUFFIX
+} from '~/src/server/constants/notifications.js'
 
-const PAGE_TITLE = 'Add Project | DDTS Assurance'
+const PAGE_TITLE = `Add Project${DDTS_ASSURANCE_SUFFIX}`
 const PAGE_HEADING = 'Add Project'
-const VIEW_TEMPLATE = 'projects/add/index'
 
 const STATUS_OPTIONS = [
   {
@@ -30,82 +33,120 @@ const PHASE_OPTIONS = [
   { value: 'Live', text: 'Live' }
 ]
 
+/**
+ * @satisfies {Partial<ServerRoute>}
+ */
 export const addProjectController = {
-  get: (_request, h) => {
-    return h.view(VIEW_TEMPLATE, {
-      pageTitle: PAGE_TITLE,
-      heading: PAGE_HEADING,
-      values: {},
-      errors: {},
-      statusOptions: STATUS_OPTIONS,
-      phaseOptions: PHASE_OPTIONS
-    })
+  get: (request, h) => {
+    try {
+      return h.view(VIEW_TEMPLATES.PROJECTS_ADD_INDEX, {
+        pageTitle: PAGE_TITLE,
+        heading: PAGE_HEADING,
+        values: {},
+        errors: {},
+        statusOptions: STATUS_OPTIONS,
+        phaseOptions: PHASE_OPTIONS
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Error loading add project page')
+      throw error
+    }
   },
 
   post: async (request, h) => {
-    const { name, phase, defCode, status, commentary } = request.payload
+    const { name, description, phase, defCode } = request.payload
 
     try {
-      // Validate required fields (defCode is optional)
-      if (!name || !phase || !status || !commentary) {
-        return h.view(VIEW_TEMPLATE, {
+      // Validate required fields
+      if (!name || !phase) {
+        return h.view(VIEW_TEMPLATES.PROJECTS_ADD_INDEX, {
           pageTitle: PAGE_TITLE,
           heading: PAGE_HEADING,
-          errorMessage: 'Please fill in all required fields',
           values: request.payload,
           errors: {
-            name: !name,
-            phase: !phase,
-            status: !status,
-            commentary: !commentary
+            name: !name ? { text: 'Enter a project name' } : null,
+            phase: !phase ? { text: 'Select a project phase' } : null
           },
-          statusOptions: STATUS_OPTIONS,
-          phaseOptions: PHASE_OPTIONS
+          errorMessage: 'Please check your input - some fields are required'
         })
       }
 
-      try {
-        await createProject(
-          { name, phase, defCode, status, commentary },
-          request
-        )
-        request.logger.info(`Project "${name}" created successfully`)
-        return h.redirect('/?notification=Project created successfully')
-      } catch (error) {
-        request.logger.error({ error }, 'Failed to create project')
+      // Create the project
+      await createProject(
+        {
+          name,
+          description,
+          phase,
+          defCode: defCode || '',
+          status: 'TBC',
+          commentary: ''
+        },
+        request
+      )
 
-        // Handle validation errors
-        if (error.message?.includes('Invalid data')) {
-          return h.view(VIEW_TEMPLATE, {
-            pageTitle: PAGE_TITLE,
-            heading: PAGE_HEADING,
-            errorMessage: 'Please check your input - some fields are invalid',
-            values: { name, phase, defCode, status, commentary },
-            statusOptions: STATUS_OPTIONS,
-            phaseOptions: PHASE_OPTIONS,
-            errors: {}
-          })
-        }
-
-        // Handle standards-related errors
-        if (error.message?.includes('standards')) {
-          return h.view(VIEW_TEMPLATE, {
-            pageTitle: PAGE_TITLE,
-            heading: PAGE_HEADING,
-            errorMessage:
-              'Unable to create project: Service standards not available',
-            values: { name, phase, defCode, status, commentary },
-            statusOptions: STATUS_OPTIONS,
-            phaseOptions: PHASE_OPTIONS,
-            errors: {}
-          })
-        }
-
-        throw error
-      }
+      request.logger.info(`Project "${name}" created successfully`)
+      return h.redirect(
+        `/?notification=${NOTIFICATIONS.PROJECT_CREATED_SUCCESSFULLY}`
+      )
     } catch (error) {
-      request.logger.error(error)
-      throw Boom.boomify(error, { statusCode: 500 })
+      request.logger.error({ error }, NOTIFICATIONS.FAILED_TO_CREATE_PROJECT)
+
+      return h.view(VIEW_TEMPLATES.PROJECTS_ADD_INDEX, {
+        pageTitle: PAGE_TITLE,
+        heading: PAGE_HEADING,
+        values: request.payload,
+        errors: {},
+        errorMessage: NOTIFICATIONS.FAILED_TO_CREATE_PROJECT
+      })
     }
+  }
+}
+
+// Alternative constant-based post method
+export const postCreateProject = async (request, h) => {
+  const { name, description, phase, defCode } = request.payload
+
+  try {
+    // Validate required fields
+    if (!name || !phase) {
+      return h.view(VIEW_TEMPLATES.PROJECTS_ADD_INDEX, {
+        pageTitle: PAGE_TITLE,
+        heading: PAGE_HEADING,
+        values: request.payload,
+        errors: {
+          name: !name ? { text: 'Enter a project name' } : null,
+          phase: !phase ? { text: 'Select a project phase' } : null
+        },
+        errorMessage: 'Please check your input - some fields are required'
+      })
+    }
+
+    // Create the project
+    await createProject(
+      {
+        name,
+        description,
+        phase,
+        defCode: defCode || '',
+        status: 'TBC',
+        commentary: ''
+      },
+      request
+    )
+
+    request.logger.info(`Project "${name}" created successfully`)
+    return h.redirect(
+      `/?notification=${NOTIFICATIONS.PROJECT_CREATED_SUCCESSFULLY}`
+    )
+  } catch (error) {
+    request.logger.error({ error }, NOTIFICATIONS.FAILED_TO_CREATE_PROJECT)
+
+    return h.view(VIEW_TEMPLATES.PROJECTS_ADD_INDEX, {
+      pageTitle: PAGE_TITLE,
+      heading: PAGE_HEADING,
+      values: request.payload,
+      errors: {},
+      errorMessage: NOTIFICATIONS.FAILED_TO_CREATE_PROJECT
+    })
   }
 }

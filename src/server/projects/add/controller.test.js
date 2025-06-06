@@ -1,6 +1,5 @@
 import { addProjectController } from './controller.js'
 import { createProject } from '~/src/server/services/projects.js'
-import Boom from '@hapi/boom'
 
 jest.mock('~/src/server/services/projects.js')
 
@@ -58,7 +57,7 @@ describe('Add Project controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/add/index',
+        'projects/add/views/index',
         expect.objectContaining({
           pageTitle: 'Add Project | DDTS Assurance',
           heading: 'Add Project',
@@ -93,16 +92,14 @@ describe('Add Project controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/add/index',
+        'projects/add/views/index',
         expect.objectContaining({
+          errorMessage: 'Please check your input - some fields are required',
           errors: expect.objectContaining({
-            name: true,
-            phase: true,
-            status: true,
-            commentary: true
+            name: { text: 'Enter a project name' },
+            phase: { text: 'Select a project phase' }
           }),
-          values: invalidRequest.payload,
-          errorMessage: 'Please fill in all required fields'
+          values: { name: '', phase: '', status: '', commentary: '' }
         })
       )
       expect(result).toBe('view-response')
@@ -117,12 +114,11 @@ describe('Add Project controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        'projects/add/index',
+        'projects/add/views/index',
         expect.objectContaining({
-          errorMessage:
-            'Unable to create project: Service standards not available',
-          values: mockRequest.payload,
-          heading: 'Add Project'
+          errorMessage: 'Failed to create project',
+          heading: 'Add Project',
+          values: mockRequest.payload
         })
       )
       expect(result).toBe('view-response')
@@ -133,10 +129,15 @@ describe('Add Project controller', () => {
       createProject.mockRejectedValue(new Error('Unexpected error'))
 
       // Act & Assert
-      await expect(
-        addProjectController.post(mockRequest, mockH)
-      ).rejects.toThrow(
-        Boom.boomify(new Error('Unexpected error'), { statusCode: 500 })
+      await addProjectController.post(mockRequest, mockH)
+
+      // Should return a view with error message instead of throwing
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/add/views/index',
+        expect.objectContaining({
+          errorMessage: 'Failed to create project',
+          values: mockRequest.payload
+        })
       )
     })
 
@@ -153,8 +154,8 @@ describe('Add Project controller', () => {
           name: 'New Project',
           phase: 'Discovery',
           defCode: 'TEST001',
-          status: 'GREEN',
-          commentary: 'Initial setup'
+          status: 'TBC',
+          commentary: ''
         }),
         mockRequest
       )

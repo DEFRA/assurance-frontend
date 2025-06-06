@@ -23,7 +23,7 @@ export const professions = {
         {
           method: 'GET',
           path: '/professions/{id}',
-          handler: professionsController.getById,
+          handler: professionsController.get,
           options: {
             auth: {
               strategy: 'session',

@@ -114,9 +114,10 @@ export function filterStandardsByProfessionAndPhase(
   const availableStandardNumbers = getAvailableStandards(phase, professionId)
 
   return allStandards.filter((standard) => {
-    // Match by number field or by parsing number from name
-    const standardNumber =
-      standard.number || parseInt(standard.name?.match(/^\d+/)?.[0])
+    // Match by number field or by parsing number from name - always convert to integer
+    const standardNumber = standard.number
+      ? parseInt(standard.number)
+      : parseInt(standard.name?.match(/^\d+/)?.[0])
     return availableStandardNumbers.includes(standardNumber)
   })
 }

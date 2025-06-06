@@ -3,13 +3,10 @@ import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import {
   getProjects,
   getProjectById,
-  deleteProject,
-  createProject,
-  updateProject
+  deleteProject
 } from '~/src/server/services/projects.js'
 import { getProfessions } from '~/src/server/services/professions.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
-import { defaultProjects } from '~/src/server/data/projects.js'
 import { defaultProfessions } from '~/src/server/data/professions.js'
 import { config } from '~/src/config/config.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
@@ -34,6 +31,12 @@ describe('Admin controller', () => {
   let mockRequest
   let mockH
   let mockAuthedFetch
+
+  // Mock projects data for testing
+  const mockProjects = [
+    { id: 'project-1', name: 'Test Project 1', phase: 'Discovery' },
+    { id: 'project-2', name: 'Test Project 2', phase: 'Alpha' }
+  ]
 
   beforeEach(() => {
     // Reset all mocks
@@ -74,7 +77,7 @@ describe('Admin controller', () => {
     it('should return admin dashboard view with counts', async () => {
       // Arrange
       getServiceStandards.mockResolvedValue(defaultServiceStandards)
-      getProjects.mockResolvedValue(defaultProjects)
+      getProjects.mockResolvedValue(mockProjects)
       getProfessions.mockResolvedValue(defaultProfessions)
 
       // Act
@@ -85,9 +88,9 @@ describe('Admin controller', () => {
         pageTitle: 'Data Management',
         heading: 'Data Management',
         standardsCount: defaultServiceStandards.length,
-        projectsCount: defaultProjects.length,
+        projectsCount: mockProjects.length,
         professionsCount: defaultProfessions.length,
-        projects: defaultProjects,
+        projects: mockProjects,
         notification: 'Test notification',
         isTestEnvironment: true,
         isDevelopment: false
@@ -97,7 +100,7 @@ describe('Admin controller', () => {
     it('should handle API errors gracefully', async () => {
       // Arrange
       getServiceStandards.mockRejectedValue(new Error('API Error'))
-      getProjects.mockResolvedValue(defaultProjects)
+      getProjects.mockResolvedValue(mockProjects)
       getProfessions.mockResolvedValue(defaultProfessions)
 
       // Act
@@ -108,64 +111,13 @@ describe('Admin controller', () => {
         pageTitle: 'Data Management',
         heading: 'Data Management',
         standardsCount: defaultServiceStandards.length,
-        projectsCount: defaultProjects.length,
+        projectsCount: mockProjects.length,
         professionsCount: defaultProfessions.length,
-        projects: defaultProjects,
+        projects: mockProjects,
         notification: 'Test notification',
         isTestEnvironment: true,
         isDevelopment: false
       })
-    })
-  })
-
-  describe('seedProjectsDev', () => {
-    it('should seed projects with assessments and redirect', async () => {
-      // Arrange
-      mockAuthedFetch.mockResolvedValue({ ok: true })
-      getProfessions.mockResolvedValue(defaultProfessions)
-      getServiceStandards.mockResolvedValue(defaultServiceStandards)
-      createProject.mockResolvedValue({ id: 'test-project-1' })
-      updateProject.mockResolvedValue({ id: 'test-project-1' })
-
-      // Mock the missing seedStandardsDev and seedProfessionsDev methods
-      adminController.seedStandardsDev = jest.fn().mockResolvedValue()
-      adminController.seedProfessionsDev = jest.fn().mockResolvedValue()
-
-      // Act
-      await adminController.seedProjectsDev(mockRequest, mockH)
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Projects and assessments seeded successfully with new system'
-      )
-
-      // Cleanup
-      delete adminController.seedStandardsDev
-      delete adminController.seedProfessionsDev
-    })
-
-    it('should handle errors', async () => {
-      // Arrange - Mock a failure in getProfessions to cause the main seeding logic to fail
-      mockAuthedFetch.mockResolvedValue({ ok: true }) // Let the initial seeding succeed
-      getProfessions.mockRejectedValue(new Error('API Error'))
-      updateProject.mockResolvedValue({ id: 'test-project-1' })
-      mockH.redirect.mockClear()
-
-      // Mock the missing seedStandardsDev and seedProfessionsDev methods
-      adminController.seedStandardsDev = jest.fn().mockResolvedValue()
-      adminController.seedProfessionsDev = jest.fn().mockResolvedValue()
-
-      // Act
-      await adminController.seedProjectsDev(mockRequest, mockH)
-
-      // Assert
-      expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Failed to seed projects and assessments'
-      )
-
-      // Cleanup
-      delete adminController.seedStandardsDev
-      delete adminController.seedProfessionsDev
     })
   })
 

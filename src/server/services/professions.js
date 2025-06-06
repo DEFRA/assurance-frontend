@@ -95,7 +95,7 @@ export async function getProfessionById(id, request) {
 export async function deleteProfession(id, request) {
   try {
     const endpoint = `/professions/${id}`
-    logger.info({ endpoint, id }, 'Deleting profession')
+    logger.info({ endpoint, id }, 'Soft deleting profession')
 
     let data
     if (request) {
@@ -107,7 +107,7 @@ export async function deleteProfession(id, request) {
       data = await fetcher(endpoint, { method: 'DELETE' })
     }
 
-    logger.info({ profession: data }, 'Profession deleted successfully')
+    logger.info({ profession: data }, 'Profession soft deleted successfully')
     return data
   } catch (error) {
     logger.error(
@@ -117,7 +117,91 @@ export async function deleteProfession(id, request) {
         code: error.code,
         id
       },
-      'Failed to delete profession'
+      'Failed to soft delete profession'
+    )
+    throw error
+  }
+}
+
+/**
+ * Get all professions including inactive ones (for admin use)
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<Array>} - All professions including inactive
+ */
+export async function getAllProfessions(request) {
+  try {
+    const endpoint = '/professions?includeInactive=true'
+    logger.info(
+      { endpoint },
+      'Fetching all professions (including inactive) from API'
+    )
+
+    let data
+    if (request) {
+      logger.info(
+        '[API_AUTH] Using authenticated fetcher for all professions API'
+      )
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      logger.warn(
+        '[API_AUTH] No request context provided, using unauthenticated fetcher'
+      )
+      data = await fetcher(endpoint)
+    }
+
+    if (!data || !Array.isArray(data)) {
+      logger.warn('Invalid data returned from API', { data })
+      return []
+    }
+
+    logger.info(
+      { count: data.length },
+      'All professions (including inactive) retrieved successfully'
+    )
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code
+      },
+      'Failed to fetch all professions'
+    )
+    throw error
+  }
+}
+
+/**
+ * Restore a soft-deleted profession
+ * @param {string} id - The profession ID
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<boolean>} - Success status
+ */
+export async function restoreProfession(id, request) {
+  try {
+    const endpoint = `/professions/${id}/restore`
+    logger.info({ endpoint, id }, 'Restoring profession')
+
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch(endpoint, { method: 'POST' })
+    } else {
+      await fetcher(endpoint, { method: 'POST' })
+    }
+
+    logger.info({ id }, 'Profession restored successfully')
+    return true
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to restore profession'
     )
     throw error
   }

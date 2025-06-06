@@ -33,6 +33,206 @@ const STATUS_OPTIONS = [
   { value: STATUS.TBC, text: STATUS_LABEL[STATUS.TBC] }
 ]
 
+// Extracted constants for duplicated literals
+const SELECT_STATUS_TEXT = 'Select status'
+const SELECT_PHASE_TEXT = 'Select phase'
+const STATUS_PRIORITY_ORDER = [
+  'RED',
+  'AMBER_RED',
+  'AMBER',
+  'GREEN_AMBER',
+  'GREEN',
+  'TBC'
+]
+const CONCERNING_STATUSES = ['RED', 'AMBER_RED', 'AMBER', 'GREEN_AMBER']
+const PHASE_OPTIONS_LIST = [
+  { value: 'Discovery', text: 'Discovery' },
+  { value: 'Alpha', text: 'Alpha' },
+  { value: 'Private Beta', text: 'Private Beta' },
+  { value: 'Public Beta', text: 'Public Beta' },
+  { value: 'Live', text: 'Live' }
+]
+
+// Helper function to create profession map
+function createProfessionMap(professions) {
+  const professionMap = {}
+  if (professions && Array.isArray(professions)) {
+    professions.forEach((profession) => {
+      if (profession.id && profession.name) {
+        professionMap[profession.id] = profession.name
+      }
+    })
+  }
+  return professionMap
+}
+
+// Helper function to create status options with selection
+function createStatusOptions(selectedStatus = '') {
+  const statusOptions = [
+    { text: SELECT_STATUS_TEXT, value: '' },
+    ...STATUS_OPTIONS
+  ]
+
+  // Mark the current values as selected
+  statusOptions.forEach((option) => {
+    if (option.value === selectedStatus) {
+      option.selected = true
+    }
+  })
+
+  return statusOptions
+}
+
+// Helper function to create phase options with selection
+function createPhaseOptions(selectedPhase = '') {
+  const phaseOptions = [
+    { text: SELECT_PHASE_TEXT, value: '' },
+    ...PHASE_OPTIONS_LIST
+  ]
+
+  // Mark the selected phase
+  phaseOptions.forEach((option) => {
+    if (option.value === selectedPhase) {
+      option.selected = true
+    }
+  })
+
+  return phaseOptions
+}
+
+// Helper function to process profession comments
+function processProfessionComments(professions, professionMap) {
+  return (
+    professions
+      ?.filter((p) => p.commentary?.trim())
+      ?.map((p) => ({
+        professionId: p.professionId,
+        professionName: professionMap[p.professionId] || p.professionId,
+        commentary: p.commentary,
+        status: p.status
+      })) || []
+  )
+}
+
+// Helper function to create standards at risk data
+function createStandardsAtRisk(project, serviceStandards, professionMap) {
+  const standardsAtRisk = []
+
+  if (!project.standardsSummary || !serviceStandards) {
+    return standardsAtRisk
+  }
+
+  // Filter to only concerning statuses and process them
+  const filteredStandards = project.standardsSummary
+    .filter((standardSummary) =>
+      ['RED', 'AMBER_RED', 'AMBER'].includes(standardSummary.aggregatedStatus)
+    )
+    .sort(
+      (a, b) =>
+        STATUS_PRIORITY_ORDER.indexOf(a.aggregatedStatus) -
+        STATUS_PRIORITY_ORDER.indexOf(b.aggregatedStatus)
+    )
+
+  filteredStandards.forEach((standardSummary) => {
+    // Find the service standard by ID
+    let serviceStandard = serviceStandards.find(
+      (s) => s.id === standardSummary.standardId
+    )
+
+    // Create placeholder if not found
+    if (!serviceStandard) {
+      serviceStandard = {
+        id: standardSummary.standardId,
+        number: 'Unknown',
+        name: 'Unknown Standard',
+        description: ''
+      }
+    }
+
+    // Build profession comments array
+    const professionComments = []
+    standardSummary.professions.forEach((profession) => {
+      if (profession.commentary?.trim()) {
+        const professionName =
+          professionMap[profession.professionId] || profession.professionId
+        professionComments.push({
+          professionName,
+          commentary: profession.commentary,
+          status: profession.status,
+          lastUpdated: profession.lastUpdated
+        })
+      }
+    })
+
+    // Add to standards at risk
+    standardsAtRisk.push({
+      id: serviceStandard.id,
+      number: serviceStandard.number,
+      name: serviceStandard.name,
+      status: standardSummary.aggregatedStatus,
+      lastUpdated: standardSummary.lastUpdated,
+      professionComments
+    })
+  })
+
+  return standardsAtRisk
+}
+
+// Helper function to create alternative standards at risk (used in validation error cases)
+function createAlternativeStandardsAtRisk(
+  project,
+  serviceStandards,
+  professionMap
+) {
+  const standardsAtRisk = []
+
+  if (!project.standardsSummary || !serviceStandards) {
+    return standardsAtRisk
+  }
+
+  const standardsWithStatus = project.standardsSummary
+    .map((standardSummary) => {
+      const standard = serviceStandards.find(
+        (s) => s.id === standardSummary.standardId
+      )
+      if (!standard) {
+        return null
+      }
+
+      return {
+        standard,
+        summary: standardSummary,
+        statusPriorityIndex: STATUS_PRIORITY_ORDER.indexOf(
+          standardSummary.aggregatedStatus
+        )
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.statusPriorityIndex - b.statusPriorityIndex)
+    .slice(0, 5)
+
+  standardsWithStatus
+    .filter((item) =>
+      CONCERNING_STATUSES.includes(item.summary.aggregatedStatus)
+    )
+    .forEach(({ standard, summary }) => {
+      const professionComments = processProfessionComments(
+        summary.professions,
+        professionMap
+      )
+
+      standardsAtRisk.push({
+        number: standard.number,
+        name: standard.name,
+        status: summary.aggregatedStatus,
+        professionComments,
+        lastUpdated: summary.lastUpdated
+      })
+    })
+
+  return standardsAtRisk
+}
+
 export const manageController = {
   getManageProject: async (request, h) => {
     const { id } = request.params
@@ -136,110 +336,13 @@ export const manageController = {
       }
 
       // Create profession ID to name mapping
-      const professionMap = {}
-      if (professions && Array.isArray(professions)) {
-        professions.forEach((profession) => {
-          if (profession.id && profession.name) {
-            professionMap[profession.id] = profession.name
-          }
-        })
-      }
-
-      // Use the common STATUS_OPTIONS for 5-scale RAG system
-      const statusOptions = [
-        { text: 'Select status', value: '' },
-        ...STATUS_OPTIONS
-      ]
-
-      // Mark the current values as selected
-      statusOptions.forEach((option) => {
-        if (option.value === project.status) {
-          option.selected = true
-        }
-      })
-
-      // Prepare standards at risk data - filter by worst performing standards
-      const standardsAtRisk = []
-
-      if (project.standardsSummary && serviceStandards) {
-        // Status priority order (worst to best)
-        const statusPriority = [
-          'RED',
-          'AMBER_RED',
-          'AMBER',
-          'GREEN_AMBER',
-          'GREEN',
-          'TBC'
-        ]
-
-        // Create a map of service standards by number for easier lookup
-        const serviceStandardsByNumber = {}
-        serviceStandards.forEach((standard) => {
-          serviceStandardsByNumber[standard.number] = standard
-        })
-
-        // Filter to only concerning statuses and process them
-        project.standardsSummary
-          .filter((standardSummary) =>
-            ['RED', 'AMBER_RED', 'AMBER'].includes(
-              standardSummary.aggregatedStatus
-            )
-          )
-          .sort(
-            (a, b) =>
-              statusPriority.indexOf(a.aggregatedStatus) -
-              statusPriority.indexOf(b.aggregatedStatus)
-          )
-          .forEach((standardSummary) => {
-            // Find the service standard by trying different approaches
-            let serviceStandard = null
-
-            // First try to find by ID (current approach)
-            serviceStandard = serviceStandards.find(
-              (s) => s.id === standardSummary.standardId
-            )
-
-            // If not found by ID, try to extract number from standardId and match by number
-            if (!serviceStandard) {
-              // Try to find by matching the last part of the standardId with service standard numbers
-              // This is a fallback approach when IDs don't match
-
-              // For now, we'll create a placeholder entry if we can't find the standard
-              serviceStandard = {
-                id: standardSummary.standardId,
-                number: 'Unknown',
-                name: 'Unknown Standard',
-                description: ''
-              }
-            }
-
-            // Build profession comments array
-            const professionComments = []
-            standardSummary.professions.forEach((profession) => {
-              if (profession.commentary?.trim()) {
-                const professionName =
-                  professionMap[profession.professionId] ||
-                  profession.professionId
-                professionComments.push({
-                  professionName,
-                  commentary: profession.commentary,
-                  status: profession.status,
-                  lastUpdated: profession.lastUpdated
-                })
-              }
-            })
-
-            // Add to standards at risk
-            standardsAtRisk.push({
-              id: serviceStandard.id,
-              number: serviceStandard.number,
-              name: serviceStandard.name,
-              status: standardSummary.aggregatedStatus,
-              lastUpdated: standardSummary.lastUpdated,
-              professionComments
-            })
-          })
-      }
+      const professionMap = createProfessionMap(professions)
+      const statusOptions = createStatusOptions(project.status)
+      const standardsAtRisk = createStandardsAtRisk(
+        project,
+        serviceStandards,
+        professionMap
+      )
 
       return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS, {
         pageTitle: `Update Status and Commentary | ${project.name}`,
@@ -281,86 +384,13 @@ export const manageController = {
           getProfessions(request)
         ])
 
-        // Create profession ID to name mapping
-        const professionMap = {}
-        if (professions && Array.isArray(professions)) {
-          professions.forEach((profession) => {
-            if (profession.id && profession.name) {
-              professionMap[profession.id] = profession.name
-            }
-          })
-        }
-
-        const statusOptions = [
-          { text: 'Select status', value: '' },
-          ...STATUS_OPTIONS
-        ]
-
-        statusOptions.forEach((option) => {
-          if (option.value === status) {
-            option.selected = true
-          }
-        })
-
-        // Prepare standards at risk data
-        const standardsAtRisk = []
-
-        if (project.standardsSummary && serviceStandards) {
-          const statusPriority = [
-            'RED',
-            'AMBER_RED',
-            'AMBER',
-            'GREEN_AMBER',
-            'GREEN',
-            'TBC'
-          ]
-
-          const standardsWithStatus = project.standardsSummary
-            .map((standardSummary) => {
-              const standard = serviceStandards.find(
-                (s) => s.id === standardSummary.standardId
-              )
-              if (!standard) return null
-
-              return {
-                standard,
-                summary: standardSummary,
-                statusPriorityIndex: statusPriority.indexOf(
-                  standardSummary.aggregatedStatus
-                )
-              }
-            })
-            .filter(Boolean)
-            .sort((a, b) => a.statusPriorityIndex - b.statusPriorityIndex)
-            .slice(0, 5)
-
-          standardsWithStatus
-            .filter((item) =>
-              ['RED', 'AMBER_RED', 'AMBER', 'GREEN_AMBER'].includes(
-                item.summary.aggregatedStatus
-              )
-            )
-            .forEach(({ standard, summary }) => {
-              const professionComments =
-                summary.professions
-                  ?.filter((p) => p.commentary?.trim())
-                  ?.map((p) => ({
-                    professionId: p.professionId,
-                    professionName:
-                      professionMap[p.professionId] || p.professionId,
-                    commentary: p.commentary,
-                    status: p.status
-                  })) || []
-
-              standardsAtRisk.push({
-                number: standard.number,
-                name: standard.name,
-                status: summary.aggregatedStatus,
-                professionComments,
-                lastUpdated: summary.lastUpdated
-              })
-            })
-        }
+        const professionMap = createProfessionMap(professions)
+        const statusOptions = createStatusOptions(status)
+        const standardsAtRisk = createAlternativeStandardsAtRisk(
+          project,
+          serviceStandards,
+          professionMap
+        )
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS, {
           pageTitle: `Update Status and Commentary | ${project.name}`,
@@ -381,7 +411,7 @@ export const manageController = {
         // Update the project
         await updateProject(id, { status, commentary }, request)
         request.logger.info(
-          `Project status and commentary updated successfully`
+          'Project status and commentary updated successfully'
         )
         return h.redirect(
           `/projects/${id}?notification=${MANAGE_NOTIFICATIONS.PROJECT_STATUS_UPDATED_SUCCESSFULLY}`
@@ -398,78 +428,13 @@ export const manageController = {
           getProfessions(request)
         ])
 
-        const professionMap = {}
-        if (professions && Array.isArray(professions)) {
-          professions.forEach((profession) => {
-            if (profession.id && profession.name) {
-              professionMap[profession.id] = profession.name
-            }
-          })
-        }
-
-        const statusOptions = [
-          { text: 'Select status', value: '' },
-          ...STATUS_OPTIONS
-        ]
-
-        const standardsAtRisk = []
-
-        if (project.standardsSummary && serviceStandards) {
-          const statusPriority = [
-            'RED',
-            'AMBER_RED',
-            'AMBER',
-            'GREEN_AMBER',
-            'GREEN',
-            'TBC'
-          ]
-
-          const standardsWithStatus = project.standardsSummary
-            .map((standardSummary) => {
-              const standard = serviceStandards.find(
-                (s) => s.id === standardSummary.standardId
-              )
-              if (!standard) return null
-
-              return {
-                standard,
-                summary: standardSummary,
-                statusPriorityIndex: statusPriority.indexOf(
-                  standardSummary.aggregatedStatus
-                )
-              }
-            })
-            .filter(Boolean)
-            .sort((a, b) => a.statusPriorityIndex - b.statusPriorityIndex)
-            .slice(0, 5)
-
-          standardsWithStatus
-            .filter((item) =>
-              ['RED', 'AMBER_RED', 'AMBER', 'GREEN_AMBER'].includes(
-                item.summary.aggregatedStatus
-              )
-            )
-            .forEach(({ standard, summary }) => {
-              const professionComments =
-                summary.professions
-                  ?.filter((p) => p.commentary?.trim())
-                  ?.map((p) => ({
-                    professionId: p.professionId,
-                    professionName:
-                      professionMap[p.professionId] || p.professionId,
-                    commentary: p.commentary,
-                    status: p.status
-                  })) || []
-
-              standardsAtRisk.push({
-                number: standard.number,
-                name: standard.name,
-                status: summary.aggregatedStatus,
-                professionComments,
-                lastUpdated: summary.lastUpdated
-              })
-            })
-        }
+        const professionMap = createProfessionMap(professions)
+        const statusOptions = createStatusOptions()
+        const standardsAtRisk = createAlternativeStandardsAtRisk(
+          project,
+          serviceStandards,
+          professionMap
+        )
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS, {
           pageTitle: `Update Status and Commentary | ${project.name}`,
@@ -502,21 +467,7 @@ export const manageController = {
           .code(404)
       }
 
-      const phaseOptions = [
-        { text: 'Select phase', value: '' },
-        { value: 'Discovery', text: 'Discovery' },
-        { value: 'Alpha', text: 'Alpha' },
-        { value: 'Private Beta', text: 'Private Beta' },
-        { value: 'Public Beta', text: 'Public Beta' },
-        { value: 'Live', text: 'Live' }
-      ]
-
-      // Mark the current values as selected
-      phaseOptions.forEach((option) => {
-        if (option.value === project.phase) {
-          option.selected = true
-        }
-      })
+      const phaseOptions = createPhaseOptions(project.phase)
 
       return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
         pageTitle: `Update Project Details | ${project.name}`,
@@ -550,21 +501,7 @@ export const manageController = {
 
       // Validate required fields
       if (!name || !phase || !defCode) {
-        const phaseOptions = [
-          { text: 'Select phase', value: '' },
-          { value: 'Discovery', text: 'Discovery' },
-          { value: 'Alpha', text: 'Alpha' },
-          { value: 'Private Beta', text: 'Private Beta' },
-          { value: 'Public Beta', text: 'Public Beta' },
-          { value: 'Live', text: 'Live' }
-        ]
-
-        // Mark the submitted values as selected
-        phaseOptions.forEach((option) => {
-          if (option.value === phase) {
-            option.selected = true
-          }
-        })
+        const phaseOptions = createPhaseOptions(phase)
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
           pageTitle: `Update Project Details | ${project.name}`,
@@ -593,14 +530,7 @@ export const manageController = {
           LOG_MESSAGES.FAILED_TO_UPDATE_PROJECT_DETAILS
         )
 
-        const phaseOptions = [
-          { text: 'Select phase', value: '' },
-          { value: 'Discovery', text: 'Discovery' },
-          { value: 'Alpha', text: 'Alpha' },
-          { value: 'Private Beta', text: 'Private Beta' },
-          { value: 'Public Beta', text: 'Public Beta' },
-          { value: 'Live', text: 'Live' }
-        ]
+        const phaseOptions = createPhaseOptions()
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
           pageTitle: `Update Project Details | ${project.name}`,

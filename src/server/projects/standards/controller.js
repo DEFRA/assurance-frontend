@@ -25,6 +25,200 @@ export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND
 }
 
+// Constants for duplicated literals
+const CHOOSE_PROFESSION_TEXT = 'Choose a profession'
+const CHOOSE_SERVICE_STANDARD_TEXT = 'Choose a service standard'
+const CHOOSE_STATUS_TEXT = 'Choose a status'
+
+// Standard status options used throughout
+const STANDARD_STATUS_OPTIONS = [
+  { value: '', text: CHOOSE_STATUS_TEXT },
+  { value: 'GREEN', text: 'Green' },
+  { value: 'GREEN_AMBER', text: 'Green Amber' },
+  { value: 'AMBER', text: 'Amber' },
+  { value: 'AMBER_RED', text: 'Amber Red' },
+  { value: 'RED', text: 'Red' },
+  { value: 'TBC', text: 'TBC' }
+]
+
+// Helper function to create profession items for dropdowns
+function createProfessionItems(professions, selectedProfessionId = '') {
+  const items = [{ value: '', text: CHOOSE_PROFESSION_TEXT }]
+
+  if (professions && Array.isArray(professions)) {
+    items.push(
+      ...professions.map((profession) => ({
+        value: profession.id,
+        text: profession.name,
+        selected: profession.id === selectedProfessionId
+      }))
+    )
+  }
+
+  return items
+}
+
+// Helper function to create standard items for dropdowns
+function createStandardItems(standards, selectedStandardId = '') {
+  const items = [{ value: '', text: CHOOSE_SERVICE_STANDARD_TEXT }]
+
+  if (standards && Array.isArray(standards)) {
+    items.push(
+      ...standards.map((standard) => ({
+        value: standard.id,
+        text: `${standard.number}. ${standard.name}`,
+        selected: standard.id === selectedStandardId
+      }))
+    )
+  }
+
+  return items
+}
+
+// Helper function to create assessment view data
+function createAssessmentViewData(
+  project,
+  professionItems,
+  standardItems,
+  selectedValues,
+  error = null
+) {
+  return {
+    pageTitle: `Assess Standards | ${project.name}`,
+    project,
+    projectId: project.id,
+    projectPhase: project.phase || '',
+    allStandards: JSON.stringify([]), // Will be replaced with actual standards
+    professionItems,
+    standardItems,
+    selectedValues,
+    error,
+    statusOptions: STANDARD_STATUS_OPTIONS,
+    professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX),
+    values: {},
+    errors: {}
+  }
+}
+
+// Helper function to handle validation errors
+async function handleValidationError(
+  request,
+  h,
+  project,
+  professionId,
+  standardId,
+  status,
+  commentary,
+  errorMessage
+) {
+  const [professions, serviceStandards] = await Promise.all([
+    getProfessions(request),
+    getServiceStandards(request)
+  ])
+
+  const professionItems = createProfessionItems(professions, professionId)
+
+  // Filter standards based on selected profession and project phase
+  let filteredStandards = serviceStandards || []
+  if (professionId && project.phase) {
+    filteredStandards = filterStandardsByProfessionAndPhase(
+      serviceStandards,
+      project.phase,
+      professionId
+    )
+  }
+
+  const standardItems = createStandardItems(filteredStandards, standardId)
+  const selectedValues = { professionId, standardId, status, commentary }
+
+  const viewData = createAssessmentViewData(
+    project,
+    professionItems,
+    standardItems,
+    selectedValues,
+    errorMessage
+  )
+  viewData.allStandards = JSON.stringify(serviceStandards || [])
+
+  return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, viewData)
+}
+
+// Helper function to validate profession-standard combination
+async function validateProfessionStandardCombination(
+  request,
+  h,
+  project,
+  professionId,
+  standardId,
+  status,
+  commentary
+) {
+  const serviceStandards = await getServiceStandards(request)
+  const selectedStandard = serviceStandards?.find((s) => s.id === standardId)
+
+  if (!selectedStandard || !project.phase) {
+    return null // No validation needed
+  }
+
+  const filteredStandards = filterStandardsByProfessionAndPhase(
+    serviceStandards,
+    project.phase,
+    professionId
+  )
+
+  const isValidCombination = filteredStandards.some((s) => s.id === standardId)
+
+  if (!isValidCombination) {
+    const errorMessage = `This profession cannot assess the selected standard in the ${project.phase} phase. Please select a different standard.`
+    return await handleValidationError(
+      request,
+      h,
+      project,
+      professionId,
+      standardId,
+      status,
+      commentary,
+      errorMessage
+    )
+  }
+
+  return null // Validation passed
+}
+
+// Helper function to handle assessment save errors
+async function handleAssessmentError(
+  request,
+  h,
+  project,
+  professionId,
+  standardId,
+  status,
+  commentary,
+  error
+) {
+  let errorMessage = NOTIFICATIONS.FAILED_TO_SAVE_ASSESSMENT
+
+  // Check if this is the known backend update issue
+  if (
+    error.message?.includes('Internal Server Error') ||
+    error.message?.includes('500')
+  ) {
+    errorMessage =
+      'Unable to update existing assessment - this is a known backend issue. New assessments work correctly.'
+  }
+
+  return await handleValidationError(
+    request,
+    h,
+    project,
+    professionId,
+    standardId,
+    status,
+    commentary,
+    errorMessage
+  )
+}
+
 export const standardsController = {
   getStandards: async (request, h) => {
     const { id } = request.params
@@ -192,46 +386,18 @@ export const standardsController = {
       }
 
       // Transform data for dropdowns
-      const professionItems = [
-        { value: '', text: 'Choose a profession' }
-      ].concat(
-        (professions || []).map((profession) => ({
-          value: profession.id,
-          text: profession.name
-        }))
-      )
+      const professionItems = createProfessionItems(professions)
+      const standardItems = createStandardItems(serviceStandards)
 
-      // Initially show all standards, will be filtered by JavaScript
-      const standardItems = [
-        { value: '', text: 'Choose a service standard' }
-      ].concat(
-        (serviceStandards || []).map((standard) => ({
-          value: standard.id,
-          text: `${standard.number}. ${standard.name}`
-        }))
-      )
-
-      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, {
-        pageTitle: `Assess Standards | ${project.name}`,
+      const viewData = createAssessmentViewData(
         project,
-        projectId: project.id,
-        projectPhase: project.phase || '',
-        allStandards: JSON.stringify(serviceStandards || []),
         professionItems,
         standardItems,
-        statusOptions: [
-          { value: '', text: 'Choose a status' },
-          { value: 'GREEN', text: 'Green' },
-          { value: 'GREEN_AMBER', text: 'Green Amber' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'AMBER_RED', text: 'Amber Red' },
-          { value: 'RED', text: 'Red' },
-          { value: 'TBC', text: 'TBC' }
-        ],
-        professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX),
-        values: {},
-        errors: {}
-      })
+        {}
+      )
+      viewData.allStandards = JSON.stringify(serviceStandards || [])
+
+      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, viewData)
     } catch (error) {
       request.logger.error({ error }, 'Error loading assessment screen')
       throw Boom.boomify(error, { statusCode: 500 })
@@ -242,9 +408,11 @@ export const standardsController = {
     const { id } = request.params
     const { professionId, standardId, status, commentary } = request.payload
 
+    let project
+
     try {
       // Get project to validate phase and profession combination
-      const project = await getProjectById(id, request)
+      project = await getProjectById(id, request)
       if (!project) {
         return h
           .view('projects/not-found', {
@@ -255,133 +423,31 @@ export const standardsController = {
 
       // Validate required fields
       if (!professionId || !standardId || !status) {
-        // Get data for dropdowns when showing errors
-        const [professions, serviceStandards] = await Promise.all([
-          getProfessions(request),
-          getServiceStandards(request)
-        ])
-
-        const professionItems = [
-          { value: '', text: 'Choose a profession' }
-        ].concat(
-          (professions || []).map((profession) => ({
-            value: profession.id,
-            text: profession.name,
-            selected: profession.id === professionId
-          }))
-        )
-
-        // Filter standards based on selected profession and project phase
-        let filteredStandards = serviceStandards || []
-        if (professionId && project.phase) {
-          filteredStandards = filterStandardsByProfessionAndPhase(
-            serviceStandards,
-            project.phase,
-            professionId
-          )
-        }
-
-        const standardItems = [
-          { value: '', text: 'Choose a service standard' }
-        ].concat(
-          filteredStandards.map((standard) => ({
-            value: standard.id,
-            text: `${standard.number}. ${standard.name}`,
-            selected: standard.id === standardId
-          }))
-        )
-
-        return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, {
-          pageTitle: `Assess Standards | ${project.name}`,
+        return await handleValidationError(
+          request,
+          h,
           project,
-          projectId: project.id,
-          projectPhase: project.phase || '',
-          allStandards: JSON.stringify(serviceStandards || []),
-          professionItems,
-          standardItems,
-          selectedValues: { professionId, standardId, status, commentary },
-          error: 'Please select a profession, service standard, and status',
-          statusOptions: [
-            { value: '', text: 'Choose a status' },
-            { value: 'GREEN', text: 'Green' },
-            { value: 'GREEN_AMBER', text: 'Green Amber' },
-            { value: 'AMBER', text: 'Amber' },
-            { value: 'AMBER_RED', text: 'Amber Red' },
-            { value: 'RED', text: 'Red' },
-            { value: 'TBC', text: 'TBC' }
-          ],
-          professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX),
-          values: {},
-          errors: {}
-        })
+          professionId,
+          standardId,
+          status,
+          commentary,
+          'Please select a profession, service standard, and status'
+        )
       }
 
       // Additional validation: Check if the profession can assess this standard in this phase
-      const serviceStandards = await getServiceStandards(request)
-      const selectedStandard = serviceStandards?.find(
-        (s) => s.id === standardId
+      const validationError = await validateProfessionStandardCombination(
+        request,
+        h,
+        project,
+        professionId,
+        standardId,
+        status,
+        commentary
       )
 
-      if (selectedStandard && project.phase) {
-        const filteredStandards = filterStandardsByProfessionAndPhase(
-          serviceStandards,
-          project.phase,
-          professionId
-        )
-
-        const isValidCombination = filteredStandards.some(
-          (s) => s.id === standardId
-        )
-
-        if (!isValidCombination) {
-          const [professions] = await Promise.all([getProfessions(request)])
-
-          const professionItems = [
-            { value: '', text: 'Choose a profession' }
-          ].concat(
-            (professions || []).map((profession) => ({
-              value: profession.id,
-              text: profession.name,
-              selected: profession.id === professionId
-            }))
-          )
-
-          const standardItems = [
-            { value: '', text: 'Choose a service standard' }
-          ].concat(
-            filteredStandards.map((standard) => ({
-              value: standard.id,
-              text: `${standard.number}. ${standard.name}`,
-              selected: standard.id === standardId
-            }))
-          )
-
-          return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, {
-            pageTitle: `Assess Standards | ${project.name}`,
-            project,
-            projectId: project.id,
-            projectPhase: project.phase || '',
-            allStandards: JSON.stringify(serviceStandards || []),
-            professionItems,
-            standardItems,
-            selectedValues: { professionId, standardId, status, commentary },
-            error: `This profession cannot assess the selected standard in the ${project.phase} phase. Please select a different standard.`,
-            statusOptions: [
-              { value: '', text: 'Choose a status' },
-              { value: 'GREEN', text: 'Green' },
-              { value: 'GREEN_AMBER', text: 'Green Amber' },
-              { value: 'AMBER', text: 'Amber' },
-              { value: 'AMBER_RED', text: 'Amber Red' },
-              { value: 'RED', text: 'Red' },
-              { value: 'TBC', text: 'TBC' }
-            ],
-            professionStandardMatrix: JSON.stringify(
-              PROFESSION_STANDARD_MATRIX
-            ),
-            values: {},
-            errors: {}
-          })
-        }
+      if (validationError) {
+        return validationError
       }
 
       // Save the assessment
@@ -408,77 +474,29 @@ export const standardsController = {
     } catch (error) {
       request.logger.error({ error }, 'Error saving assessment')
 
-      let errorMessage = NOTIFICATIONS.FAILED_TO_SAVE_ASSESSMENT
-
-      // Check if this is the known backend update issue
-      if (
-        error.message?.includes('Internal Server Error') ||
-        error.message?.includes('500')
-      ) {
-        errorMessage =
-          'Unable to update existing assessment - this is a known backend issue. New assessments work correctly.'
+      // If project was not loaded due to the error, try to get it for error handling
+      if (!project) {
+        try {
+          project = await getProjectById(id, request)
+        } catch (projectError) {
+          request.logger.error(
+            { projectError },
+            'Failed to load project for error handling'
+          )
+          throw Boom.boomify(error, { statusCode: 500 })
+        }
       }
 
-      // Get data for dropdowns when showing errors
-      const [project, professions, serviceStandards] = await Promise.all([
-        getProjectById(id, request),
-        getProfessions(request),
-        getServiceStandards(request)
-      ])
-
-      const professionItems = [
-        { value: '', text: 'Choose a profession' }
-      ].concat(
-        (professions || []).map((profession) => ({
-          value: profession.id,
-          text: profession.name,
-          selected: profession.id === professionId
-        }))
-      )
-
-      // Filter standards based on selected profession and project phase
-      let filteredStandards = serviceStandards || []
-      if (professionId && project?.phase) {
-        filteredStandards = filterStandardsByProfessionAndPhase(
-          serviceStandards,
-          project.phase,
-          professionId
-        )
-      }
-
-      const standardItems = [
-        { value: '', text: 'Choose a service standard' }
-      ].concat(
-        filteredStandards.map((standard) => ({
-          value: standard.id,
-          text: `${standard.number}. ${standard.name}`,
-          selected: standard.id === standardId
-        }))
-      )
-
-      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, {
-        pageTitle: `Assess Standards | ${project.name}`,
+      return await handleAssessmentError(
+        request,
+        h,
         project,
-        projectId: project.id,
-        projectPhase: project.phase || '',
-        allStandards: JSON.stringify(serviceStandards || []),
-        professionItems,
-        standardItems,
-        selectedValues: { professionId, standardId, status, commentary },
-        error: errorMessage,
-        statusOptions: [
-          { value: '', text: 'Choose a status' },
-          { value: 'GREEN', text: 'Green' },
-          { value: 'GREEN_AMBER', text: 'Green Amber' },
-          { value: 'AMBER', text: 'Amber' },
-          { value: 'AMBER_RED', text: 'Amber Red' },
-          { value: 'RED', text: 'Red' },
-          { value: 'TBC', text: 'TBC' }
-        ],
-        professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX),
-        values: {},
-        errors: {}
-      })
+        professionId,
+        standardId,
+        status,
+        commentary,
+        error
+      )
     }
   },
 

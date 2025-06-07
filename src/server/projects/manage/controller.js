@@ -44,7 +44,8 @@ const STATUS_PRIORITY_ORDER = [
   'GREEN',
   'TBC'
 ]
-const CONCERNING_STATUSES = ['RED', 'AMBER_RED', 'AMBER', 'GREEN_AMBER']
+// For service standards aggregation (3 RAG system)
+const CONCERNING_STANDARD_STATUSES = ['RED', 'AMBER']
 const PHASE_OPTIONS_LIST = [
   { value: 'Discovery', text: 'Discovery' },
   { value: 'Alpha', text: 'Alpha' },
@@ -125,7 +126,7 @@ function createStandardsAtRisk(project, serviceStandards, professionMap) {
   // Filter to only concerning statuses and process them
   const filteredStandards = project.standardsSummary
     .filter((standardSummary) =>
-      ['RED', 'AMBER_RED', 'AMBER'].includes(standardSummary.aggregatedStatus)
+      ['RED', 'AMBER'].includes(standardSummary.aggregatedStatus)
     )
     .sort(
       (a, b) =>
@@ -213,7 +214,7 @@ function createAlternativeStandardsAtRisk(
 
   standardsWithStatus
     .filter((item) =>
-      CONCERNING_STATUSES.includes(item.summary.aggregatedStatus)
+      CONCERNING_STANDARD_STATUSES.includes(item.summary.aggregatedStatus)
     )
     .forEach(({ standard, summary }) => {
       const professionComments = processProfessionComments(

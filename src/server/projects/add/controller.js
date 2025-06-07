@@ -4,22 +4,10 @@ import {
   VIEW_TEMPLATES,
   DDTS_ASSURANCE_SUFFIX
 } from '~/src/server/constants/notifications.js'
+import { PROJECT_STATUS_OPTIONS } from '~/src/server/constants/status.js'
 
 const PAGE_TITLE = `Add Project${DDTS_ASSURANCE_SUFFIX}`
 const PAGE_HEADING = 'Add Project'
-
-const STATUS_OPTIONS = [
-  {
-    text: 'Select status',
-    value: ''
-  },
-  { value: 'RED', text: 'Red' },
-  { value: 'AMBER_RED', text: 'Amber/Red' },
-  { value: 'AMBER', text: 'Amber' },
-  { value: 'GREEN_AMBER', text: 'Green/Amber' },
-  { value: 'GREEN', text: 'Green' },
-  { value: 'TBC', text: 'TBC' }
-]
 
 const PHASE_OPTIONS = [
   {
@@ -44,7 +32,7 @@ export const addProjectController = {
         heading: PAGE_HEADING,
         values: {},
         errors: {},
-        statusOptions: STATUS_OPTIONS,
+        statusOptions: PROJECT_STATUS_OPTIONS,
         phaseOptions: PHASE_OPTIONS
       })
     } catch (error) {

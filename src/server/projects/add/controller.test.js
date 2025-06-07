@@ -34,12 +34,12 @@ describe('Add Project controller', () => {
     test('should return add project form', async () => {
       // Arrange
       const expectedStatusOptions = [
-        { text: 'Select status', value: '' },
-        { value: 'RED', text: 'Red' },
-        { value: 'AMBER_RED', text: 'Amber/Red' },
-        { value: 'AMBER', text: 'Amber' },
-        { value: 'GREEN_AMBER', text: 'Green/Amber' },
+        { value: '', text: 'Choose a status' },
         { value: 'GREEN', text: 'Green' },
+        { value: 'GREEN_AMBER', text: 'Green Amber' },
+        { value: 'AMBER', text: 'Amber' },
+        { value: 'AMBER_RED', text: 'Amber Red' },
+        { value: 'RED', text: 'Red' },
         { value: 'TBC', text: 'TBC' }
       ]
 

@@ -20,6 +20,7 @@ import {
   NOTIFICATIONS,
   VIEW_TEMPLATES
 } from '~/src/server/constants/notifications.js'
+import { SERVICE_STANDARD_STATUS_OPTIONS } from '~/src/server/constants/status.js'
 
 export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND
@@ -28,18 +29,6 @@ export const NOTIFICATIONS_LEGACY = {
 // Constants for duplicated literals
 const CHOOSE_PROFESSION_TEXT = 'Choose a profession'
 const CHOOSE_SERVICE_STANDARD_TEXT = 'Choose a service standard'
-const CHOOSE_STATUS_TEXT = 'Choose a status'
-
-// Standard status options used throughout
-const STANDARD_STATUS_OPTIONS = [
-  { value: '', text: CHOOSE_STATUS_TEXT },
-  { value: 'GREEN', text: 'Green' },
-  { value: 'GREEN_AMBER', text: 'Green Amber' },
-  { value: 'AMBER', text: 'Amber' },
-  { value: 'AMBER_RED', text: 'Amber Red' },
-  { value: 'RED', text: 'Red' },
-  { value: 'TBC', text: 'TBC' }
-]
 
 // Helper function to create profession items for dropdowns
 function createProfessionItems(professions, selectedProfessionId = '') {
@@ -93,7 +82,7 @@ function createAssessmentViewData(
     standardItems,
     selectedValues,
     error,
-    statusOptions: STANDARD_STATUS_OPTIONS,
+    statusOptions: SERVICE_STANDARD_STATUS_OPTIONS,
     professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX),
     values: {},
     errors: {}

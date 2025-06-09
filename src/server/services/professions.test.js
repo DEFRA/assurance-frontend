@@ -3,7 +3,9 @@ import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/auth
 import {
   getProfessions,
   getProfessionById,
-  deleteProfession
+  deleteProfession,
+  getAllProfessions,
+  restoreProfession
 } from './professions.js'
 
 // Mock dependencies
@@ -88,6 +90,26 @@ describe('Professions service', () => {
 
       // Assert
       expect(result).toEqual([])
+    })
+
+    test('should handle non-array response from API', async () => {
+      // Arrange
+      mockAuthedFetch.mockResolvedValue({ error: 'Not an array' })
+
+      // Act
+      const result = await getProfessions(mockRequest)
+
+      // Assert
+      expect(result).toEqual([])
+    })
+
+    test('should handle API errors', async () => {
+      // Arrange
+      const error = new Error('API error')
+      mockAuthedFetch.mockRejectedValue(error)
+
+      // Act & Assert
+      await expect(getProfessions(mockRequest)).rejects.toThrow('API error')
     })
   })
 
@@ -182,6 +204,118 @@ describe('Professions service', () => {
       // Act & Assert
       await expect(deleteProfession('1', mockRequest)).rejects.toThrow(
         'API error'
+      )
+    })
+  })
+
+  describe('getAllProfessions', () => {
+    test('should fetch all professions including inactive with authenticated request', async () => {
+      // Arrange
+      const mockProfessions = [
+        { id: '1', name: 'Active Profession', active: true },
+        { id: '2', name: 'Inactive Profession', active: false }
+      ]
+      mockAuthedFetch.mockResolvedValue(mockProfessions)
+
+      // Act
+      const result = await getAllProfessions(mockRequest)
+
+      // Assert
+      expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/professions?includeInactive=true'
+      )
+      expect(result).toEqual(mockProfessions)
+    })
+
+    test('should fetch all professions without authenticated request', async () => {
+      // Arrange
+      const mockProfessions = [
+        { id: '1', name: 'Active Profession', active: true },
+        { id: '2', name: 'Inactive Profession', active: false }
+      ]
+      fetcher.mockResolvedValue(mockProfessions)
+
+      // Act
+      const result = await getAllProfessions()
+
+      // Assert
+      expect(fetcher).toHaveBeenCalledWith('/professions?includeInactive=true')
+      expect(result).toEqual(mockProfessions)
+    })
+
+    test('should handle null response from API', async () => {
+      // Arrange
+      mockAuthedFetch.mockResolvedValue(null)
+
+      // Act
+      const result = await getAllProfessions(mockRequest)
+
+      // Assert
+      expect(result).toEqual([])
+    })
+
+    test('should handle non-array response from API', async () => {
+      // Arrange
+      mockAuthedFetch.mockResolvedValue({ error: 'Not an array' })
+
+      // Act
+      const result = await getAllProfessions(mockRequest)
+
+      // Assert
+      expect(result).toEqual([])
+    })
+
+    test('should throw error when API call fails', async () => {
+      // Arrange
+      const error = new Error('API error')
+      error.code = 'ECONNREFUSED'
+      mockAuthedFetch.mockRejectedValue(error)
+
+      // Act & Assert
+      await expect(getAllProfessions(mockRequest)).rejects.toThrow('API error')
+    })
+  })
+
+  describe('restoreProfession', () => {
+    test('should restore profession with authenticated request', async () => {
+      // Arrange
+      mockAuthedFetch.mockResolvedValue(null)
+
+      // Act
+      const result = await restoreProfession('1', mockRequest)
+
+      // Assert
+      expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/1/restore', {
+        method: 'POST'
+      })
+      expect(result).toBe(true)
+    })
+
+    test('should restore profession without authenticated request', async () => {
+      // Arrange
+      fetcher.mockResolvedValue(null)
+
+      // Act
+      const result = await restoreProfession('1')
+
+      // Assert
+      expect(fetcher).toHaveBeenCalledWith('/professions/1/restore', {
+        method: 'POST'
+      })
+      expect(result).toBe(true)
+    })
+
+    test('should throw error when API call fails', async () => {
+      // Arrange
+      const error = new Error('Restore failed')
+      error.code = 'ECONNREFUSED'
+      mockAuthedFetch.mockRejectedValue(error)
+
+      // Act & Assert
+      await expect(restoreProfession('1', mockRequest)).rejects.toThrow(
+        'Restore failed'
       )
     })
   })

@@ -1,7 +1,7 @@
-// Mock the logger module before importing middleware
-// Now import the middleware which will use our mocked logger
 import * as middleware from './middleware.js'
+import { logger } from '~/src/server/common/helpers/logging/logger.js'
 
+// Mock the logger module before importing middleware
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   logger: {
     debug: jest.fn(),
@@ -86,6 +86,24 @@ describe('Auth Middleware', () => {
         '/auth/login?redirectTo=/protected-path'
       )
     })
+
+    test('should handle errors and redirect to login', () => {
+      // Arrange
+      mockRequest.auth = null // This will cause an error when trying to access .isAuthenticated
+
+      // Act
+      const result = middleware.requireAuth(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe(mockH.redirect())
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/login?redirectTo=/protected-path'
+      )
+      expect(logger.error).toHaveBeenCalledWith(
+        'Authentication error',
+        expect.any(Error)
+      )
+    })
   })
 
   describe('requireRole middleware', () => {
@@ -164,6 +182,16 @@ describe('Auth Middleware', () => {
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/auth/insufficient-permissions'
       )
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Access denied - insufficient permissions',
+        {
+          requiredRoles: ['admin'],
+          userRoles: ['editor'],
+          userId: 'test-user-id',
+          path: '/protected-path',
+          userEmail: 'test@example.com'
+        }
+      )
     })
 
     test('should redirect to insufficient permissions if user has no roles', () => {
@@ -193,6 +221,124 @@ describe('Auth Middleware', () => {
       expect(result).toBe('redirected-with-takeover')
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/auth/insufficient-permissions'
+      )
+    })
+
+    test('should handle errors and redirect to insufficient permissions', () => {
+      // Arrange
+      mockRequest.auth = null // This will cause an error
+      const middlewareFn = middleware.requireRole('admin')
+
+      // Act
+      const result = middlewareFn(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('redirected-with-takeover')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/insufficient-permissions'
+      )
+      expect(logger.error).toHaveBeenCalledWith(
+        'Authorization error',
+        expect.any(Error)
+      )
+    })
+  })
+
+  describe('requireAdmin middleware', () => {
+    test('should continue if user is authenticated and has admin role', () => {
+      // Act
+      const result = middleware.requireAdmin(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('continue-response')
+      expect(mockRequest.user).toEqual(mockRequest.auth.credentials.user)
+    })
+
+    test('should redirect to login if user is not authenticated', () => {
+      // Arrange
+      mockRequest.auth.isAuthenticated = false
+
+      // Act
+      const result = middleware.requireAdmin(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('redirected-with-takeover')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/login?redirectTo=/protected-path'
+      )
+    })
+
+    test('should redirect to login if user credentials are missing', () => {
+      // Arrange
+      mockRequest.auth.credentials.user = null
+
+      // Act
+      const result = middleware.requireAdmin(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('redirected-with-takeover')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/login?redirectTo=/protected-path'
+      )
+    })
+
+    test('should redirect to insufficient permissions if user does not have admin role', () => {
+      // Arrange
+      mockRequest.auth.credentials.user.roles = ['editor']
+
+      // Act
+      const result = middleware.requireAdmin(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('redirected-with-takeover')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/insufficient-permissions'
+      )
+    })
+
+    test('should redirect to insufficient permissions if user has no roles', () => {
+      // Arrange
+      mockRequest.auth.credentials.user.roles = []
+
+      // Act
+      const result = middleware.requireAdmin(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('redirected-with-takeover')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/insufficient-permissions'
+      )
+    })
+
+    test('should redirect to insufficient permissions when roles are undefined', () => {
+      // Arrange
+      mockRequest.auth.credentials.user.roles = undefined
+
+      // Act
+      const result = middleware.requireAdmin(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('redirected-with-takeover')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/insufficient-permissions'
+      )
+    })
+
+    test('should handle errors and redirect to insufficient permissions', () => {
+      // Arrange
+      mockRequest.auth = null // This will cause an error
+
+      // Act
+      const result = middleware.requireAdmin(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('redirected-with-takeover')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/insufficient-permissions'
+      )
+      expect(logger.error).toHaveBeenCalledWith(
+        'Admin authorization error',
+        expect.any(Error)
       )
     })
   })

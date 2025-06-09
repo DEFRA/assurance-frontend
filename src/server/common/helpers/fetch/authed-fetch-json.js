@@ -24,6 +24,11 @@ export function authedFetchJsonDecorator(request) {
 
     // Safely get the token if it exists
     const token = request?.auth?.credentials?.token
+
+    if (!token) {
+      logger.warn('No token available for backend request')
+    }
+
     const headers = {
       'Content-Type': 'application/json',
       ...options.headers

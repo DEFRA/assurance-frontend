@@ -12,24 +12,12 @@ export const professions = {
         {
           method: 'GET',
           path: '/professions',
-          handler: professionsController.getAll,
-          options: {
-            auth: {
-              strategy: 'session',
-              mode: 'required'
-            }
-          }
+          handler: professionsController.getAll
         },
         {
           method: 'GET',
           path: '/professions/{id}',
-          handler: professionsController.get,
-          options: {
-            auth: {
-              strategy: 'session',
-              mode: 'required'
-            }
-          }
+          handler: professionsController.get
         }
       ])
     }

@@ -97,7 +97,7 @@
                 </div>
               {% endif %}
               
-              {% if isAuthenticated and not entry.archived %}
+              {% if isAdmin and not entry.archived %}
                 <div class="timeline__event-actions">
                   <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ profession.id }}/history/{{ entry.id }}/archive" 
                      class="govuk-link govuk-link--destructive">
@@ -121,7 +121,7 @@
           classes: "govuk-button--secondary"
         }) }}
         
-        {% if isAuthenticated %}
+        {% if isAdmin %}
           {{ govukButton({
             text: "Add New Assessment",
             href: "/projects/" + project.id + "/assessment",

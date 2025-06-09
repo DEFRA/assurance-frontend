@@ -12,7 +12,7 @@
           </li>
         {% endfor %}
         
-        {% if isAuthenticated %}
+        {% if isAdmin %}
           <li class="app-navigation__list-item">
             <a class="app-navigation__link{% if currentPath and currentPath.startsWith('/admin') %} app-navigation__link--active{% endif %}"
                href="/admin"

@@ -12,6 +12,7 @@ import { pulse } from '~/src/server/common/helpers/pulse.js'
 import { requestTracing } from '~/src/server/common/helpers/request-tracing.js'
 import { setupProxy } from '~/src/server/common/helpers/proxy/setup-proxy.js'
 import { navigation } from '~/src/server/common/helpers/navigation.js'
+import { hasAdminRole } from '~/src/server/common/helpers/auth.js'
 import Inert from '@hapi/inert'
 import Vision from '@hapi/vision'
 import { plugin as authPlugin } from './auth/plugin.js'
@@ -97,16 +98,21 @@ export async function createServer() {
     if (response.variety === 'view') {
       const currentPath = request.path
       const credentials = request.auth?.credentials
+      const user = credentials?.user
 
       // Simple and effective authentication check
       const isAuthenticated = !!credentials
+      const isAdmin = hasAdminRole(user)
 
       logger.debug(
-        `Auth state for ${currentPath}: ${isAuthenticated ? 'authenticated' : 'not authenticated'}`
+        `Auth state for ${currentPath}: ${isAuthenticated ? 'authenticated' : 'not authenticated'}, admin: ${isAdmin}`
       )
 
       // Create the navigation with auth status
-      const nav = navigation({ isAuthenticated, credentials }, currentPath)
+      const nav = navigation(
+        { isAuthenticated, isAdmin, credentials },
+        currentPath
+      )
 
       // Update response context with consistent auth data
       response.source.context = {
@@ -114,6 +120,7 @@ export async function createServer() {
         ...response.source.context,
         user: credentials,
         isAuthenticated,
+        isAdmin,
         currentPath,
         navigation: nav
       }

@@ -66,7 +66,7 @@
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
-      {% if isAuthenticated %}
+      {% if isAdmin %}
         <p class="govuk-body govuk-!-margin-bottom-4">
           <a href="/projects/{{ project.id }}/manage" class="govuk-link">Manage project</a>
           <span class="govuk-!-margin-left-4">
@@ -170,7 +170,7 @@
                     <div class="govuk-body govuk-!-margin-bottom-2" style="white-space: pre-wrap;">{{ displayCommentary }}</div>
                   {% endif %}
                   
-                  {% if isAuthenticated and (entry.changes.status or entry.changes.commentary) %}
+                  {% if isAdmin and (entry.changes.status or entry.changes.commentary) %}
                     <p class="govuk-body-s govuk-!-margin-top-3 govuk-!-margin-bottom-0">
                       <a href="/projects/{{ project.id }}/history/{{ entry.id }}/archive?returnTo=detail" class="govuk-link">Archive this update</a>
                     </p>

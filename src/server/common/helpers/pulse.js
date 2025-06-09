@@ -6,7 +6,7 @@ const tenSeconds = 10 * 1000
 const pulse = {
   plugin: hapiPulse,
   options: {
-    logger: logger,
+    logger,
     timeout: tenSeconds
   }
 }

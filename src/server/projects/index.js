@@ -1,5 +1,5 @@
 import { projectsController } from './controller.js'
-import { requireAuth } from '~/src/server/auth/middleware.js'
+import { requireRole } from '~/src/server/auth/middleware.js'
 import { manageRoutes } from './manage/index.js'
 import { standardsRoutes } from './standards/index.js'
 import { addProjectController } from './add/controller.js'
@@ -33,13 +33,19 @@ export const projectsRoutes = {
           method: 'GET',
           path: '/projects/add',
           handler: addProjectController.get,
-          options: { auth: { strategy: 'session', mode: 'required' } }
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
         },
         {
           method: 'POST',
           path: '/projects/add',
           handler: addProjectController.post,
-          options: { auth: { strategy: 'session', mode: 'required' } }
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
         },
 
         // Project detail
@@ -54,13 +60,19 @@ export const projectsRoutes = {
           method: 'GET',
           path: '/projects/{id}/edit',
           handler: projectsController.getEdit,
-          options: { auth: { strategy: 'session', mode: 'required' } }
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
         },
         {
           method: 'POST',
           path: '/projects/{id}/edit',
           handler: projectsController.postEdit,
-          options: { auth: { strategy: 'session', mode: 'required' } }
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
         },
 
         // Project history
@@ -69,7 +81,7 @@ export const projectsRoutes = {
           path: '/projects/{id}/history',
           handler: projectsController.getHistory,
           options: {
-            pre: [{ method: requireAuth }]
+            pre: [{ method: requireRole('admin') }]
           }
         },
 
@@ -80,8 +92,10 @@ export const projectsRoutes = {
           handler: projectsController.getArchiveProjectHistory,
           options: {
             auth: {
+              strategy: 'session',
               mode: 'required'
-            }
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -90,8 +104,10 @@ export const projectsRoutes = {
           handler: projectsController.postArchiveProjectHistory,
           options: {
             auth: {
+              strategy: 'session',
               mode: 'required'
-            }
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
 
@@ -101,7 +117,7 @@ export const projectsRoutes = {
           path: '/projects/{id}/professions/{professionId}/history',
           handler: projectsController.getProfessionHistory,
           options: {
-            pre: [{ method: requireAuth }]
+            pre: [{ method: requireRole('admin') }]
           }
         }
       ])

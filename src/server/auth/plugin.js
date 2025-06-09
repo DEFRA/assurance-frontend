@@ -9,7 +9,6 @@ import { config } from '~/src/config/config.js'
 // Constants for repeated literals
 const AUTH_ERROR_TITLE = 'Authentication Error'
 const OIDC_CONFIG_ERROR = 'OIDC client is not properly configured'
-const ADMIN_ROLE = 'admin'
 const AUTH_SESSION_COOKIE_NAME = 'assurance-session'
 const HOME_PATH = '/'
 const AUTH_PATH = '/auth'
@@ -69,8 +68,7 @@ export const plugin = {
       logger.debug('Received token and claims', {
         hasIdToken: !!tokenSet.id_token,
         hasAccessToken: !!tokenSet.access_token,
-        tokenExpiry: tokenSet.expires_in,
-        claimsReceived: Object.keys(claims)
+        tokenExpiry: tokenSet.expires_in
       })
 
       // Create session
@@ -206,13 +204,14 @@ export const plugin = {
             return { isValid: false }
           }
 
-          // Add default roles if none exist for backward compatibility
-          if (!cached.user?.roles) {
-            cached.user = {
-              ...cached.user,
-              roles: [ADMIN_ROLE]
-            }
-          }
+          // Add debugging for session validation
+          logger.debug('Session validation successful', {
+            sessionId: session.id,
+            userId: cached.user?.id,
+            userEmail: cached.user?.email,
+            userRoles: cached.user?.roles || [],
+            path: request.path
+          })
 
           return {
             isValid: true,

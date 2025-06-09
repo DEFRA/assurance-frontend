@@ -362,10 +362,8 @@ describe('Projects controller', () => {
         professions: []
       }
       const mockStandards = [{ number: 1, name: 'Standard 1' }]
-      const mockProfessions = []
       mockGetProjectById.mockResolvedValue(mockProject)
       mockGetServiceStandards.mockResolvedValue(mockStandards)
-      mockGetProfessions.mockResolvedValue(mockProfessions)
 
       // Act
       await projectsController.getEdit(mockRequest, mockH)
@@ -379,7 +377,6 @@ describe('Projects controller', () => {
           project: expect.objectContaining({
             id: '1',
             name: 'Test Project',
-            professions: [],
             standards: expect.arrayContaining([
               expect.objectContaining({
                 standardId: '1',
@@ -387,17 +384,8 @@ describe('Projects controller', () => {
               })
             ])
           }),
-          professions: [],
-          professionNames: {},
-          professionOptions: [
-            {
-              value: '',
-              text: 'Select a profession'
-            }
-          ],
           statusOptions: expect.any(Array),
           deliveryHistory: expect.any(Array),
-          professionHistory: expect.any(Array),
           statusClassMap: expect.any(Object),
           statusLabelMap: expect.any(Object)
         })
@@ -428,34 +416,6 @@ describe('Projects controller', () => {
       expect(mockRequest.logger.error).toHaveBeenCalled()
     })
 
-    test('should handle error fetching professions', async () => {
-      // Arrange
-      const mockRequest = {
-        params: { id: '1' },
-        logger: {
-          error: jest.fn(),
-          info: jest.fn()
-        },
-        auth: {
-          isAuthenticated: true
-        }
-      }
-      mockGetProjectById.mockResolvedValue({
-        id: '1',
-        name: 'Test Project',
-        standards: [],
-        professions: []
-      })
-      mockGetProfessions.mockRejectedValue(new Error('Professions error'))
-
-      // Act
-      await projectsController.getEdit(mockRequest, mockH)
-
-      // Assert - controller should handle this error gracefully
-      expect(mockH.view).toHaveBeenCalled()
-      expect(mockRequest.logger.error).toHaveBeenCalled()
-    })
-
     test('should handle project not found', async () => {
       // Arrange
       const mockRequest = {
@@ -473,6 +433,31 @@ describe('Projects controller', () => {
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
         `/?notification=${NOTIFICATIONS.NOT_FOUND}`
+      )
+    })
+
+    it('should handle null project history', async () => {
+      // Arrange
+      const mockProject = { id: '1', name: 'Test Project', professions: [] }
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetProjectHistory.mockResolvedValue(null)
+
+      // Act
+      await projectsController.getEdit(
+        {
+          params: { id: '1' },
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/views/edit',
+        expect.objectContaining({
+          project: mockProject,
+          deliveryHistory: []
+        })
       )
     })
   })
@@ -677,6 +662,195 @@ describe('Projects controller', () => {
 
       // Assert - since we mocked the implementation for this test, accept the mock output
       expect(mockH.redirect).toHaveBeenCalled()
+    })
+  })
+
+  describe('postEdit - delivery updates with dates', () => {
+    it('should handle delivery updates with valid dates', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        payload: {
+          status: 'GREEN',
+          commentary: 'Updated status',
+          tags: 'tag1, tag2',
+          'updateDate-day': '10',
+          'updateDate-month': '03',
+          'updateDate-year': '2024'
+        },
+        logger: { info: jest.fn(), error: jest.fn() },
+        query: { type: 'delivery' }
+      }
+
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test Project'
+      })
+      mockUpdateProject.mockResolvedValue({ id: '1' })
+
+      // Act
+      await projectsController.postEdit(mockRequest, mockH)
+
+      // Assert
+      expect(mockUpdateProject).toHaveBeenCalledWith(
+        '1',
+        expect.objectContaining({
+          status: 'GREEN',
+          commentary: 'Updated status',
+          tags: ['tag1', 'tag2'],
+          updateDate: '2024-03-10'
+        }),
+        mockRequest
+      )
+    })
+
+    it('should handle delivery updates with invalid dates', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        payload: {
+          status: 'AMBER',
+          commentary: 'Status update',
+          'updateDate-day': '40', // Invalid day
+          'updateDate-month': '15', // Invalid month
+          'updateDate-year': '2024'
+        },
+        logger: { info: jest.fn(), error: jest.fn() },
+        query: { type: 'delivery' }
+      }
+
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test Project'
+      })
+      mockUpdateProject.mockResolvedValue({ id: '1' })
+
+      // Act
+      await projectsController.postEdit(mockRequest, mockH)
+
+      // Assert - should not include updateDate for invalid date
+      expect(mockUpdateProject).toHaveBeenCalledWith(
+        '1',
+        expect.objectContaining({
+          status: 'AMBER',
+          commentary: 'Status update',
+          tags: []
+        }),
+        mockRequest
+      )
+    })
+
+    it('should handle partial date fields', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        payload: {
+          status: 'RED',
+          commentary: 'Issue identified',
+          'updateDate-day': '15',
+          'updateDate-month': '06'
+          // Missing year
+        },
+        logger: { info: jest.fn(), error: jest.fn() },
+        query: { type: 'delivery' }
+      }
+
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test Project'
+      })
+      mockUpdateProject.mockResolvedValue({ id: '1' })
+
+      // Act
+      await projectsController.postEdit(mockRequest, mockH)
+
+      // Assert - should not include updateDate for incomplete date
+      expect(mockUpdateProject).toHaveBeenCalledWith(
+        '1',
+        expect.objectContaining({
+          status: 'RED',
+          commentary: 'Issue identified',
+          tags: []
+        }),
+        mockRequest
+      )
+    })
+  })
+
+  describe('postEdit - error scenarios', () => {
+    it('should handle Standards error specifically for tests', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        payload: {
+          status: 'GREEN',
+          commentary: 'Test'
+        },
+        logger: { error: jest.fn(), info: jest.fn() },
+        query: { type: 'delivery' }
+      }
+
+      mockGetProjectById.mockResolvedValue({
+        id: '1',
+        name: 'Test Project'
+      })
+      mockUpdateProject.mockRejectedValue(new Error('Standards error'))
+
+      // Act & Assert
+      await expect(
+        projectsController.postEdit(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
+    })
+
+    it('should handle general processing errors', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '1' },
+        payload: {
+          status: 'GREEN'
+        },
+        logger: { error: jest.fn(), info: jest.fn() },
+        query: { type: 'delivery' }
+      }
+
+      mockGetProjectById.mockRejectedValue(new Error('Database error'))
+
+      // Act & Assert
+      await expect(
+        projectsController.postEdit(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
+    })
+
+    it('should handle payload validation correctly', async () => {
+      // Arrange - Test a realistic validation scenario
+      const validPayload = {
+        updateType: 'delivery',
+        status: 'GREEN',
+        commentary: 'Test update'
+      }
+
+      mockGetProjectById.mockResolvedValue({ id: '1', name: 'Test Project' })
+
+      // Act
+      await projectsController.postEdit(
+        {
+          params: { id: '1' },
+          payload: validPayload,
+          query: { type: 'delivery' },
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert - Should process successfully
+      expect(mockUpdateProject).toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        expect.stringContaining('notification=Project updated successfully')
+      )
     })
   })
 
@@ -1317,7 +1491,6 @@ describe('Projects controller', () => {
         const mockProject = { id: '1', name: 'Test Project', professions: [] }
         mockGetProjectById.mockResolvedValue(mockProject)
         mockGetProjectHistory.mockResolvedValue(null)
-        mockGetProfessions.mockResolvedValue([])
 
         // Act
         await projectsController.getEdit(
@@ -1334,41 +1507,6 @@ describe('Projects controller', () => {
           expect.objectContaining({
             project: mockProject,
             deliveryHistory: []
-          })
-        )
-      })
-
-      it('should handle profession history fetch errors gracefully', async () => {
-        // Arrange
-        const mockProject = {
-          id: '1',
-          name: 'Test Project',
-          professions: [{ professionId: 'prof-1', status: 'GREEN' }]
-        }
-        mockGetProjectById.mockResolvedValue(mockProject)
-        mockGetProjectHistory.mockResolvedValue([])
-        mockGetProfessions.mockResolvedValue([
-          { id: 'prof-1', name: 'Test Prof' }
-        ])
-        mockGetProfessionHistory.mockRejectedValue(
-          new Error('History API error')
-        )
-
-        // Act
-        await projectsController.getEdit(
-          {
-            params: { id: '1' },
-            logger: { error: jest.fn(), info: jest.fn() }
-          },
-          mockH
-        )
-
-        // Assert - should continue without profession history
-        expect(mockH.view).toHaveBeenCalledWith(
-          'projects/detail/views/edit',
-          expect.objectContaining({
-            project: mockProject,
-            professionHistory: []
           })
         )
       })

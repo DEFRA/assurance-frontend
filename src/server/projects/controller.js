@@ -356,87 +356,12 @@ export const projectsController = {
         // Continue with empty history if fetch fails
       }
 
-      // Get professions with proper error handling
-      let professions = []
-      try {
-        professions = (await getProfessions(request)) || []
-      } catch (error) {
-        request.logger.error({ error }, 'Error fetching professions')
-        // Continue with empty professions rather than failing completely
-      }
-
-      // Create a map of profession IDs to names for the template
-      const professionNames = {}
-      professions.forEach((p) => {
-        if (p.id && p.name) {
-          professionNames[p.id] = p.name
-        }
-      })
-
-      // Create profession options for the form
-      const professionOptions = [
-        { value: '', text: 'Select a profession' },
-        ...professions
-          .filter((p) => p.id && p.name)
-          .map((p) => ({
-            value: p.id,
-            text: p.name
-          }))
-      ]
-
-      // Fetch profession history for each profession
-      let professionHistory = []
-      if (project.professions && project.professions.length > 0) {
-        const professionHistoryPromises = project.professions.map(
-          async (profession) => {
-            try {
-              const history = await getProfessionHistory(
-                id,
-                profession.professionId,
-                request
-              )
-              if (history && history.length > 0) {
-                // Only include non-archived entries
-                const filtered = history
-                  .filter((entry) => !entry.archived)
-                  .map((entry) => ({
-                    ...entry,
-                    professionId: profession.professionId,
-                    professionName:
-                      professionNames[profession.professionId] ||
-                      `Profession ${profession.professionId}`
-                  }))
-                return filtered
-              }
-              return []
-            } catch (err) {
-              request.logger.error(
-                `Error fetching history for profession ${profession.professionId}:`,
-                err
-              )
-              return []
-            }
-          }
-        )
-
-        // Wait for all profession histories and combine them
-        const allHistories = await Promise.all(professionHistoryPromises)
-        professionHistory = allHistories
-          .flat()
-          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-          .slice(0, 20) // Limit to 20 most recent entries
-      }
-
       return h.view(VIEW_TEMPLATES.PROJECTS_DETAIL_EDIT, {
         pageTitle: `Edit ${project.name}${DDTS_ASSURANCE_SUFFIX}`,
         heading: `Edit ${project.name}`,
         project,
-        professions: professions || [],
-        professionNames,
-        professionOptions,
         statusOptions: STATUS_OPTIONS,
         deliveryHistory,
-        professionHistory,
         statusClassMap: STATUS_CLASS,
         statusLabelMap: STATUS_LABEL
       })
@@ -452,18 +377,10 @@ export const projectsController = {
       status,
       commentary,
       tags,
-      // For profession updates
-      profession,
-      'profession-status': professionStatus,
-      'profession-commentary': professionCommentary,
       // Date fields for delivery
       'updateDate-day': updateDateDay,
       'updateDate-month': updateDateMonth,
-      'updateDate-year': updateDateYear,
-      // Date fields for profession
-      'profession-updateDate-day': professionUpdateDateDay,
-      'profession-updateDate-month': professionUpdateDateMonth,
-      'profession-updateDate-year': professionUpdateDateYear
+      'updateDate-year': updateDateYear
     } = request.payload
     const updateType = request.query.type || 'delivery'
 
@@ -521,70 +438,11 @@ export const projectsController = {
           },
           'Updating project delivery status'
         )
-      } else if (updateType === 'profession') {
-        // Validate required fields for profession updates
-        if (profession && professionStatus) {
-          // Get profession name from the service
-          const professions = await getProfessions(request)
-          const professionInfo = professions.find((p) => p.id === profession)
-          const professionName =
-            professionInfo?.name || `Profession ${profession}`
-
-          // Get existing professions
-          const existingProfessions = currentProject.professions || []
-
-          // Filter out the profession we're updating
-          const otherProfessions = existingProfessions.filter(
-            (p) => p.professionId !== profession
-          )
-
-          // Parse date from form fields
-          if (
-            professionUpdateDateDay &&
-            professionUpdateDateMonth &&
-            professionUpdateDateYear
-          ) {
-            const iso = `${professionUpdateDateYear.padStart(4, '0')}-${professionUpdateDateMonth.padStart(2, '0')}-${professionUpdateDateDay.padStart(2, '0')}`
-            if (!isNaN(Date.parse(iso))) {
-              updateDate = iso
-            }
-          }
-
-          // Add the updated profession
-          const updatedProfessions = [
-            ...otherProfessions,
-            {
-              professionId: profession,
-              name: professionName,
-              status: professionStatus,
-              commentary: professionCommentary || ''
-            }
-          ]
-
-          request.logger.info(
-            {
-              updatedProfessions: updatedProfessions.map((p) => ({
-                id: p.professionId,
-                status: p.status
-              })),
-              updateDate
-            },
-            'Updated project professions'
-          )
-
-          // Add professions to project data
-          projectData.professions = updatedProfessions
-          if (updateDate) {
-            projectData.updateDate = updateDate
-          } else if ('updateDate' in projectData) {
-            delete projectData.updateDate
-          }
-        } else {
-          // Missing required fields
-          return h.redirect(
-            `/projects/${id}/edit?tab=professions&notification=${NOTIFICATIONS.VALIDATION_ERROR}`
-          )
-        }
+      } else {
+        // Invalid update type
+        return h.redirect(
+          `/projects/${id}/edit?notification=${NOTIFICATIONS.VALIDATION_ERROR}`
+        )
       }
 
       try {
@@ -593,20 +451,14 @@ export const projectsController = {
         request.logger.info(
           {
             result: result ? 'success' : 'failure',
-            updateType,
-            professions: result?.professions?.map((p) => ({
-              id: p.professionId,
-              status: p.status
-            }))
+            updateType
           },
           'Project update result'
         )
 
-        // Redirect to the appropriate tab after save
-        const redirectTab =
-          updateType === 'profession' ? '?tab=professions' : ''
+        // Redirect after save
         return h.redirect(
-          `/projects/${id}${redirectTab}${redirectTab ? '&' : '?'}notification=${NOTIFICATIONS.PROJECT_UPDATED_SUCCESSFULLY}`
+          `/projects/${id}?notification=${NOTIFICATIONS.PROJECT_UPDATED_SUCCESSFULLY}`
         )
       } catch (updateError) {
         request.logger.error(

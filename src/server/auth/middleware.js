@@ -1,5 +1,9 @@
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 
+// Constants for repeated redirect URLs
+const LOGIN_REDIRECT_URL = '/auth/login?redirectTo='
+const INSUFFICIENT_PERMISSIONS_URL = '/auth/insufficient-permissions'
+
 /**
  * Middleware to ensure user is authenticated
  * @param {import('@hapi/hapi').Request} request
@@ -9,13 +13,13 @@ export const requireAuth = (request, h) => {
   try {
     // Check if user is authenticated
     if (!request.auth.isAuthenticated) {
-      return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+      return h.redirect(`${LOGIN_REDIRECT_URL}${request.url.pathname}`)
     }
 
     // Get user from session
     const user = request.auth.credentials.user
     if (!user) {
-      return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+      return h.redirect(`${LOGIN_REDIRECT_URL}${request.url.pathname}`)
     }
 
     // Add user to request for easy access
@@ -23,7 +27,7 @@ export const requireAuth = (request, h) => {
     return h.continue
   } catch (error) {
     logger.error('Authentication error', error)
-    return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+    return h.redirect(`${LOGIN_REDIRECT_URL}${request.url.pathname}`)
   }
 }
 
@@ -40,7 +44,7 @@ export const requireRole = (requiredRoles) => {
       // Check if user is authenticated
       if (!request.auth.isAuthenticated) {
         return h
-          .redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+          .redirect(`${LOGIN_REDIRECT_URL}${request.url.pathname}`)
           .takeover()
       }
 
@@ -48,7 +52,7 @@ export const requireRole = (requiredRoles) => {
       const user = request.auth.credentials.user
       if (!user) {
         return h
-          .redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+          .redirect(`${LOGIN_REDIRECT_URL}${request.url.pathname}`)
           .takeover()
       }
 
@@ -64,7 +68,7 @@ export const requireRole = (requiredRoles) => {
           userEmail: user.email
         })
 
-        return h.redirect('/auth/insufficient-permissions').takeover()
+        return h.redirect(INSUFFICIENT_PERMISSIONS_URL).takeover()
       }
 
       // Add user to request for easy access
@@ -72,7 +76,7 @@ export const requireRole = (requiredRoles) => {
       return h.continue
     } catch (error) {
       logger.error('Authorization error', error)
-      return h.redirect('/auth/insufficient-permissions').takeover()
+      return h.redirect(INSUFFICIENT_PERMISSIONS_URL).takeover()
     }
   }
 }
@@ -87,7 +91,7 @@ export const requireAdmin = (request, h) => {
     // Check if user is authenticated
     if (!request.auth.isAuthenticated) {
       return h
-        .redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+        .redirect(`${LOGIN_REDIRECT_URL}${request.url.pathname}`)
         .takeover()
     }
 
@@ -95,13 +99,13 @@ export const requireAdmin = (request, h) => {
     const user = request.auth.credentials.user
     if (!user) {
       return h
-        .redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+        .redirect(`${LOGIN_REDIRECT_URL}${request.url.pathname}`)
         .takeover()
     }
 
     // Check if user has admin role
     if (!user.roles?.includes('admin')) {
-      return h.redirect('/auth/insufficient-permissions').takeover()
+      return h.redirect(INSUFFICIENT_PERMISSIONS_URL).takeover()
     }
 
     // Add user to request for easy access
@@ -109,6 +113,6 @@ export const requireAdmin = (request, h) => {
     return h.continue
   } catch (error) {
     logger.error('Admin authorization error', error)
-    return h.redirect('/auth/insufficient-permissions').takeover()
+    return h.redirect(INSUFFICIENT_PERMISSIONS_URL).takeover()
   }
 }

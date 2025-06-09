@@ -18,7 +18,9 @@ export const hasAdminRole = (user) => {
  * @returns {boolean} True if user has any of the specified roles
  */
 export const hasAnyRole = (user, roles) => {
-  if (!user?.roles) return false
+  if (!user?.roles) {
+    return false
+  }
 
   const requiredRoles = Array.isArray(roles) ? roles : [roles]
   return requiredRoles.some((role) => user.roles.includes(role))

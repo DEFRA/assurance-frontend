@@ -1,7 +1,5 @@
 import Boom from '@hapi/boom'
-import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
-
-const logger = createLogger()
+import { logger } from '~/src/server/common/helpers/logging/logger.js'
 
 /**
  * Middleware to ensure user is authenticated
@@ -75,5 +73,31 @@ export const requireRole = (requiredRoles) => {
       logger.error('Authorization error', error)
       return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
     }
+  }
+}
+
+/**
+ * Middleware to ensure user has admin role
+ * @param {import('@hapi/hapi').Request} request
+ * @param {import('@hapi/hapi').ResponseToolkit} h
+ */
+export const requireAdmin = (request, h) => {
+  try {
+    // First check if user is authenticated
+    const authResult = requireAuth(request, h)
+    if (authResult !== h.continue) {
+      return authResult
+    }
+
+    // Check if user has admin role
+    const user = request.auth.credentials.user
+    if (!user.roles?.includes('admin')) {
+      return Boom.forbidden('Admin access required')
+    }
+
+    return h.continue
+  } catch (error) {
+    logger.error('Admin authorization error', error)
+    return Boom.forbidden('Admin access required')
   }
 }

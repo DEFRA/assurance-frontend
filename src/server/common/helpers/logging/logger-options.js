@@ -32,6 +32,47 @@ export const loggerOptions = {
   level: logConfig.level || 'info',
   ...formatters[logConfig.format],
   nesting: true,
+  // Enhanced serializers for consistent error and request formatting
+  serializers: {
+    error: (error) => {
+      if (!error) {
+        return error
+      }
+      return {
+        type: error.name,
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        ...error
+      }
+    },
+    request: (request) => {
+      if (!request) {
+        return request
+      }
+      return {
+        method: request.method,
+        url: request.url,
+        headers: request.headers,
+        remoteAddress: request.remoteAddress
+      }
+    }
+  },
+  // Enhanced formatters for consistent log structure
+  formatters: {
+    level: (label) => {
+      return { level: label.toUpperCase() }
+    },
+    bindings: (bindings) => {
+      return { ...bindings }
+    },
+    log: (obj) => {
+      // Remove error from the log object since it's handled separately
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { err, error, ...rest } = obj
+      return rest
+    }
+  },
   mixin() {
     const mixinValues = {}
     const traceId = getTraceId()
@@ -46,55 +87,3 @@ export const loggerOptions = {
  * @import { Options } from 'hapi-pino'
  * @import { LoggerOptions } from 'pino'
  */
-
-/**
- * Get logger options based on environment configuration
- * @returns {object} Logger configuration options
- */
-export function getLoggerOptions() {
-  const env = config.get('env')
-  const isProduction = env === 'production'
-
-  return {
-    level: config.get('log.level') || (isProduction ? 'info' : 'debug'),
-    formatters: {
-      level: (label) => {
-        return { level: label.toUpperCase() }
-      },
-      bindings: (bindings) => {
-        return { ...bindings }
-      },
-      log: (obj) => {
-        // Remove error from the log object since it's handled separately
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { err, error, ...rest } = obj
-        return rest
-      }
-    },
-    serializers: {
-      error: (error) => {
-        if (!error) {
-          return error
-        }
-        return {
-          type: error.name,
-          message: error.message,
-          stack: error.stack,
-          code: error.code,
-          ...error
-        }
-      },
-      request: (request) => {
-        if (!request) {
-          return request
-        }
-        return {
-          method: request.method,
-          url: request.url,
-          headers: request.headers,
-          remoteAddress: request.remoteAddress
-        }
-      }
-    }
-  }
-}

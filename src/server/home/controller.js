@@ -3,7 +3,6 @@ import {
   PAGE_TITLES,
   VIEW_TEMPLATES
 } from '~/src/server/constants/notifications.js'
-import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
 
 /**
  * A GET route for the homepage
@@ -16,10 +15,9 @@ export const homeController = {
   handler: async (request, h) => {
     const { notification } = request.query
     const isAuthenticated = request.auth.isAuthenticated
-    const logger = createLogger()
 
     try {
-      logger.info('Home page - fetching projects')
+      request.logger.info('Home page - fetching projects')
       const projects = await getProjects(request)
 
       // Get all project names for autocomplete
@@ -42,7 +40,7 @@ export const homeController = {
         notification
       })
     } catch (error) {
-      logger.error('Error fetching projects for homepage')
+      request.logger.error('Error fetching projects for homepage')
 
       // Still render the page but without projects
       return h.view(VIEW_TEMPLATES.HOME_INDEX, {

@@ -16,10 +16,10 @@ jest.mock('hapi-pino', () => ({
   name: 'mock-hapi-pino'
 }))
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
-  createLogger: () => ({
+  logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args)
-  })
+  }
 }))
 
 describe('#startServer', () => {

@@ -1,7 +1,5 @@
-import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
+import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { config } from '~/src/config/config.js'
-
-const logger = createLogger()
 
 /**
  * Session cache plugin

@@ -1,5 +1,4 @@
-import { getLoggerOptions } from './logger-options.js'
-import { config } from '~/src/config/config.js'
+import { loggerOptions } from './logger-options.js'
 
 jest.mock('~/src/config/config.js', () => ({
   config: {
@@ -29,58 +28,40 @@ describe('Logger options', () => {
     jest.clearAllMocks()
   })
 
-  describe('log level', () => {
-    test('should use configured log level when provided', () => {
-      // Arrange
-      config.get.mockImplementation((key) => {
-        if (key === 'log.level') return 'warn'
-        if (key === 'env') return 'development'
-        return null
-      })
-
-      // Act
-      const options = getLoggerOptions()
-
+  describe('configuration', () => {
+    test('should use configured log level', () => {
       // Assert
-      expect(options.level).toBe('warn')
+      expect(loggerOptions.level).toBe('info')
     })
 
-    test('should default to info in production', () => {
-      // Arrange
-      config.get.mockImplementation((key) => {
-        if (key === 'env') return 'production'
-        return null
-      })
-
-      // Act
-      const options = getLoggerOptions()
-
+    test('should have proper serializers', () => {
       // Assert
-      expect(options.level).toBe('info')
+      expect(loggerOptions.serializers).toBeDefined()
+      expect(typeof loggerOptions.serializers.error).toBe('function')
+      expect(typeof loggerOptions.serializers.request).toBe('function')
     })
 
-    test('should default to debug in development', () => {
-      // Arrange
-      config.get.mockImplementation((key) => {
-        if (key === 'env') return 'development'
-        return null
-      })
-
-      // Act
-      const options = getLoggerOptions()
-
+    test('should have proper formatters', () => {
       // Assert
-      expect(options.level).toBe('debug')
+      expect(loggerOptions.formatters).toBeDefined()
+      expect(typeof loggerOptions.formatters.level).toBe('function')
+      expect(typeof loggerOptions.formatters.bindings).toBe('function')
+      expect(typeof loggerOptions.formatters.log).toBe('function')
+    })
+
+    test('should have mixin function for trace IDs', () => {
+      // Assert
+      expect(typeof loggerOptions.mixin).toBe('function')
     })
   })
 
   describe('formatters', () => {
     test('should format level to uppercase', () => {
       // Act
-      const options = getLoggerOptions()
+      const result = loggerOptions.formatters.level('debug')
 
       // Assert
-      expect(options.formatters.level('debug')).toEqual({
+      expect(result).toEqual({
         level: 'DEBUG'
       })
     })
@@ -90,10 +71,10 @@ describe('Logger options', () => {
       const bindings = { service: 'test', version: '1.0' }
 
       // Act
-      const options = getLoggerOptions()
+      const result = loggerOptions.formatters.bindings(bindings)
 
       // Assert
-      expect(options.formatters.bindings(bindings)).toEqual(bindings)
+      expect(result).toEqual(bindings)
     })
 
     test('should remove error fields from log object', () => {
@@ -106,10 +87,10 @@ describe('Logger options', () => {
       }
 
       // Act
-      const options = getLoggerOptions()
+      const result = loggerOptions.formatters.log(logObj)
 
       // Assert
-      expect(options.formatters.log(logObj)).toEqual({
+      expect(result).toEqual({
         message: 'Test',
         data: { test: true }
       })
@@ -123,10 +104,10 @@ describe('Logger options', () => {
       error.code = 'TEST_ERROR'
 
       // Act
-      const options = getLoggerOptions()
+      const result = loggerOptions.serializers.error(error)
 
       // Assert
-      expect(options.serializers.error(error)).toMatchObject({
+      expect(result).toMatchObject({
         type: 'Error',
         message: 'Test error',
         code: 'TEST_ERROR',
@@ -136,10 +117,10 @@ describe('Logger options', () => {
 
     test('should handle null errors', () => {
       // Act
-      const options = getLoggerOptions()
+      const result = loggerOptions.serializers.error(null)
 
       // Assert
-      expect(options.serializers.error(null)).toBeNull()
+      expect(result).toBeNull()
     })
 
     test('should serialize request objects', () => {
@@ -153,10 +134,10 @@ describe('Logger options', () => {
       }
 
       // Act
-      const options = getLoggerOptions()
+      const result = loggerOptions.serializers.request(request)
 
       // Assert
-      expect(options.serializers.request(request)).toEqual({
+      expect(result).toEqual({
         method: 'GET',
         url: '/test',
         headers: { 'content-type': 'application/json' },
@@ -166,10 +147,22 @@ describe('Logger options', () => {
 
     test('should handle null requests', () => {
       // Act
-      const options = getLoggerOptions()
+      const result = loggerOptions.serializers.request(null)
 
       // Assert
-      expect(options.serializers.request(null)).toBeNull()
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('mixin', () => {
+    test('should include trace ID when available', () => {
+      // Act
+      const result = loggerOptions.mixin()
+
+      // Assert
+      expect(result).toEqual({
+        trace: { id: 'mock-trace-id' }
+      })
     })
   })
 })

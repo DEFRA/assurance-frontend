@@ -51,8 +51,6 @@
     "accessible-autocomplete": "^3.0.1",
     "aws-embedded-metrics": "^4.2.0",
     "babel-plugin-module-resolver": "^5.0.2",
-    "chart.js": "^4.4.8",
-    "chartjs-adapter-date-fns": "^3.0.0",
     "config": "^3.3.9",
     "convict": "^6.2.4",
     "cssnano": "^7.0.6",

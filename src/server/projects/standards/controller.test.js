@@ -252,6 +252,93 @@ describe('Standards Controller', () => {
       )
       expect(result).toBe('redirect-response')
     })
+
+    test('should handle error when fetching assessment history for archive link', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standardsSummary: [
+          {
+            standardId: 'std-1',
+            professions: [
+              {
+                professionId: 'prof-1',
+                status: 'GREEN',
+                commentary: 'Test'
+              }
+            ]
+          }
+        ]
+      }
+
+      const mockProfessions = [{ id: 'prof-1', name: 'Test Profession' }]
+      const mockServiceStandards = [
+        { id: 'std-1', number: 1, name: 'Test Standard' }
+      ]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+
+      // Mock getAssessmentHistory to throw error
+      getAssessmentHistory.mockRejectedValue(new Error('History fetch failed'))
+
+      const mockRequest = {
+        params: { id: '1', standardId: 'std-1' },
+        query: {},
+        auth: { isAuthenticated: true },
+        logger: { warn: jest.fn(), error: jest.fn() }
+      }
+
+      // Act
+      await standardsController.getStandardDetail(mockRequest, mockH)
+
+      // Assert
+      expect(mockRequest.logger.warn).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Could not fetch assessment history for archive link'
+      )
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/standards/views/detail',
+        expect.objectContaining({
+          assessments: expect.arrayContaining([
+            expect.objectContaining({
+              professionId: 'prof-1',
+              mostRecentHistoryId: null
+            })
+          ])
+        })
+      )
+    })
+
+    test('should handle standard with case-sensitive StandardId field', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standardsSummary: [
+          {
+            StandardId: 'std-1', // Note the capital S
+            professions: []
+          }
+        ]
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+
+      const mockRequest = {
+        params: { id: '1', standardId: 'std-1' },
+        query: {},
+        logger: { error: jest.fn() }
+      }
+
+      // Act
+      await standardsController.getStandardHistory(mockRequest, mockH)
+
+      // Assert
+      expect(getStandardHistory).toHaveBeenCalledWith('1', 'std-1', mockRequest)
+    })
   })
 
   describe('getStandardHistory', () => {
@@ -723,6 +810,111 @@ describe('Standards Controller', () => {
         'projects/standards/views/assessment',
         expect.objectContaining({
           error: 'Failed to save assessment. Please try again.'
+        })
+      )
+    })
+
+    test('should handle project loading failure during error handling', async () => {
+      // Arrange
+      const mockPayload = {
+        professionId: 'prof-1',
+        standardId: 'std-1',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+
+      // First call fails (no project loaded)
+      getProjectById
+        .mockRejectedValueOnce(new Error('Initial project load failed'))
+        .mockRejectedValueOnce(new Error('Error recovery project load failed'))
+
+      const mockRequest = {
+        params: { id: '1' },
+        payload: mockPayload,
+        logger: { error: jest.fn(), info: jest.fn() }
+      }
+
+      // Act & Assert
+      await expect(
+        standardsController.postAssessmentScreen(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
+
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        { projectError: expect.any(Error) },
+        'Failed to load project for error handling'
+      )
+    })
+
+    test('should handle Internal Server Error specifically in assessment save', async () => {
+      // Arrange
+      const mockProject = { id: '1', phase: 'Live' }
+      const mockPayload = {
+        professionId: 'prof-1',
+        standardId: 'std-1',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue([])
+      getServiceStandards.mockResolvedValue([])
+
+      // Mock updateAssessment to throw Internal Server Error
+      updateAssessment.mockRejectedValue(new Error('Internal Server Error'))
+
+      const mockRequest = {
+        params: { id: '1' },
+        payload: mockPayload,
+        logger: { error: jest.fn(), info: jest.fn() }
+      }
+
+      // Act
+      await standardsController.postAssessmentScreen(mockRequest, mockH)
+
+      // Assert - should call handleAssessmentError which shows specific error for 500 errors
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/standards/views/assessment',
+        expect.objectContaining({
+          error:
+            'Unable to update existing assessment - this is a known backend issue. New assessments work correctly.'
+        })
+      )
+    })
+
+    test('should handle 500 status error in assessment save', async () => {
+      // Arrange
+      const mockProject = { id: '1', phase: 'Live' }
+      const mockPayload = {
+        professionId: 'prof-1',
+        standardId: 'std-1',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue([])
+      getServiceStandards.mockResolvedValue([])
+
+      // Mock updateAssessment to throw 500 error
+      updateAssessment.mockRejectedValue(new Error('500'))
+
+      const mockRequest = {
+        params: { id: '1' },
+        payload: mockPayload,
+        logger: { error: jest.fn(), info: jest.fn() }
+      }
+
+      // Act
+      await standardsController.postAssessmentScreen(mockRequest, mockH)
+
+      // Assert - should show specific 500 error message
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/standards/views/assessment',
+        expect.objectContaining({
+          error:
+            'Unable to update existing assessment - this is a known backend issue. New assessments work correctly.'
         })
       )
     })

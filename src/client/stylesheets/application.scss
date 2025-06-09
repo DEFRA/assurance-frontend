@@ -6,11 +6,6 @@
 @use 'components';
 @use 'partials';
 
-.project-history-chart {
-  background: #f8f8f8;
-  height: 200px;
-}
-
 .govuk-summary-card {
   height: 100%;
 
@@ -20,9 +15,6 @@
   }
 }
 
-.standards-overview {
-  height: 150px;
-}
 // Timeline Component Styles
 .timeline {
   margin-bottom: 1.5em;

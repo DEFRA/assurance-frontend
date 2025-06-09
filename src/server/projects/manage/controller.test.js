@@ -596,4 +596,324 @@ describe('Manage Controller', () => {
       expect(typeof result.code).toBe('function')
     })
   })
+
+  describe('Helper functions advanced scenarios', () => {
+    test('should handle projects with missing standardsSummary via getManageProjectStatus', async () => {
+      // Arrange
+      const mockProject = { id: '1', name: 'Test Project' } // no standardsSummary
+      const mockServiceStandards = [
+        { id: 'std-1', number: 1, name: 'Test Standard' }
+      ]
+      const mockProfessions = [{ id: 'prof-1', name: 'Test Profession' }]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+
+      // Act
+      await manageController.getManageProjectStatus(mockRequest, mockH)
+
+      // Assert - should handle missing standardsSummary gracefully
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/manage/views/status',
+        expect.objectContaining({
+          standardsAtRisk: [] // Empty array when no standardsSummary
+        })
+      )
+    })
+
+    test('should handle null serviceStandards via getManageProjectStatus', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standardsSummary: [
+          {
+            standardId: 'std-1',
+            aggregatedStatus: 'RED',
+            professions: []
+          }
+        ]
+      }
+      const mockProfessions = [{ id: 'prof-1', name: 'Test Profession' }]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(null) // null serviceStandards
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+
+      // Act
+      await manageController.getManageProjectStatus(mockRequest, mockH)
+
+      // Assert - should handle null serviceStandards gracefully
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/manage/views/status',
+        expect.objectContaining({
+          standardsAtRisk: [] // Empty array when serviceStandards is null
+        })
+      )
+    })
+
+    test('should create placeholder for missing service standard via getManageProjectStatus', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standardsSummary: [
+          {
+            standardId: 'missing-std',
+            aggregatedStatus: 'RED',
+            professions: [
+              {
+                professionId: 'prof-1',
+                commentary: 'Test comment',
+                status: 'RED'
+              }
+            ]
+          }
+        ]
+      }
+      const mockServiceStandards = [] // empty array, no matching standard
+      const mockProfessions = [{ id: 'prof-1', name: 'Test Profession' }]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+
+      // Act
+      await manageController.getManageProjectStatus(mockRequest, mockH)
+
+      // Assert - should create placeholder for missing standard
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/manage/views/status',
+        expect.objectContaining({
+          standardsAtRisk: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'missing-std',
+              number: 'Unknown',
+              name: 'Unknown Standard',
+              status: 'RED'
+            })
+          ])
+        })
+      )
+    })
+
+    test('should handle profession comments with empty commentary', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standardsSummary: [
+          {
+            standardId: 'std-1',
+            aggregatedStatus: 'RED',
+            professions: [
+              {
+                professionId: 'prof-1',
+                commentary: '   ', // whitespace only
+                status: 'RED'
+              },
+              {
+                professionId: 'prof-2',
+                commentary: '', // empty string
+                status: 'AMBER'
+              },
+              {
+                professionId: 'prof-3',
+                commentary: 'Valid comment',
+                status: 'GREEN'
+              }
+            ]
+          }
+        ]
+      }
+      const mockServiceStandards = [
+        { id: 'std-1', number: 1, name: 'Test Standard' }
+      ]
+      const mockProfessions = [
+        { id: 'prof-1', name: 'Profession 1' },
+        { id: 'prof-2', name: 'Profession 2' },
+        { id: 'prof-3', name: 'Profession 3' }
+      ]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+
+      // Act
+      await manageController.getManageProjectStatus(mockRequest, mockH)
+
+      // Assert - should only include prof-3 with non-empty commentary
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/manage/views/status',
+        expect.objectContaining({
+          standardsAtRisk: expect.arrayContaining([
+            expect.objectContaining({
+              professionComments: [
+                {
+                  professionName: 'Profession 3',
+                  commentary: 'Valid comment',
+                  status: 'GREEN',
+                  lastUpdated: undefined
+                }
+              ]
+            })
+          ])
+        })
+      )
+    })
+  })
+
+  describe('postManageProjectStatus error scenarios', () => {
+    test('should handle validation errors and use alternative standards at risk', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        standardsSummary: [
+          {
+            standardId: 'std-1',
+            aggregatedStatus: 'RED',
+            professions: []
+          }
+        ]
+      }
+      const mockServiceStandards = [
+        { id: 'std-1', number: 1, name: 'Test Standard' }
+      ]
+      const mockProfessions = [{ id: 'prof-1', name: 'Test Profession' }]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      const mockRequest = {
+        params: { id: '1' },
+        payload: { status: '', commentary: '' }, // Missing required fields
+        logger: { error: jest.fn() }
+      }
+
+      // Act
+      await manageController.postManageProjectStatus(mockRequest, mockH)
+
+      // Assert - should show validation error view with alternative standards
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/manage/views/status',
+        expect.objectContaining({
+          project: mockProject,
+          values: mockRequest.payload,
+          errors: {
+            status: true,
+            commentary: true
+          },
+          errorMessage: 'Failed to update project. Please try again.',
+          standardsAtRisk: expect.any(Array)
+        })
+      )
+    })
+
+    test('should handle project fetch failure in status update', async () => {
+      // Arrange
+      getProjectById.mockRejectedValue(new Error('Project fetch failed'))
+
+      const mockRequest = {
+        params: { id: '1' },
+        payload: { status: 'GREEN', commentary: 'Test' },
+        logger: { error: jest.fn() }
+      }
+
+      // Act & Assert
+      await expect(
+        manageController.postManageProjectStatus(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
+    })
+  })
+
+  describe('getManageProjectStatus with empty data scenarios', () => {
+    test('should handle empty professions array gracefully', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        status: 'GREEN',
+        standardsSummary: []
+      }
+      const mockServiceStandards = []
+      const mockProfessions = [] // Empty professions
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+
+      // Act
+      await manageController.getManageProjectStatus(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/manage/views/status',
+        expect.objectContaining({
+          project: mockProject,
+          professionMap: {}, // Empty profession map
+          standardsAtRisk: []
+        })
+      )
+    })
+
+    test('should handle null professions response', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        status: 'GREEN',
+        standardsSummary: []
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue([])
+      getProfessions.mockResolvedValue(null) // Null professions
+
+      const mockRequest = {
+        params: { id: '1' },
+        logger: { error: jest.fn() }
+      }
+
+      // Act
+      await manageController.getManageProjectStatus(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/manage/views/status',
+        expect.objectContaining({
+          professionMap: {} // Should handle null professions gracefully
+        })
+      )
+    })
+  })
 })

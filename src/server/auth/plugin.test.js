@@ -20,10 +20,10 @@ jest.mock('node:crypto', () => ({
 }))
 
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
-  createLogger: jest.fn().mockReturnValue({
+  logger: {
     debug: jest.fn(),
     error: jest.fn()
-  })
+  }
 }))
 
 jest.mock('~/src/config/config.js', () => ({

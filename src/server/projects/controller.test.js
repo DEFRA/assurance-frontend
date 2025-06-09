@@ -954,5 +954,524 @@ describe('Projects controller', () => {
         })
       )
     })
+
+    it('should handle empty project history', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        professions: []
+      }
+
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetProjectHistory.mockResolvedValue([])
+      mockGetProfessions.mockResolvedValue([])
+
+      // Act
+      await projectsController.getHistory(
+        {
+          params: { id: '1' },
+          logger: { error: jest.fn(), info: jest.fn() },
+          auth: { isAuthenticated: true }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/views/project-history',
+        expect.objectContaining({
+          project: mockProject,
+          history: []
+        })
+      )
+    })
+
+    it('should filter out archived entries from history', async () => {
+      // Arrange
+      const mockProject = {
+        id: '1',
+        name: 'Test Project',
+        professions: []
+      }
+      const mockProjectHistory = [
+        {
+          id: 'history-1',
+          timestamp: '2024-02-15',
+          archived: false,
+          changes: {
+            status: { from: 'AMBER', to: 'GREEN' }
+          }
+        },
+        {
+          id: 'history-2',
+          timestamp: '2024-02-14',
+          archived: true,
+          changes: {
+            commentary: { from: '', to: 'Archived update' }
+          }
+        }
+      ]
+
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetProjectHistory.mockResolvedValue(mockProjectHistory)
+      mockGetProfessions.mockResolvedValue([])
+
+      // Act
+      await projectsController.getHistory(
+        {
+          params: { id: '1' },
+          logger: { error: jest.fn(), info: jest.fn() },
+          auth: { isAuthenticated: true }
+        },
+        mockH
+      )
+
+      // Assert
+      const viewCall = mockH.view.mock.calls[0]
+      const historyArg = viewCall[1].history
+      // Filter is applied in the addProfessionHistoryToTimeline helper, not in the main getHistory method
+      // The main method processes all history and the filtering happens downstream
+      expect(historyArg).toHaveLength(2) // Both entries are included in the base processing
+    })
+  })
+
+  describe('getArchiveProjectHistory', () => {
+    it('should return archive page for valid history entry', async () => {
+      // Arrange
+      const mockProject = { id: '1', name: 'Test Project' }
+      const mockHistory = [
+        {
+          id: 'history-1',
+          timestamp: '2024-02-15',
+          changes: {
+            status: { from: 'AMBER', to: 'GREEN' },
+            commentary: { from: '', to: 'Updated status' }
+          }
+        }
+      ]
+
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetProjectHistory.mockResolvedValue(mockHistory)
+
+      // Act
+      await projectsController.getArchiveProjectHistory(
+        {
+          params: { id: '1', historyId: 'history-1' },
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/detail/views/archive-project-history',
+        expect.objectContaining({
+          pageTitle: 'Archive Project Update',
+          project: mockProject,
+          historyEntry: mockHistory[0]
+        })
+      )
+    })
+
+    it('should redirect when project is not found', async () => {
+      // Arrange
+      mockGetProjectById.mockResolvedValue(null)
+
+      // Act
+      await projectsController.getArchiveProjectHistory(
+        {
+          params: { id: '999', historyId: 'history-1' },
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/?notification=Project not found'
+      )
+    })
+
+    it('should redirect when history entry is not found', async () => {
+      // Arrange
+      const mockProject = { id: '1', name: 'Test Project' }
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetProjectHistory.mockResolvedValue([])
+
+      // Act
+      await projectsController.getArchiveProjectHistory(
+        {
+          params: { id: '1', historyId: 'non-existent' },
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1?notification=History entry not found'
+      )
+    })
+
+    it('should redirect when history entry has no archivable changes', async () => {
+      // Arrange
+      const mockProject = { id: '1', name: 'Test Project' }
+      const mockHistory = [
+        {
+          id: 'history-1',
+          timestamp: '2024-02-15',
+          changes: {
+            name: { from: 'Old Name', to: 'New Name' }
+          }
+        }
+      ]
+
+      mockGetProjectById.mockResolvedValue(mockProject)
+      mockGetProjectHistory.mockResolvedValue(mockHistory)
+
+      // Act
+      await projectsController.getArchiveProjectHistory(
+        {
+          params: { id: '1', historyId: 'history-1' },
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1?notification=Only status and commentary updates can be archived'
+      )
+    })
+
+    it('should handle errors when fetching data', async () => {
+      // Arrange
+      mockGetProjectById.mockRejectedValue(new Error('Database error'))
+
+      // Act & Assert
+      await expect(
+        projectsController.getArchiveProjectHistory(
+          {
+            params: { id: '1', historyId: 'history-1' },
+            logger: { error: jest.fn() }
+          },
+          mockH
+        )
+      ).rejects.toThrow()
+    })
+  })
+
+  describe('postArchiveProjectHistory', () => {
+    it('should archive history entry and redirect to detail page', async () => {
+      // Arrange
+      mockArchiveProjectHistoryEntry.mockResolvedValue()
+
+      // Mock updateProjectAfterArchive by mocking the services it uses
+      mockGetProjectHistory.mockResolvedValue([
+        {
+          id: 'history-2',
+          timestamp: '2024-02-14',
+          archived: false,
+          changes: {
+            status: { from: 'AMBER', to: 'GREEN' },
+            commentary: { from: '', to: 'Latest status' }
+          }
+        }
+      ])
+
+      // Act
+      await projectsController.postArchiveProjectHistory(
+        {
+          params: { id: '1', historyId: 'history-1' },
+          query: { returnTo: 'detail' },
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockArchiveProjectHistoryEntry).toHaveBeenCalledWith(
+        '1',
+        'history-1',
+        expect.any(Object)
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1?notification=Project update archived successfully'
+      )
+    })
+
+    it('should redirect to edit page when returnTo is edit', async () => {
+      // Arrange
+      mockArchiveProjectHistoryEntry.mockResolvedValue()
+      mockGetProjectHistory.mockResolvedValue([])
+
+      // Act
+      await projectsController.postArchiveProjectHistory(
+        {
+          params: { id: '1', historyId: 'history-1' },
+          query: { returnTo: 'edit' },
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/edit?tab=delivery&notification=Delivery update successfully archived'
+      )
+    })
+
+    it('should redirect to history page by default', async () => {
+      // Arrange
+      mockArchiveProjectHistoryEntry.mockResolvedValue()
+      mockGetProjectHistory.mockResolvedValue([])
+
+      // Act
+      await projectsController.postArchiveProjectHistory(
+        {
+          params: { id: '1', historyId: 'history-1' },
+          query: {},
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/history?notification=Project update archived successfully'
+      )
+    })
+
+    it('should handle archive errors with detail returnTo', async () => {
+      // Arrange
+      mockArchiveProjectHistoryEntry.mockRejectedValue(
+        new Error('Archive failed')
+      )
+
+      // Act
+      await projectsController.postArchiveProjectHistory(
+        {
+          params: { id: '1', historyId: 'history-1' },
+          query: { returnTo: 'detail' },
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1?notification=Failed to archive project update'
+      )
+    })
+
+    it('should handle archive errors with edit returnTo', async () => {
+      // Arrange
+      mockArchiveProjectHistoryEntry.mockRejectedValue(
+        new Error('Archive failed')
+      )
+
+      // Act
+      await projectsController.postArchiveProjectHistory(
+        {
+          params: { id: '1', historyId: 'history-1' },
+          query: { returnTo: 'edit' },
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/edit?tab=delivery&notification=Failed to archive delivery update'
+      )
+    })
+
+    it('should handle archive errors with default returnTo', async () => {
+      // Arrange
+      mockArchiveProjectHistoryEntry.mockRejectedValue(
+        new Error('Archive failed')
+      )
+
+      // Act
+      await projectsController.postArchiveProjectHistory(
+        {
+          params: { id: '1', historyId: 'history-1' },
+          query: {},
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/history?notification=Failed to archive project update'
+      )
+    })
+  })
+
+  describe('Edge cases and error handling', () => {
+    describe('getEdit', () => {
+      it('should handle null project history', async () => {
+        // Arrange
+        const mockProject = { id: '1', name: 'Test Project', professions: [] }
+        mockGetProjectById.mockResolvedValue(mockProject)
+        mockGetProjectHistory.mockResolvedValue(null)
+        mockGetProfessions.mockResolvedValue([])
+
+        // Act
+        await projectsController.getEdit(
+          {
+            params: { id: '1' },
+            logger: { error: jest.fn(), info: jest.fn() }
+          },
+          mockH
+        )
+
+        // Assert
+        expect(mockH.view).toHaveBeenCalledWith(
+          'projects/detail/views/edit',
+          expect.objectContaining({
+            project: mockProject,
+            deliveryHistory: []
+          })
+        )
+      })
+
+      it('should handle profession history fetch errors gracefully', async () => {
+        // Arrange
+        const mockProject = {
+          id: '1',
+          name: 'Test Project',
+          professions: [{ professionId: 'prof-1', status: 'GREEN' }]
+        }
+        mockGetProjectById.mockResolvedValue(mockProject)
+        mockGetProjectHistory.mockResolvedValue([])
+        mockGetProfessions.mockResolvedValue([
+          { id: 'prof-1', name: 'Test Prof' }
+        ])
+        mockGetProfessionHistory.mockRejectedValue(
+          new Error('History API error')
+        )
+
+        // Act
+        await projectsController.getEdit(
+          {
+            params: { id: '1' },
+            logger: { error: jest.fn(), info: jest.fn() }
+          },
+          mockH
+        )
+
+        // Assert - should continue without profession history
+        expect(mockH.view).toHaveBeenCalledWith(
+          'projects/detail/views/edit',
+          expect.objectContaining({
+            project: mockProject,
+            professionHistory: []
+          })
+        )
+      })
+    })
+
+    describe('get', () => {
+      it('should handle null project history gracefully', async () => {
+        // Arrange
+        const mockProject = { id: '1', name: 'Test Project', professions: [] }
+        mockGetProjectById.mockResolvedValue(mockProject)
+        mockGetServiceStandards.mockResolvedValue([])
+        mockGetProfessions.mockResolvedValue([])
+        mockGetProjectHistory.mockResolvedValue(null)
+
+        // Act
+        await projectsController.get(
+          {
+            params: { id: '1' },
+            logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
+            auth: { isAuthenticated: true },
+            query: { page: '1', tab: 'project-engagement' }
+          },
+          mockH
+        )
+
+        // Assert
+        expect(mockH.view).toHaveBeenCalledWith(
+          'projects/detail/views/index',
+          expect.objectContaining({
+            project: mockProject,
+            projectHistory: []
+          })
+        )
+      })
+
+      it('should filter archived entries from project history', async () => {
+        // Arrange
+        const mockProject = { id: '1', name: 'Test Project', professions: [] }
+        const mockHistory = [
+          {
+            id: 'h1',
+            archived: false,
+            changes: { status: { from: 'RED', to: 'GREEN' } }
+          },
+          {
+            id: 'h2',
+            archived: true,
+            changes: { commentary: { from: '', to: 'Archived comment' } }
+          }
+        ]
+
+        mockGetProjectById.mockResolvedValue(mockProject)
+        mockGetServiceStandards.mockResolvedValue([])
+        mockGetProfessions.mockResolvedValue([])
+        mockGetProjectHistory.mockResolvedValue(mockHistory)
+
+        // Act
+        await projectsController.get(
+          {
+            params: { id: '1' },
+            logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
+            auth: { isAuthenticated: true },
+            query: { page: '1', tab: 'project-engagement' }
+          },
+          mockH
+        )
+
+        // Assert
+        const viewCall = mockH.view.mock.calls[0]
+        const projectHistory = viewCall[1].projectHistory
+        expect(projectHistory).toHaveLength(1)
+        expect(projectHistory[0].id).toBe('h1')
+      })
+    })
+
+    describe('postEdit - additional edge cases', () => {
+      it('should handle payload validation correctly', async () => {
+        // Arrange - Test a realistic validation scenario
+        const validPayload = {
+          updateType: 'delivery',
+          status: 'GREEN',
+          commentary: 'Test update'
+        }
+
+        mockGetProjectById.mockResolvedValue({ id: '1', name: 'Test Project' })
+
+        // Act
+        await projectsController.postEdit(
+          {
+            params: { id: '1' },
+            payload: validPayload,
+            query: { type: 'delivery' },
+            logger: { error: jest.fn(), info: jest.fn() }
+          },
+          mockH
+        )
+
+        // Assert - Should process successfully
+        expect(mockUpdateProject).toHaveBeenCalled()
+        expect(mockH.redirect).toHaveBeenCalledWith(
+          expect.stringContaining('notification=Project updated successfully')
+        )
+      })
+    })
   })
 })

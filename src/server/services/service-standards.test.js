@@ -1,4 +1,9 @@
-import { getServiceStandards } from './service-standards.js'
+import {
+  getServiceStandards,
+  getAllServiceStandards,
+  deleteServiceStandard,
+  restoreServiceStandard
+} from './service-standards.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
@@ -289,6 +294,212 @@ describe('Service Standards Service', () => {
       )
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
       expect(mockAuthedFetch).toHaveBeenCalledWith('/serviceStandards')
+    })
+  })
+
+  describe('getAllServiceStandards', () => {
+    test('should fetch all service standards including inactive with authenticated request', async () => {
+      // Arrange
+      const mockApiResponse = [
+        {
+          id: 'std-1',
+          number: '1',
+          name: 'Active Standard',
+          active: true
+        },
+        {
+          id: 'std-2',
+          number: '2',
+          name: 'Inactive Standard',
+          active: false
+        }
+      ]
+
+      mockAuthedFetch.mockResolvedValue(mockApiResponse)
+
+      // Act
+      const result = await getAllServiceStandards(mockRequest)
+
+      // Assert
+      expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/serviceStandards?includeInactive=true'
+      )
+      expect(result).toEqual(mockApiResponse)
+      expect(logger.info).toHaveBeenCalledWith(
+        { endpoint: '/serviceStandards?includeInactive=true' },
+        'Fetching all service standards (including inactive) from API'
+      )
+    })
+
+    test('should use unauthenticated fetcher when no request provided', async () => {
+      // Arrange
+      const mockApiResponse = [
+        { id: 'std-1', name: 'Test Standard', active: true }
+      ]
+
+      fetcher.mockResolvedValue(mockApiResponse)
+
+      // Act
+      const result = await getAllServiceStandards()
+
+      // Assert
+      expect(fetcher).toHaveBeenCalledWith(
+        '/serviceStandards?includeInactive=true'
+      )
+      expect(result).toEqual(mockApiResponse)
+      expect(logger.warn).toHaveBeenCalledWith(
+        '[API_AUTH] No request context provided, using unauthenticated fetcher'
+      )
+    })
+
+    test('should return empty array for null API response', async () => {
+      // Arrange
+      mockAuthedFetch.mockResolvedValue(null)
+
+      // Act
+      const result = await getAllServiceStandards(mockRequest)
+
+      // Assert
+      expect(result).toEqual([])
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Invalid data returned from API',
+        { data: null }
+      )
+    })
+
+    test('should handle API errors by throwing', async () => {
+      // Arrange
+      const apiError = new Error('API connection failed')
+      mockAuthedFetch.mockRejectedValue(apiError)
+
+      // Act & Assert
+      await expect(getAllServiceStandards(mockRequest)).rejects.toThrow(
+        'API connection failed'
+      )
+    })
+  })
+
+  describe('deleteServiceStandard', () => {
+    test('should delete service standard with authenticated request', async () => {
+      // Arrange
+      mockAuthedFetch.mockResolvedValue(null)
+
+      // Act
+      const result = await deleteServiceStandard('std-1', mockRequest)
+
+      // Assert
+      expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/serviceStandards/std-1', {
+        method: 'DELETE'
+      })
+      expect(result).toBe(true)
+      expect(logger.info).toHaveBeenCalledWith(
+        { endpoint: '/serviceStandards/std-1', id: 'std-1' },
+        'Soft deleting service standard'
+      )
+      expect(logger.info).toHaveBeenCalledWith(
+        { id: 'std-1' },
+        'Service standard soft deleted successfully'
+      )
+    })
+
+    test('should delete service standard without authenticated request', async () => {
+      // Arrange
+      fetcher.mockResolvedValue(null)
+
+      // Act
+      const result = await deleteServiceStandard('std-1')
+
+      // Assert
+      expect(fetcher).toHaveBeenCalledWith('/serviceStandards/std-1', {
+        method: 'DELETE'
+      })
+      expect(result).toBe(true)
+    })
+
+    test('should handle API errors when deleting', async () => {
+      // Arrange
+      const error = new Error('Delete failed')
+      error.code = 'FORBIDDEN'
+      mockAuthedFetch.mockRejectedValue(error)
+
+      // Act & Assert
+      await expect(deleteServiceStandard('std-1', mockRequest)).rejects.toThrow(
+        'Delete failed'
+      )
+      expect(logger.error).toHaveBeenCalledWith(
+        {
+          error: error.message,
+          stack: error.stack,
+          code: error.code,
+          id: 'std-1'
+        },
+        'Failed to soft delete service standard'
+      )
+    })
+  })
+
+  describe('restoreServiceStandard', () => {
+    test('should restore service standard with authenticated request', async () => {
+      // Arrange
+      mockAuthedFetch.mockResolvedValue(null)
+
+      // Act
+      const result = await restoreServiceStandard('std-1', mockRequest)
+
+      // Assert
+      expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/serviceStandards/std-1/restore',
+        {
+          method: 'POST'
+        }
+      )
+      expect(result).toBe(true)
+      expect(logger.info).toHaveBeenCalledWith(
+        { endpoint: '/serviceStandards/std-1/restore', id: 'std-1' },
+        'Restoring service standard'
+      )
+      expect(logger.info).toHaveBeenCalledWith(
+        { id: 'std-1' },
+        'Service standard restored successfully'
+      )
+    })
+
+    test('should restore service standard without authenticated request', async () => {
+      // Arrange
+      fetcher.mockResolvedValue(null)
+
+      // Act
+      const result = await restoreServiceStandard('std-1')
+
+      // Assert
+      expect(fetcher).toHaveBeenCalledWith('/serviceStandards/std-1/restore', {
+        method: 'POST'
+      })
+      expect(result).toBe(true)
+    })
+
+    test('should handle API errors when restoring', async () => {
+      // Arrange
+      const error = new Error('Restore failed')
+      error.code = 'NOT_FOUND'
+      mockAuthedFetch.mockRejectedValue(error)
+
+      // Act & Assert
+      await expect(
+        restoreServiceStandard('std-1', mockRequest)
+      ).rejects.toThrow('Restore failed')
+      expect(logger.error).toHaveBeenCalledWith(
+        {
+          error: error.message,
+          stack: error.stack,
+          code: error.code,
+          id: 'std-1'
+        },
+        'Failed to restore service standard'
+      )
     })
   })
 })

@@ -15,7 +15,7 @@ jest.mock('~/src/server/services/projects.js', () => ({
 }))
 
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
-  createLogger: () => mockLogger
+  logger: mockLogger
 }))
 
 // Skip actual server creation

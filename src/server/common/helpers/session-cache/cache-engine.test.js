@@ -15,10 +15,10 @@ jest.mock('ioredis', () => ({
 jest.mock('@hapi/catbox-redis')
 jest.mock('@hapi/catbox-memory')
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
-  createLogger: () => ({
+  logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args)
-  })
+  }
 }))
 
 describe('#getCacheEngine', () => {

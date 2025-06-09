@@ -6,7 +6,13 @@ import {
   getProjectHistory,
   createProject,
   deleteProject,
-  getProfessionHistory
+  getProfessionHistory,
+  archiveProjectHistoryEntry,
+  archiveProfessionHistoryEntry,
+  getAssessment,
+  updateAssessment,
+  getAssessmentHistory,
+  archiveAssessmentHistoryEntry
 } from './projects.js'
 
 // First declare the mocks
@@ -71,6 +77,25 @@ describe('Projects service', () => {
       // Assert
       expect(result).toEqual(mockProjects)
       expect(mockFetch).toHaveBeenCalledWith('/projects')
+    })
+
+    test('should use authenticated fetcher when request is provided', async () => {
+      // Arrange
+      const mockProjects = [
+        { id: '1', name: 'Project 1' },
+        { id: '2', name: 'Project 2' }
+      ]
+      const mockRequest = { auth: { credentials: { token: 'test-token' } } }
+      const mockAuthedFetch = jest.fn().mockResolvedValue(mockProjects)
+      mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+      // Act
+      const result = await getProjects(mockRequest)
+
+      // Assert
+      expect(result).toEqual(mockProjects)
+      expect(mockAuthedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/projects')
     })
 
     test('should handle API errors', async () => {
@@ -169,6 +194,31 @@ describe('Projects service', () => {
 
       // Assert
       expect(result[0].tags).toEqual([])
+    })
+
+    test('should handle projects with non-array standards', async () => {
+      // Arrange
+      const mockProjects = [
+        {
+          id: '1',
+          standards: null
+        }
+      ]
+      mockFetch.mockResolvedValue(mockProjects)
+
+      // Act
+      await getProjects()
+
+      // Assert
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        {
+          sampleProject: {
+            id: '1',
+            standards: []
+          }
+        },
+        'Sample project structure'
+      )
     })
   })
 
@@ -540,101 +590,257 @@ describe('Projects service', () => {
 })
 
 describe('createProject', () => {
-  test('should create project with standards', async () => {
+  test('should create a new project with standards', async () => {
     // Arrange
-    const mockStandards = [
-      { number: 2, name: 'Standard 2' },
-      { number: 1, name: 'Standard 1' }
-    ]
-    const mockProjectData = {
-      name: 'Test Project',
+    const projectData = {
+      name: 'New Project',
+      phase: 'Alpha',
+      defCode: 'DEF001',
       status: 'GREEN',
-      commentary: 'Initial setup'
+      commentary: 'Initial project'
     }
-    const mockResponse = { id: '123', ...mockProjectData }
+
+    const mockStandards = [
+      { number: 1, name: 'Standard 1' },
+      { number: 2, name: 'Standard 2' }
+    ]
+
+    const expectedProject = {
+      id: 'new-project-id',
+      name: 'New Project',
+      phase: 'Alpha',
+      defCode: 'DEF001',
+      status: 'GREEN',
+      commentary: 'Initial project'
+    }
 
     mockGetServiceStandards.mockResolvedValue(mockStandards)
-    mockFetch.mockResolvedValue(mockResponse)
+    mockFetch.mockResolvedValue(expectedProject)
 
     // Act
-    const result = await createProject(mockProjectData)
+    const result = await createProject(projectData)
 
     // Assert
-    expect(result).toEqual(mockResponse)
+    expect(result).toEqual(expectedProject)
     expect(mockFetch).toHaveBeenCalledWith(
       '/projects',
       expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"standards":[{') // Verify standards included
+        method: 'POST'
       })
     )
-    // Verify standards are sorted by number
-    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(requestBody.standards[0].standardId).toBe('1')
-    expect(requestBody.standards[1].standardId).toBe('2')
+
+    // Check the body was called with the right structure
+    const callArgs = mockFetch.mock.calls[0][1]
+    const sentData = JSON.parse(callArgs.body)
+    expect(sentData.name).toBe('New Project')
+    expect(sentData.phase).toBe('Alpha')
+    expect(sentData.standards).toHaveLength(2)
+    expect(sentData.standards[0].standardId).toBe('1')
+    expect(sentData.standards[1].standardId).toBe('2')
   })
 
-  test('should handle missing service standards', async () => {
+  test('should create project with authenticated request', async () => {
     // Arrange
-    mockGetServiceStandards.mockResolvedValue([])
-    const mockProjectData = {
-      name: 'Test Project',
-      status: 'GREEN',
-      commentary: 'Initial setup'
+    const projectData = {
+      name: 'Auth Project',
+      phase: 'Beta',
+      defCode: 'DEF002',
+      status: 'AMBER',
+      commentary: 'Authenticated project'
     }
-    const mockResponse = { id: '123', ...mockProjectData }
-    mockFetch.mockResolvedValue(mockResponse)
+
+    const mockRequest = { auth: { credentials: { token: 'test-token' } } }
+    const mockAuthedFetch = jest
+      .fn()
+      .mockResolvedValue({ id: 'auth-project-id' })
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+    mockGetServiceStandards.mockResolvedValue([])
 
     // Act
-    const result = await createProject(mockProjectData)
+    const result = await createProject(projectData, mockRequest)
 
     // Assert
-    expect(result).toEqual(mockResponse)
-    // Verify standards array is empty when no standards available
-    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(requestBody.standards).toEqual([])
+    expect(result).toEqual({ id: 'auth-project-id' })
+    expect(mockAuthedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/projects',
+      expect.any(Object)
+    )
   })
 
-  test('should handle API validation errors', async () => {
+  test('should handle standards fetch failure gracefully', async () => {
     // Arrange
-    const mockStandards = [{ number: 1, name: 'Standard 1' }]
-    mockGetServiceStandards.mockResolvedValue(mockStandards)
-    mockFetch.mockResolvedValue({
+    const projectData = {
+      name: 'Project Without Standards',
+      phase: 'Discovery',
+      defCode: 'DEF003',
+      status: 'RED',
+      commentary: 'No standards available'
+    }
+
+    mockGetServiceStandards.mockRejectedValue(
+      new Error('Standards service unavailable')
+    )
+    mockFetch.mockResolvedValue({ id: 'project-no-standards' })
+
+    // Act
+    const result = await createProject(projectData)
+
+    // Assert
+    expect(result).toEqual({ id: 'project-no-standards' })
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects',
+      expect.objectContaining({
+        method: 'POST'
+      })
+    )
+
+    // Check the body was called with empty standards
+    const callArgs = mockFetch.mock.calls[0][1]
+    const sentData = JSON.parse(callArgs.body)
+    expect(sentData.name).toBe('Project Without Standards')
+    expect(sentData.standards).toEqual([])
+  })
+
+  test('should handle empty standards array', async () => {
+    // Arrange
+    const projectData = {
+      name: 'Empty Standards Project',
+      phase: 'Live',
+      defCode: 'DEF004',
+      status: 'GREEN',
+      commentary: 'Empty standards'
+    }
+
+    mockGetServiceStandards.mockResolvedValue([])
+    mockFetch.mockResolvedValue({ id: 'empty-standards-project' })
+
+    // Act
+    const result = await createProject(projectData)
+
+    // Assert
+    expect(result).toEqual({ id: 'empty-standards-project' })
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects',
+      expect.objectContaining({
+        method: 'POST'
+      })
+    )
+
+    // Check the body was called with empty standards
+    const callArgs = mockFetch.mock.calls[0][1]
+    const sentData = JSON.parse(callArgs.body)
+    expect(sentData.standards).toEqual([])
+  })
+
+  test('should handle Boom error response', async () => {
+    // Arrange
+    const projectData = {
+      name: 'Invalid Project',
+      phase: 'Alpha',
+      defCode: 'INVALID',
+      status: 'GREEN',
+      commentary: 'This will fail'
+    }
+
+    const boomError = {
       isBoom: true,
       output: {
         statusCode: 400,
-        payload: { message: 'Invalid data' }
+        payload: { message: 'Invalid project data' }
       }
-    })
+    }
+
+    mockGetServiceStandards.mockResolvedValue([])
+    mockFetch.mockResolvedValue(boomError)
 
     // Act & Assert
-    await expect(
-      createProject({
-        name: 'Test Project',
-        status: 'INVALID'
-      })
-    ).rejects.toThrow('Failed to create project: Invalid data')
+    await expect(createProject(projectData)).rejects.toThrow(
+      'Failed to create project: Invalid data'
+    )
   })
 
-  test('should handle empty API response', async () => {
+  test('should handle null response from API', async () => {
     // Arrange
-    const mockStandards = [{ number: 1, name: 'Standard 1' }]
-    mockGetServiceStandards.mockResolvedValue(mockStandards)
-    mockFetch.mockResolvedValue({
-      isBoom: true,
-      output: {
-        statusCode: 500,
-        payload: { message: 'Failed to create project' }
-      }
-    })
+    const projectData = {
+      name: 'Null Response Project',
+      phase: 'Alpha',
+      defCode: 'DEF005',
+      status: 'GREEN',
+      commentary: 'Null response'
+    }
+
+    mockGetServiceStandards.mockResolvedValue([])
+    mockFetch.mockResolvedValue(null)
 
     // Act & Assert
-    await expect(
-      createProject({
-        name: 'Test Project',
-        status: 'GREEN'
-      })
-    ).rejects.toThrow('Failed to create project')
+    await expect(createProject(projectData)).rejects.toThrow(
+      'Cannot read properties of null'
+    )
+  })
+
+  test('should sort standards by number before adding to project', async () => {
+    // Arrange
+    const projectData = {
+      name: 'Sorted Standards Project',
+      phase: 'Beta',
+      defCode: 'DEF006',
+      status: 'AMBER',
+      commentary: 'Standards should be sorted'
+    }
+
+    const mockStandards = [
+      { number: 3, name: 'Standard 3' },
+      { number: 1, name: 'Standard 1' },
+      { number: 2, name: 'Standard 2' }
+    ]
+
+    mockGetServiceStandards.mockResolvedValue(mockStandards)
+    mockFetch.mockResolvedValue({ id: 'sorted-project' })
+
+    // Act
+    const result = await createProject(projectData)
+
+    // Assert
+    expect(result).toEqual({ id: 'sorted-project' })
+
+    // Verify the call was made with standards in the correct order
+    const callArgs = mockFetch.mock.calls[0][1]
+    const projectWithStandards = JSON.parse(callArgs.body)
+
+    expect(projectWithStandards.standards).toEqual([
+      expect.objectContaining({ standardId: '1' }),
+      expect.objectContaining({ standardId: '2' }),
+      expect.objectContaining({ standardId: '3' })
+    ])
+  })
+
+  test('should handle API errors during creation', async () => {
+    // Arrange
+    const projectData = {
+      name: 'Error Project',
+      phase: 'Alpha',
+      defCode: 'ERROR',
+      status: 'RED',
+      commentary: 'This will cause an error'
+    }
+
+    const apiError = new Error('Network error')
+    apiError.code = 'ECONNREFUSED'
+
+    mockGetServiceStandards.mockResolvedValue([])
+    mockFetch.mockRejectedValue(apiError)
+
+    // Act & Assert
+    await expect(createProject(projectData)).rejects.toThrow('Network error')
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: 'Network error',
+        code: 'ECONNREFUSED',
+        projectData
+      }),
+      'Failed to create project'
+    )
   })
 })
 
@@ -906,5 +1112,440 @@ describe('getProfessionHistory', () => {
     // Cleanup
     global.Date = Date
     process.env.NODE_ENV = 'test'
+  })
+})
+
+describe('archiveProjectHistoryEntry', () => {
+  const mockRequest = {
+    auth: { credentials: { token: 'test-token' } },
+    logger: { info: jest.fn(), error: jest.fn() }
+  }
+  const mockAuthedFetch = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+  })
+
+  test('should archive project history entry with authenticated request', async () => {
+    // Arrange
+    mockAuthedFetch.mockResolvedValue({ success: true })
+
+    // Act
+    const result = await archiveProjectHistoryEntry('1', 'hist-1', mockRequest)
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/projects/1/history/hist-1/archive',
+      {
+        method: 'PUT'
+      }
+    )
+    expect(result).toBe(true)
+  })
+
+  test('should archive project history entry without authenticated request', async () => {
+    // Arrange
+    mockFetch.mockResolvedValue({ success: true })
+
+    // Act
+    const result = await archiveProjectHistoryEntry('1', 'hist-1')
+
+    // Assert
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects/1/history/hist-1/archive',
+      {
+        method: 'PUT'
+      }
+    )
+    expect(result).toBe(true)
+  })
+
+  test('should handle API errors', async () => {
+    // Arrange
+    const error = new Error('Archive failed')
+    mockAuthedFetch.mockRejectedValue(error)
+
+    // Act & Assert
+    await expect(
+      archiveProjectHistoryEntry('1', 'hist-1', mockRequest)
+    ).rejects.toThrow('Archive failed')
+  })
+})
+
+describe('archiveProfessionHistoryEntry', () => {
+  const mockRequest = {
+    auth: { credentials: { token: 'test-token' } },
+    logger: { info: jest.fn(), error: jest.fn() }
+  }
+  const mockAuthedFetch = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+  })
+
+  test('should archive profession history entry with authenticated request', async () => {
+    // Arrange
+    mockAuthedFetch.mockResolvedValue({ success: true })
+
+    // Act
+    const result = await archiveProfessionHistoryEntry(
+      '1',
+      '2',
+      'hist-1',
+      mockRequest
+    )
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/projects/1/professions/2/history/hist-1/archive',
+      {
+        method: 'PUT'
+      }
+    )
+    expect(result).toBe(true)
+  })
+
+  test('should archive profession history entry without authenticated request', async () => {
+    // Arrange
+    mockFetch.mockResolvedValue({ success: true })
+
+    // Act
+    const result = await archiveProfessionHistoryEntry('1', '2', 'hist-1')
+
+    // Assert
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects/1/professions/2/history/hist-1/archive',
+      {
+        method: 'PUT'
+      }
+    )
+    expect(result).toBe(true)
+  })
+
+  test('should handle API errors', async () => {
+    // Arrange
+    const error = new Error('Archive failed')
+    mockAuthedFetch.mockRejectedValue(error)
+
+    // Act & Assert
+    await expect(
+      archiveProfessionHistoryEntry('1', '2', 'hist-1', mockRequest)
+    ).rejects.toThrow('Archive failed')
+  })
+})
+
+describe('getAssessment', () => {
+  const mockRequest = {
+    auth: { credentials: { token: 'test-token' } },
+    logger: { info: jest.fn(), error: jest.fn() }
+  }
+  const mockAuthedFetch = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+  })
+
+  test('should get assessment with authenticated request', async () => {
+    // Arrange
+    const mockAssessment = {
+      projectId: '1',
+      standardId: '2',
+      professionId: '3',
+      status: 'GREEN',
+      commentary: 'Test assessment'
+    }
+    mockAuthedFetch.mockResolvedValue(mockAssessment)
+
+    // Act
+    const result = await getAssessment('1', '2', '3', mockRequest)
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/projects/1/standards/2/professions/3/assessment'
+    )
+    expect(result).toEqual(mockAssessment)
+  })
+
+  test('should get assessment without authenticated request', async () => {
+    // Arrange
+    const mockAssessment = {
+      projectId: '1',
+      standardId: '2',
+      professionId: '3',
+      status: 'AMBER',
+      commentary: 'Test assessment'
+    }
+    mockFetch.mockResolvedValue(mockAssessment)
+
+    // Act
+    const result = await getAssessment('1', '2', '3')
+
+    // Assert
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects/1/standards/2/professions/3/assessment'
+    )
+    expect(result).toEqual(mockAssessment)
+  })
+
+  test('should return null when assessment not found', async () => {
+    // Arrange
+    mockAuthedFetch.mockResolvedValue(null)
+
+    // Act
+    const result = await getAssessment('1', '2', '3', mockRequest)
+
+    // Assert
+    expect(result).toBeNull()
+  })
+
+  test('should handle API errors', async () => {
+    // Arrange
+    const error = new Error('API error')
+    mockAuthedFetch.mockRejectedValue(error)
+
+    // Act & Assert
+    await expect(getAssessment('1', '2', '3', mockRequest)).rejects.toThrow(
+      'API error'
+    )
+  })
+})
+
+describe('updateAssessment', () => {
+  const mockRequest = {
+    auth: { credentials: { token: 'test-token' } },
+    logger: { info: jest.fn(), error: jest.fn() }
+  }
+  const mockAuthedFetch = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+  })
+
+  test('should update assessment with authenticated request', async () => {
+    // Arrange
+    const assessmentData = {
+      status: 'GREEN',
+      commentary: 'Updated assessment'
+    }
+    const mockResponse = { success: true }
+    mockAuthedFetch.mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await updateAssessment(
+      '1',
+      '2',
+      '3',
+      assessmentData,
+      mockRequest
+    )
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/projects/1/standards/2/professions/3/assessment',
+      {
+        method: 'POST',
+        body: JSON.stringify(assessmentData),
+        headers: { 'Content-Type': 'application/json' }
+      }
+    )
+    expect(result).toEqual(mockResponse)
+  })
+
+  test('should update assessment without authenticated request', async () => {
+    // Arrange
+    const assessmentData = {
+      status: 'AMBER',
+      commentary: 'Updated assessment'
+    }
+    const mockResponse = { success: true }
+    mockFetch.mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await updateAssessment('1', '2', '3', assessmentData)
+
+    // Assert
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects/1/standards/2/professions/3/assessment',
+      {
+        method: 'POST',
+        body: JSON.stringify(assessmentData),
+        headers: { 'Content-Type': 'application/json' }
+      }
+    )
+    expect(result).toEqual(mockResponse)
+  })
+
+  test('should handle API errors', async () => {
+    // Arrange
+    const assessmentData = { status: 'RED', commentary: 'Error test' }
+    const error = new Error('Update failed')
+    mockAuthedFetch.mockRejectedValue(error)
+
+    // Act & Assert
+    await expect(
+      updateAssessment('1', '2', '3', assessmentData, mockRequest)
+    ).rejects.toThrow('Update failed')
+  })
+})
+
+describe('getAssessmentHistory', () => {
+  const mockRequest = {
+    auth: { credentials: { token: 'test-token' } },
+    logger: { info: jest.fn(), error: jest.fn() }
+  }
+  const mockAuthedFetch = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+    process.env.NODE_ENV = 'test'
+  })
+
+  test('should get assessment history with authenticated request', async () => {
+    // Arrange
+    const mockHistory = [
+      {
+        timestamp: '2024-02-15T12:00:00Z',
+        changes: {
+          status: { from: 'AMBER', to: 'GREEN' },
+          commentary: { from: '', to: 'Updated assessment' }
+        }
+      }
+    ]
+    mockAuthedFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getAssessmentHistory('1', '2', '3', mockRequest)
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/projects/1/standards/2/professions/3/history'
+    )
+    expect(result).toEqual(mockHistory)
+  })
+
+  test('should get assessment history without authenticated request', async () => {
+    // Arrange
+    const mockHistory = [
+      {
+        timestamp: '2024-02-15T12:00:00Z',
+        status: 'GREEN',
+        commentary: 'Test assessment'
+      }
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getAssessmentHistory('1', '2', '3')
+
+    // Assert
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects/1/standards/2/professions/3/history'
+    )
+    expect(result).toEqual(mockHistory)
+  })
+
+  test('should handle null API response', async () => {
+    // Arrange
+    mockAuthedFetch.mockResolvedValue(null)
+
+    // Act
+    const result = await getAssessmentHistory('1', '2', '3', mockRequest)
+
+    // Assert
+    expect(result).toEqual([])
+  })
+
+  test('should handle API errors', async () => {
+    // Arrange
+    const error = new Error('API error')
+    mockAuthedFetch.mockRejectedValue(error)
+
+    // Act & Assert
+    await expect(
+      getAssessmentHistory('1', '2', '3', mockRequest)
+    ).rejects.toThrow('API error')
+  })
+
+  test('should not append cache parameter in test environment', async () => {
+    // Arrange
+    process.env.NODE_ENV = 'test'
+    mockFetch.mockResolvedValue([])
+
+    // Act
+    await getAssessmentHistory('1', '2', '3')
+
+    // Assert
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects/1/standards/2/professions/3/history'
+    )
+  })
+})
+
+describe('archiveAssessmentHistoryEntry', () => {
+  const mockRequest = {
+    auth: { credentials: { token: 'test-token' } },
+    logger: { info: jest.fn(), error: jest.fn() }
+  }
+  const mockAuthedFetch = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+  })
+
+  test('should archive assessment history entry with authenticated request', async () => {
+    // Arrange
+    mockAuthedFetch.mockResolvedValue({ success: true })
+
+    // Act
+    const result = await archiveAssessmentHistoryEntry(
+      '1',
+      '2',
+      '3',
+      'hist-1',
+      mockRequest
+    )
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/projects/1/standards/2/professions/3/history/hist-1/archive',
+      {
+        method: 'POST'
+      }
+    )
+    expect(result).toEqual({ success: true })
+  })
+
+  test('should archive assessment history entry without authenticated request', async () => {
+    // Arrange
+    mockFetch.mockResolvedValue({ success: true })
+
+    // Act
+    const result = await archiveAssessmentHistoryEntry('1', '2', '3', 'hist-1')
+
+    // Assert
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects/1/standards/2/professions/3/history/hist-1/archive',
+      {
+        method: 'POST'
+      }
+    )
+    expect(result).toEqual({ success: true })
+  })
+
+  test('should handle API errors', async () => {
+    // Arrange
+    const error = new Error('Archive failed')
+    mockAuthedFetch.mockRejectedValue(error)
+
+    // Act & Assert
+    await expect(
+      archiveAssessmentHistoryEntry('1', '2', '3', 'hist-1', mockRequest)
+    ).rejects.toThrow('Archive failed')
   })
 })

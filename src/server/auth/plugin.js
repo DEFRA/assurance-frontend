@@ -3,10 +3,8 @@ import Cookie from '@hapi/cookie'
 import Boom from '@hapi/boom'
 import crypto from 'node:crypto'
 import { URL } from 'url'
-import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
+import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { config } from '~/src/config/config.js'
-
-const logger = createLogger()
 
 // Constants for repeated literals
 const AUTH_ERROR_TITLE = 'Authentication Error'

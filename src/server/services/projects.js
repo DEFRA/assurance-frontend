@@ -316,7 +316,7 @@ export async function getProjectById(id, request) {
       return null
     }
 
-    logger.info({ project: data }, 'Project retrieved successfully')
+    logger.info('Project retrieved successfully')
     return data
   } catch (error) {
     logger.error(

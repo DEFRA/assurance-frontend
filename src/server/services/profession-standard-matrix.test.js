@@ -102,7 +102,7 @@ describe('Profession Standard Matrix Service', () => {
       // Assert
       expect(Array.isArray(result)).toBe(true)
       // The function should parse string numbers correctly now
-      expect(result).toHaveLength(5) // Should include standards 1, 2, 3, 4, 5
+      expect(result).toHaveLength(6) // Should include standards 1, 2, 3, 4, 5, 6
 
       // Verify that all returned standards are included in the matrix for this profession/phase
       const expectedStandardNumbers =
@@ -122,7 +122,7 @@ describe('Profession Standard Matrix Service', () => {
 
       // Assert
       expect(Array.isArray(result)).toBe(true)
-      expect(result).toHaveLength(4) // Should include standards 8, 11, 12, 13
+      expect(result).toHaveLength(6) // Should include standards 6, 8, 11, 12, 13, 14
 
       const expectedStandardNumbers =
         PROFESSION_STANDARD_MATRIX.Alpha['technical-architecture']
@@ -254,7 +254,7 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      expect(resultLowerCase).toHaveLength(5) // Should have 5 standards for user-centred-design in Discovery
+      expect(resultLowerCase).toHaveLength(6) // Should have 6 standards for user-centred-design in Discovery
       expect(resultUpperCase).toHaveLength(0) // Should be case-sensitive
     })
 
@@ -273,7 +273,7 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      expect(resultCorrectCase).toHaveLength(5) // Should have 5 standards for user-centred-design in Discovery
+      expect(resultCorrectCase).toHaveLength(6) // Should have 6 standards for user-centred-design in Discovery
       expect(resultWrongCase).toHaveLength(0) // Should be case-sensitive
     })
 
@@ -292,9 +292,9 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      // Discovery should have 5 standards [1,2,3,4,5], Live should have 3 standards [1,2,5]
-      expect(discoveryResults).toHaveLength(5)
-      expect(liveResults).toHaveLength(3)
+      // Discovery should have 6 standards [1,2,3,4,5,6], Live should have 6 standards [1,2,3,4,5,9]
+      expect(discoveryResults).toHaveLength(6)
+      expect(liveResults).toHaveLength(6)
       expect(discoveryResults).not.toEqual(liveResults)
     })
 
@@ -313,9 +313,9 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      // user-centred-design has [1,2,3,4,5], delivery-management has [8,9,15]
-      expect(userCentredResults).toHaveLength(5)
-      expect(deliveryResults).toHaveLength(3)
+      // user-centred-design has [1,2,3,4,5,6], delivery-management has [4,5,6,7,8]
+      expect(userCentredResults).toHaveLength(6)
+      expect(deliveryResults).toHaveLength(5)
       expect(userCentredResults).not.toEqual(deliveryResults)
     })
 
@@ -363,7 +363,7 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      expect(result).toHaveLength(5) // Should have 5 standards for user-centred-design in Discovery
+      expect(result).toHaveLength(6) // Should have 6 standards for user-centred-design in Discovery
 
       // Test the first standard's structure
       const firstStandard = result[0]
@@ -420,8 +420,8 @@ describe('Profession Standard Matrix Service', () => {
       expect(endTime - startTime).toBeLessThan(100) // Should complete within 100ms
     })
 
-    test('should return empty array for profession with no standards in phase', () => {
-      // Act - business-analysis has no standards in Discovery phase
+    test('should return standards for profession that now has standards in Discovery phase', () => {
+      // Act - business-analysis now has standards [6,7] in Discovery phase
       const result = filterStandardsByProfessionAndPhase(
         mockServiceStandards,
         'Discovery',
@@ -429,26 +429,26 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      expect(result).toEqual([])
+      expect(result).toHaveLength(2) // Should include standards 6 and 7
     })
 
     test('should handle professions that have standards in some phases but not others', () => {
-      // Act - release-management has no standards in Discovery but has standards in Private Beta
+      // Act - business-analysis has standards in Discovery but none in Live
       const discoveryResult = filterStandardsByProfessionAndPhase(
         mockServiceStandards,
         'Discovery',
-        'release-management'
+        'business-analysis'
       )
 
-      const privateBetaResult = filterStandardsByProfessionAndPhase(
+      const liveResult = filterStandardsByProfessionAndPhase(
         mockServiceStandards,
-        'Private Beta',
-        'release-management'
+        'Live',
+        'business-analysis'
       )
 
       // Assert
-      expect(discoveryResult).toEqual([]) // release-management has [] in Discovery
-      expect(privateBetaResult).toHaveLength(2) // release-management has [7,14] in Private Beta
+      expect(discoveryResult).toHaveLength(2) // business-analysis has [6,7] in Discovery
+      expect(liveResult).toEqual([]) // business-analysis has [] in Live
     })
   })
 })

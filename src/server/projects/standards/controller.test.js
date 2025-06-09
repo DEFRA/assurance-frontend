@@ -378,6 +378,73 @@ describe('Standards Controller', () => {
       })
       expect(result).toBe('view-with-code-response')
     })
+
+    test('should handle error when fetching project data', async () => {
+      // Arrange
+      getProjectById.mockRejectedValue(new Error('Database error'))
+
+      // Act & Assert
+      await expect(
+        standardsController.getAssessmentScreen(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
+    })
+
+    test('should handle missing professions data', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue([])
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/standards/views/assessment',
+        expect.objectContaining({
+          professionItems: [{ value: '', text: 'Choose a profession' }]
+        })
+      )
+    })
+
+    test('should handle missing standards data', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue([])
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/standards/views/assessment',
+        expect.objectContaining({
+          standardItems: [{ value: '', text: 'Choose a service standard' }],
+          allStandards: '[]'
+        })
+      )
+    })
+
+    test('should handle null service standards response', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(null)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/standards/views/assessment',
+        expect.objectContaining({
+          allStandards: '[]'
+        })
+      )
+    })
   })
 
   describe('postAssessmentScreen', () => {
@@ -568,6 +635,97 @@ describe('Standards Controller', () => {
       })
       expect(result).toBe('view-with-code-response')
     })
+
+    test('should handle error when project cannot be loaded for error handling', async () => {
+      // Arrange
+      const mockPayload = {
+        professionId: 'prof-1',
+        standardId: '1',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+
+      // First call fails (the main processing)
+      // Second call fails (the error handling attempt)
+      getProjectById
+        .mockRejectedValueOnce(new Error('Initial database error'))
+        .mockRejectedValueOnce(new Error('Error handling failed'))
+
+      const mockRequest = {
+        params: { id: '1' },
+        payload: mockPayload,
+        logger: { error: jest.fn(), info: jest.fn() }
+      }
+
+      // Act & Assert
+      await expect(
+        standardsController.postAssessmentScreen(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
+    })
+
+    test('should handle update assessment failure with project loaded', async () => {
+      // Arrange
+      const mockPayload = {
+        professionId: 'prof-1',
+        standardId: '1',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      updateAssessment.mockRejectedValue(new Error('Update failed'))
+
+      const mockRequest = {
+        params: { id: '1' },
+        payload: mockPayload,
+        logger: { error: jest.fn(), info: jest.fn() }
+      }
+
+      // Act
+      await standardsController.postAssessmentScreen(mockRequest, mockH)
+
+      // Assert - should show error view instead of throwing
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/standards/views/assessment',
+        expect.objectContaining({
+          error: 'Failed to save assessment. Please try again.'
+        })
+      )
+    })
+
+    test('should handle general assessment save errors', async () => {
+      // Arrange
+      const mockPayload = {
+        professionId: 'prof-1',
+        standardId: '1',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      updateAssessment.mockRejectedValue(new Error('Internal error'))
+
+      const mockRequest = {
+        params: { id: '1' },
+        payload: mockPayload,
+        logger: { error: jest.fn(), info: jest.fn() }
+      }
+
+      // Act
+      await standardsController.postAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/standards/views/assessment',
+        expect.objectContaining({
+          error: 'Failed to save assessment. Please try again.'
+        })
+      )
+    })
   })
 
   describe('getAssessmentHistory', () => {
@@ -661,6 +819,68 @@ describe('Standards Controller', () => {
       )
       expect(result).toBe('redirect-response')
     })
+
+    test('should handle error when fetching assessment history data', async () => {
+      // Arrange
+      getProjectById.mockRejectedValue(new Error('Database error'))
+
+      // Act & Assert
+      await expect(
+        standardsController.getAssessmentHistory(
+          {
+            params: { id: '1', standardId: '1', professionId: 'prof-1' },
+            logger: { error: jest.fn() }
+          },
+          mockH
+        )
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
+    })
+
+    test('should handle null professions response', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(null)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getAssessmentHistory.mockResolvedValue([])
+
+      // Act
+      await standardsController.getAssessmentHistory(
+        {
+          params: { id: '1', standardId: '1', professionId: 'prof-1' },
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1?notification=Standard not found'
+      )
+    })
+
+    test('should handle null service standards response', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(null)
+      getAssessmentHistory.mockResolvedValue([])
+
+      // Act
+      await standardsController.getAssessmentHistory(
+        {
+          params: { id: '1', standardId: '1', professionId: 'prof-1' },
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1?notification=Standard not found'
+      )
+    })
   })
 
   describe('getArchiveAssessment', () => {
@@ -710,6 +930,29 @@ describe('Standards Controller', () => {
         `/projects/project-123/standards/std-1/professions/prof-1/history?notification=${NOTIFICATIONS.HISTORY_ENTRY_NOT_FOUND}`
       )
       expect(result).toBe('redirect-response')
+    })
+
+    test('should handle error when fetching archive assessment data', async () => {
+      // Arrange
+      getProjectById.mockRejectedValue(new Error('Database error'))
+
+      // Act & Assert
+      await expect(
+        standardsController.getArchiveAssessment(
+          {
+            params: {
+              id: '1',
+              standardId: '1',
+              professionId: 'prof-1',
+              historyId: 'hist-1'
+            },
+            logger: { error: jest.fn() }
+          },
+          mockH
+        )
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
     })
   })
 
@@ -781,70 +1024,126 @@ describe('Standards Controller', () => {
 
     test('should handle archive errors with returnTo detail', async () => {
       // Arrange
-      mockRequest.query = { returnTo: 'detail' }
       archiveAssessmentHistoryEntry.mockRejectedValue(
         new Error('Archive failed')
       )
 
       // Act
       const result = await standardsController.postArchiveAssessment(
-        mockRequest,
+        {
+          params: {
+            id: 'project-123',
+            standardId: 'std-1',
+            professionId: 'prof-1',
+            historyId: 'hist-1'
+          },
+          query: { returnTo: 'detail' },
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
         mockH
       )
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        `/projects/project-123/standards/std-1?notification=${NOTIFICATIONS.FAILED_TO_ARCHIVE_ASSESSMENT}`
+        '/projects/project-123/standards/std-1?notification=Failed to archive assessment entry'
       )
       expect(result).toBe('redirect-response')
     })
+
+    test('should handle archive failure with returnTo detail', async () => {
+      // Arrange
+      archiveAssessmentHistoryEntry.mockRejectedValue(
+        new Error('Archive failed')
+      )
+
+      // Act
+      await standardsController.postArchiveAssessment(
+        {
+          params: {
+            id: '1',
+            standardId: '1',
+            professionId: 'prof-1',
+            historyId: 'hist-1'
+          },
+          query: { returnTo: 'detail' },
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/standards/1?notification=Failed to archive assessment entry'
+      )
+    })
+
+    test('should handle archive failure with returnTo history (default)', async () => {
+      // Arrange
+      archiveAssessmentHistoryEntry.mockRejectedValue(
+        new Error('Archive failed')
+      )
+
+      // Act
+      await standardsController.postArchiveAssessment(
+        {
+          params: {
+            id: '1',
+            standardId: '1',
+            professionId: 'prof-1',
+            historyId: 'hist-1'
+          },
+          query: {},
+          logger: { error: jest.fn(), info: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/1/standards/1/professions/prof-1/history?notification=Failed to archive assessment entry'
+      )
+    })
   })
 
-  describe('Helper functions integration', () => {
-    test('should handle profession items creation with empty professions', async () => {
+  describe('Helper functions edge cases', () => {
+    test('should handle empty professions array in helper', async () => {
       // Arrange
       getProjectById.mockResolvedValue(mockProject)
       getProfessions.mockResolvedValue([])
       getServiceStandards.mockResolvedValue(mockServiceStandards)
 
       // Act
-      const result = await standardsController.getAssessmentScreen(
-        mockRequest,
-        mockH
-      )
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        'projects/standards/views/assessment',
         expect.objectContaining({
-          professionItems: [{ value: '', text: 'Choose a profession' }]
+          professionItems: expect.arrayContaining([
+            { value: '', text: 'Choose a profession' }
+          ])
         })
       )
-      expect(result).toHaveProperty('code')
-      expect(typeof result.code).toBe('function')
     })
 
-    test('should handle standard items creation with empty standards', async () => {
+    test('should handle empty standards array in helper', async () => {
       // Arrange
       getProjectById.mockResolvedValue(mockProject)
-      getProfessions.mockResolvedValue(mockProfessions)
+      getProfessions.mockResolvedValue([])
       getServiceStandards.mockResolvedValue([])
 
       // Act
-      const result = await standardsController.getAssessmentScreen(
-        mockRequest,
-        mockH
-      )
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith(
-        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        'projects/standards/views/assessment',
         expect.objectContaining({
-          standardItems: [{ value: '', text: 'Choose a service standard' }]
+          standardItems: expect.arrayContaining([
+            { value: '', text: 'Choose a service standard' }
+          ])
         })
       )
-      expect(result).toHaveProperty('code')
-      expect(typeof result.code).toBe('function')
     })
   })
 })

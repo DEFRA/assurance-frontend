@@ -368,4 +368,299 @@ describe('Admin controller', () => {
       )
     })
   })
+
+  describe('confirmDeleteProject - edge cases', () => {
+    test('should handle failed project fetch for confirmation page', async () => {
+      // Arrange
+      getProjectById.mockRejectedValue(new Error('Database error'))
+
+      // Act
+      await adminController.confirmDeleteProject(
+        {
+          params: { id: '123' },
+          method: 'get',
+          logger: { warn: jest.fn(), error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert - should continue with generic name
+      expect(mockH.view).toHaveBeenCalledWith(
+        'admin/confirm-delete',
+        expect.objectContaining({
+          message: 'Are you sure you want to delete the project "this project"?'
+        })
+      )
+    })
+
+    test('should handle null project for confirmation page', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(null)
+
+      // Act
+      await adminController.confirmDeleteProject(
+        {
+          params: { id: '123' },
+          method: 'get',
+          logger: { warn: jest.fn(), error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert - should use fallback name
+      expect(mockH.view).toHaveBeenCalledWith(
+        'admin/confirm-delete',
+        expect.objectContaining({
+          message: 'Are you sure you want to delete the project "this project"?'
+        })
+      )
+    })
+
+    test('should handle general error in confirmation flow', async () => {
+      // Arrange - simulate a configuration or template error
+      mockH.view.mockImplementation(() => {
+        throw new Error('Template error')
+      })
+
+      // Act
+      await adminController.confirmDeleteProject(
+        {
+          params: { id: '123' },
+          method: 'get',
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to show delete confirmation'
+      )
+    })
+
+    test('should handle POST confirmation with ID missing', async () => {
+      // Arrange
+      const mockRequest = {
+        params: { id: '' }, // Empty ID
+        method: 'post',
+        payload: { confirmed: 'true' },
+        logger: { info: jest.fn(), error: jest.fn() }
+      }
+
+      deleteProject.mockResolvedValue(true)
+
+      // Act
+      await adminController.confirmDeleteProject(mockRequest, mockH)
+
+      // Assert - should still try to delete with empty ID
+      expect(deleteProject).toHaveBeenCalledWith('', mockRequest)
+    })
+  })
+
+  describe('confirmDeleteAllStandards - POST handling', () => {
+    test('should proceed with deletion when confirmed=true', async () => {
+      // Arrange
+      const mockRequest = {
+        method: 'post',
+        payload: { confirmed: 'true' },
+        logger: { info: jest.fn(), error: jest.fn() }
+      }
+
+      const mockAuthedFetch = jest.fn().mockResolvedValue({})
+      authedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+      // Act
+      await adminController.confirmDeleteAllStandards(mockRequest, mockH)
+
+      // Assert
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/serviceStandards/seed', {
+        method: 'POST',
+        body: JSON.stringify([])
+      })
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Standards deleted successfully'
+      )
+    })
+
+    test('should handle errors in confirmDeleteAllStandards', async () => {
+      // Arrange - simulate error in view rendering
+      mockH.view.mockImplementation(() => {
+        throw new Error('View error')
+      })
+
+      // Act
+      await adminController.confirmDeleteAllStandards(
+        {
+          method: 'get',
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to show delete confirmation'
+      )
+    })
+  })
+
+  describe('confirmDeleteAllProfessions - POST handling', () => {
+    test('should proceed with deletion when confirmed=true', async () => {
+      // Arrange
+      const mockRequest = {
+        method: 'post',
+        payload: { confirmed: 'true' },
+        logger: { info: jest.fn(), error: jest.fn() }
+      }
+
+      const mockAuthedFetch = jest.fn().mockResolvedValue({})
+      authedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+      // Act
+      await adminController.confirmDeleteAllProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/deleteAll', {
+        method: 'POST'
+      })
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Professions deleted successfully'
+      )
+    })
+
+    test('should handle errors in confirmDeleteAllProfessions', async () => {
+      // Arrange - simulate error in view rendering
+      mockH.view.mockImplementation(() => {
+        throw new Error('View error')
+      })
+
+      // Act
+      await adminController.confirmDeleteAllProfessions(
+        {
+          method: 'get',
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to show delete confirmation'
+      )
+    })
+  })
+
+  describe('deleteProject - edge cases', () => {
+    test('should handle null result from deleteProject', async () => {
+      // Arrange
+      deleteProject.mockResolvedValue(null)
+
+      // Act
+      await adminController.deleteProject(
+        {
+          params: { id: '123' },
+          logger: { info: jest.fn(), warn: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Project not found'
+      )
+    })
+
+    test('should handle false result from deleteProject', async () => {
+      // Arrange
+      deleteProject.mockResolvedValue(false)
+
+      // Act
+      await adminController.deleteProject(
+        {
+          params: { id: '123' },
+          logger: { info: jest.fn(), warn: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Project not found'
+      )
+    })
+  })
+
+  describe('seedProfessions - environment restrictions', () => {
+    test('should seed professions in development environment', async () => {
+      // Arrange
+      config.get.mockReturnValue('development')
+      mockAuthedFetch.mockResolvedValue({ ok: true })
+
+      // Act
+      await adminController.seedProfessions(mockRequest, mockH)
+
+      // Assert
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/seed', {
+        method: 'POST',
+        body: JSON.stringify(defaultProfessions)
+      })
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Professions seeded (dev only)'
+      )
+    })
+  })
+
+  describe('get - API error scenarios', () => {
+    test('should handle mixed API errors', async () => {
+      // Arrange
+      getProjects.mockResolvedValue([]) // Don't reject, just return empty
+      getProfessions.mockResolvedValue([])
+      getServiceStandards.mockResolvedValue([])
+
+      // Act
+      await adminController.get(
+        {
+          query: { notification: 'Test notification' },
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert - should still render view with fallback data
+      expect(mockH.view).toHaveBeenCalledWith(
+        'admin/index',
+        expect.objectContaining({
+          projectsCount: 0,
+          professionsCount: 0,
+          standardsCount: 0
+        })
+      )
+    })
+
+    test('should handle null responses from all APIs', async () => {
+      // Arrange
+      getProjects.mockResolvedValue(null)
+      getProfessions.mockResolvedValue(null)
+      getServiceStandards.mockResolvedValue(null)
+
+      // Act
+      await adminController.get(
+        {
+          query: { notification: 'Test notification' },
+          logger: { error: jest.fn() }
+        },
+        mockH
+      )
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'admin/index',
+        expect.objectContaining({
+          projectsCount: 0,
+          professionsCount: 0,
+          standardsCount: 0
+        })
+      )
+    })
+  })
 })

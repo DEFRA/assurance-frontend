@@ -74,12 +74,10 @@ export const loggerOptions = {
     }
   },
   mixin() {
-    const mixinValues = {}
     const traceId = getTraceId()
-    if (traceId) {
-      mixinValues.trace = { id: traceId }
+    return {
+      trace: traceId ? { id: traceId } : null
     }
-    return mixinValues
   }
 }
 

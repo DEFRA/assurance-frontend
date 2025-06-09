@@ -69,7 +69,7 @@
             </p>
           {% endif %}
           
-          {% if isAuthenticated %}
+          {% if isAdmin %}
             <p class="govuk-body govuk-!-margin-top-4">
               <a href="/projects/{{ project.id }}/assessment" class="govuk-link">Add service standard update</a>
             </p>
@@ -115,7 +115,7 @@
                       text: "Archive",
                       visuallyHiddenText: "assessment for " + assessment.professionDisplayName
                     }
-                  ] if (isAuthenticated and assessment.mostRecentHistoryId) else []
+                  ] if (isAdmin and assessment.mostRecentHistoryId) else []
                 }
               },
               rows: [

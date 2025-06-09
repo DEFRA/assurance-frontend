@@ -112,8 +112,10 @@ export const admin = {
           handler: adminController.seedStandards,
           options: {
             auth: {
+              strategy: 'session',
               mode: 'required'
-            }
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -122,8 +124,10 @@ export const admin = {
           handler: adminController.seedProfessions,
           options: {
             auth: {
+              strategy: 'session',
               mode: 'required'
-            }
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         }
       ]

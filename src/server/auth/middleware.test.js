@@ -5,7 +5,9 @@ import * as middleware from './middleware.js'
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   logger: {
     debug: jest.fn(),
-    error: jest.fn()
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn()
   }
 }))
 
@@ -35,9 +37,13 @@ describe('Auth Middleware', () => {
       }
     }
 
-    // Mock response toolkit
+    // Mock response toolkit with takeover method
+    const mockRedirectResponse = {
+      takeover: jest.fn().mockReturnValue('redirected-with-takeover')
+    }
+
     mockH = {
-      redirect: jest.fn().mockReturnValue('redirected'),
+      redirect: jest.fn().mockReturnValue(mockRedirectResponse),
       continue: 'continue-response'
     }
   })
@@ -61,7 +67,7 @@ describe('Auth Middleware', () => {
       const result = middleware.requireAuth(mockRequest, mockH)
 
       // Assert
-      expect(result).toBe('redirected')
+      expect(result).toBe(mockH.redirect())
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/auth/login?redirectTo=/protected-path'
       )
@@ -75,7 +81,7 @@ describe('Auth Middleware', () => {
       const result = middleware.requireAuth(mockRequest, mockH)
 
       // Assert
-      expect(result).toBe('redirected')
+      expect(result).toBe(mockH.redirect())
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/auth/login?redirectTo=/protected-path'
       )
@@ -124,7 +130,7 @@ describe('Auth Middleware', () => {
       const result = middlewareFn(mockRequest, mockH)
 
       // Assert
-      expect(result).toBe('redirected')
+      expect(result).toBe('redirected-with-takeover')
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/auth/login?redirectTo=/protected-path'
       )
@@ -139,42 +145,54 @@ describe('Auth Middleware', () => {
       const result = middlewareFn(mockRequest, mockH)
 
       // Assert
-      expect(result).toBe('redirected')
+      expect(result).toBe('redirected-with-takeover')
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/auth/login?redirectTo=/protected-path'
       )
     })
 
-    test('should throw Boom forbidden if user does not have the required role', () => {
+    test('should redirect to insufficient permissions if user does not have the required role', () => {
       // Arrange
       mockRequest.auth.credentials.user.roles = ['editor']
       const middlewareFn = middleware.requireRole('admin')
 
-      // Act & Assert
-      expect(() => middlewareFn(mockRequest, mockH)).toThrow(
-        'Insufficient permissions'
+      // Act
+      const result = middlewareFn(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('redirected-with-takeover')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/insufficient-permissions'
       )
     })
 
-    test('should throw Boom forbidden if user has no roles', () => {
+    test('should redirect to insufficient permissions if user has no roles', () => {
       // Arrange
       mockRequest.auth.credentials.user.roles = []
       const middlewareFn = middleware.requireRole('admin')
 
-      // Act & Assert
-      expect(() => middlewareFn(mockRequest, mockH)).toThrow(
-        'Insufficient permissions'
+      // Act
+      const result = middlewareFn(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('redirected-with-takeover')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/insufficient-permissions'
       )
     })
 
-    test('should handle undefined roles properly', () => {
+    test('should redirect to insufficient permissions when roles are undefined', () => {
       // Arrange
       mockRequest.auth.credentials.user.roles = undefined
       const middlewareFn = middleware.requireRole('admin')
 
-      // Act & Assert
-      expect(() => middlewareFn(mockRequest, mockH)).toThrow(
-        'Insufficient permissions'
+      // Act
+      const result = middlewareFn(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBe('redirected-with-takeover')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/auth/insufficient-permissions'
       )
     })
   })

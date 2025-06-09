@@ -1,4 +1,3 @@
-import Boom from '@hapi/boom'
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 
 /**
@@ -40,38 +39,40 @@ export const requireRole = (requiredRoles) => {
     try {
       // Check if user is authenticated
       if (!request.auth.isAuthenticated) {
-        return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+        return h
+          .redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+          .takeover()
       }
 
       // Get user from session
       const user = request.auth.credentials.user
       if (!user) {
-        return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+        return h
+          .redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+          .takeover()
       }
 
       // Check if user has required role
       const hasRole = roles.some((role) => user.roles?.includes(role))
-      logger.debug('Role check', {
-        requiredRoles: roles,
-        userRoles: user.roles || [],
-        hasRequiredRole: hasRole,
-        userId: user.id,
-        path: request.url.pathname
-      })
 
       if (!hasRole) {
-        throw Boom.forbidden('Insufficient permissions')
+        logger.warn('Access denied - insufficient permissions', {
+          requiredRoles: roles,
+          userRoles: user.roles || [],
+          userId: user.id,
+          path: request.url.pathname,
+          userEmail: user.email
+        })
+
+        return h.redirect('/auth/insufficient-permissions').takeover()
       }
 
       // Add user to request for easy access
       request.user = user
       return h.continue
     } catch (error) {
-      if (error.isBoom) {
-        throw error
-      }
       logger.error('Authorization error', error)
-      return h.redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+      return h.redirect('/auth/insufficient-permissions').takeover()
     }
   }
 }
@@ -83,21 +84,31 @@ export const requireRole = (requiredRoles) => {
  */
 export const requireAdmin = (request, h) => {
   try {
-    // First check if user is authenticated
-    const authResult = requireAuth(request, h)
-    if (authResult !== h.continue) {
-      return authResult
+    // Check if user is authenticated
+    if (!request.auth.isAuthenticated) {
+      return h
+        .redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+        .takeover()
+    }
+
+    // Get user from session
+    const user = request.auth.credentials.user
+    if (!user) {
+      return h
+        .redirect(`/auth/login?redirectTo=${request.url.pathname}`)
+        .takeover()
     }
 
     // Check if user has admin role
-    const user = request.auth.credentials.user
     if (!user.roles?.includes('admin')) {
-      return Boom.forbidden('Admin access required')
+      return h.redirect('/auth/insufficient-permissions').takeover()
     }
 
+    // Add user to request for easy access
+    request.user = user
     return h.continue
   } catch (error) {
     logger.error('Admin authorization error', error)
-    return Boom.forbidden('Admin access required')
+    return h.redirect('/auth/insufficient-permissions').takeover()
   }
 }

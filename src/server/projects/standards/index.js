@@ -1,5 +1,5 @@
 import { standardsController } from './controller.js'
-import { requireAuth } from '~/src/server/auth/middleware.js'
+import { requireRole } from '~/src/server/auth/middleware.js'
 
 /**
  * Sets up the project standards routes.
@@ -26,22 +26,21 @@ export const standardsRoutes = {
         {
           method: 'GET',
           path: '/projects/{id}/standards/{standardId}/history',
-          handler: standardsController.getStandardHistory,
-          options: {
-            pre: [{ method: requireAuth }]
-          }
+          handler: standardsController.getStandardHistory
         },
         {
           method: 'GET',
           path: '/projects/{id}/assessment',
-          handler: standardsController.getAssessmentScreen,
-          options: { pre: [{ method: requireAuth }] }
+          handler: standardsController.getAssessmentScreen
         },
         {
           method: 'POST',
           path: '/projects/{id}/assessment',
           handler: standardsController.postAssessmentScreen,
-          options: { auth: { strategy: 'session', mode: 'required' } }
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
         },
         {
           method: 'GET',
@@ -54,8 +53,10 @@ export const standardsRoutes = {
           handler: standardsController.getArchiveAssessment,
           options: {
             auth: {
+              strategy: 'session',
               mode: 'required'
-            }
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         },
         {
@@ -64,8 +65,10 @@ export const standardsRoutes = {
           handler: standardsController.postArchiveAssessment,
           options: {
             auth: {
+              strategy: 'session',
               mode: 'required'
-            }
+            },
+            pre: [{ method: requireRole('admin') }]
           }
         }
       ])

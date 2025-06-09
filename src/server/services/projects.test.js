@@ -1549,3 +1549,481 @@ describe('archiveAssessmentHistoryEntry', () => {
     ).rejects.toThrow('Archive failed')
   })
 })
+
+describe('normalizeHistoryEntry edge cases', () => {
+  test('should handle entry with string status in changes via getProjectHistory', async () => {
+    // Arrange
+    const mockHistory = [
+      {
+        id: '1',
+        changes: {
+          status: 'GREEN'
+        }
+      }
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProjectHistory('project-1')
+
+    // Assert
+    expect(result[0].changes.status).toEqual({
+      from: '',
+      to: 'GREEN'
+    })
+  })
+
+  test('should handle entry with commentary but no changes.commentary via getProjectHistory', async () => {
+    // Arrange
+    const mockHistory = [
+      {
+        id: '1',
+        commentary: 'Test commentary'
+      }
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProjectHistory('project-1')
+
+    // Assert
+    expect(result[0].changes.commentary).toEqual({
+      from: '',
+      to: 'Test commentary'
+    })
+  })
+
+  test('should handle entry with changeDate instead of timestamp via getProjectHistory', async () => {
+    // Arrange
+    const changeDate = '2023-01-01T12:00:00Z'
+    const mockHistory = [
+      {
+        id: '1',
+        changeDate
+      }
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProjectHistory('project-1')
+
+    // Assert
+    expect(result[0].timestamp).toBe(changeDate)
+  })
+
+  test('should handle entry with status but no changes.status via getProjectHistory', async () => {
+    // Arrange
+    const mockHistory = [
+      {
+        id: '1',
+        status: 'AMBER'
+      }
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProjectHistory('project-1')
+
+    // Assert
+    expect(result[0].changes.status).toEqual({
+      from: '',
+      to: 'AMBER'
+    })
+  })
+
+  test('should preserve existing proper status changes object via getProjectHistory', async () => {
+    // Arrange
+    const mockHistory = [
+      {
+        id: '1',
+        changes: {
+          status: {
+            from: 'GREEN',
+            to: 'RED'
+          }
+        }
+      }
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProjectHistory('project-1')
+
+    // Assert
+    expect(result[0].changes.status).toEqual({
+      from: 'GREEN',
+      to: 'RED'
+    })
+  })
+
+  test('should test normalizeHistoryEntry via getProfessionHistory', async () => {
+    // Arrange
+    const mockHistory = [
+      {
+        id: '1',
+        commentary: 'Test comment',
+        status: 'RED'
+      }
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProfessionHistory('project-1', 'prof-1')
+
+    // Assert
+    expect(result[0].type).toBe('profession')
+    expect(result[0].changes.commentary).toEqual({
+      from: '',
+      to: 'Test comment'
+    })
+    expect(result[0].changes.status).toEqual({
+      from: '',
+      to: 'RED'
+    })
+  })
+})
+
+describe('getProjectHistory advanced scenarios', () => {
+  test('should handle archived entries filtering', async () => {
+    // Arrange
+    const mockHistory = [
+      { id: '1', archived: false, status: 'GREEN' },
+      { id: '2', archived: true, status: 'RED' },
+      { id: '3', archived: false, status: 'AMBER' }
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProjectHistory('project-1')
+
+    // Assert
+    expect(result).toHaveLength(2)
+    expect(result.map((r) => r.id)).toEqual(['1', '3'])
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      {
+        totalEntries: 3,
+        activeEntries: 2,
+        archivedEntries: 1
+      },
+      'Filtered project history entries'
+    )
+  })
+
+  test('should handle token access error', async () => {
+    // Arrange
+    const mockRequest = {
+      auth: {
+        get credentials() {
+          throw new Error('Token access error')
+        }
+      }
+    }
+    const mockAuthedFetch = jest.fn().mockResolvedValue([])
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    // Act
+    await getProjectHistory('project-1', mockRequest)
+
+    // Assert
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      { error: 'Token access error' },
+      '[AUTH_CHECK] Error accessing token'
+    )
+  })
+
+  test('should handle valid token access', async () => {
+    // Arrange
+    const mockRequest = {
+      auth: {
+        credentials: {
+          token: 'valid-token-123'
+        }
+      }
+    }
+    const mockAuthedFetch = jest.fn().mockResolvedValue([])
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    // Act
+    await getProjectHistory('project-1', mockRequest)
+
+    // Assert
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      '[AUTH_CHECK] Token found directly in credentials, length: 15'
+    )
+  })
+
+  test('should filter out null entries', async () => {
+    // Arrange
+    const mockHistory = [
+      { id: '1', archived: false },
+      null,
+      { id: '2', archived: false },
+      undefined
+    ]
+    mockFetch.mockResolvedValue(mockHistory)
+
+    // Act
+    const result = await getProjectHistory('project-1')
+
+    // Assert
+    expect(result).toHaveLength(2)
+    expect(result.map((r) => r.id)).toEqual(['1', '2'])
+  })
+})
+
+describe('getAssessment 404 handling', () => {
+  test('should handle 404 Not Found error gracefully', async () => {
+    // Arrange
+    const notFoundError = new Error('Not Found')
+    notFoundError.status = 404
+    mockFetch.mockRejectedValue(notFoundError)
+
+    // Act
+    const result = await getAssessment('project-1', 'std-1', 'prof-1')
+
+    // Assert
+    expect(result).toBeNull()
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      {
+        endpoint:
+          '/projects/project-1/standards/std-1/professions/prof-1/assessment'
+      },
+      'Assessment not found - will create new one'
+    )
+  })
+
+  test('should handle error message containing "Not Found"', async () => {
+    // Arrange
+    const notFoundError = new Error('Resource Not Found on server')
+    mockFetch.mockRejectedValue(notFoundError)
+
+    // Act
+    const result = await getAssessment('project-1', 'std-1', 'prof-1')
+
+    // Assert
+    expect(result).toBeNull()
+  })
+
+  test('should re-throw non-404 errors', async () => {
+    // Arrange
+    const serverError = new Error('Internal Server Error')
+    serverError.status = 500
+    mockFetch.mockRejectedValue(serverError)
+
+    // Act & Assert
+    await expect(getAssessment('project-1', 'std-1', 'prof-1')).rejects.toThrow(
+      'Internal Server Error'
+    )
+  })
+})
+
+describe('getAssessmentHistory 404 handling', () => {
+  test('should handle 404 error and return empty array', async () => {
+    // Arrange
+    const notFoundError = new Error('Not Found')
+    notFoundError.status = 404
+    mockFetch.mockRejectedValue(notFoundError)
+
+    // Act
+    const result = await getAssessmentHistory('project-1', 'std-1', 'prof-1')
+
+    // Assert
+    expect(result).toEqual([])
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      { projectId: 'project-1', standardId: 'std-1', professionId: 'prof-1' },
+      'Assessment history endpoint not available yet - returning empty array'
+    )
+  })
+
+  test('should handle error message containing "Not Found"', async () => {
+    // Arrange
+    const notFoundError = new Error('Endpoint Not Found')
+    mockFetch.mockRejectedValue(notFoundError)
+
+    // Act
+    const result = await getAssessmentHistory('project-1', 'std-1', 'prof-1')
+
+    // Assert
+    expect(result).toEqual([])
+  })
+
+  test('should re-throw non-404 errors', async () => {
+    // Arrange
+    const serverError = new Error('Database connection failed')
+    mockFetch.mockRejectedValue(serverError)
+
+    // Act & Assert
+    await expect(
+      getAssessmentHistory('project-1', 'std-1', 'prof-1')
+    ).rejects.toThrow('Database connection failed')
+  })
+})
+
+describe('archiveAssessmentHistoryEntry 404 handling', () => {
+  test('should handle 404 error and throw specific message', async () => {
+    // Arrange
+    const notFoundError = new Error('Not Found')
+    notFoundError.status = 404
+    mockFetch.mockRejectedValue(notFoundError)
+
+    // Act & Assert
+    await expect(
+      archiveAssessmentHistoryEntry('project-1', 'std-1', 'prof-1', 'hist-1')
+    ).rejects.toThrow(
+      'Archive functionality is not yet available on the backend'
+    )
+
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      {
+        projectId: 'project-1',
+        standardId: 'std-1',
+        professionId: 'prof-1',
+        historyId: 'hist-1'
+      },
+      'Archive assessment endpoint not available yet'
+    )
+  })
+
+  test('should handle error message containing "Not Found"', async () => {
+    // Arrange
+    const notFoundError = new Error('Archive endpoint Not Found')
+    mockFetch.mockRejectedValue(notFoundError)
+
+    // Act & Assert
+    await expect(
+      archiveAssessmentHistoryEntry('project-1', 'std-1', 'prof-1', 'hist-1')
+    ).rejects.toThrow(
+      'Archive functionality is not yet available on the backend'
+    )
+  })
+
+  test('should re-throw non-404 errors', async () => {
+    // Arrange
+    const serverError = new Error('Server Error')
+    serverError.status = 500
+    mockFetch.mockRejectedValue(serverError)
+
+    // Act & Assert
+    await expect(
+      archiveAssessmentHistoryEntry('project-1', 'std-1', 'prof-1', 'hist-1')
+    ).rejects.toThrow('Server Error')
+  })
+})
+
+describe('updateProject with suppressHistory parameter', () => {
+  test('should handle suppressHistory=true', async () => {
+    // Arrange
+    const currentProject = { id: '1', name: 'Current Project' }
+    const updateData = { name: 'Updated Project' }
+    const mockAuthedFetch = jest
+      .fn()
+      .mockResolvedValue({ id: '1', name: 'Updated Project' })
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    // Mock getProjectById to return current project
+    jest.doMock('./projects.js', () => ({
+      ...jest.requireActual('./projects.js'),
+      getProjectById: jest.fn().mockResolvedValue(currentProject)
+    }))
+
+    // Act
+    await updateProject(
+      '1',
+      updateData,
+      { auth: { credentials: { token: 'test' } } },
+      true
+    )
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/projects/1?suppressHistory=true',
+      expect.any(Object)
+    )
+  })
+})
+
+describe('edge case scenarios', () => {
+  test('should handle getProjects with projects containing non-array standards', async () => {
+    // Arrange
+    const mockProjects = [
+      {
+        id: '1',
+        standards: null
+      }
+    ]
+    mockFetch.mockResolvedValue(mockProjects)
+
+    // Act
+    const result = await getProjects()
+
+    // Assert
+    expect(result).toEqual(mockProjects)
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      {
+        sampleProject: {
+          id: '1',
+          standards: []
+        }
+      },
+      'Sample project structure'
+    )
+  })
+
+  test('should handle createProject with empty projectData fields', async () => {
+    // Arrange
+    const projectData = {
+      name: '',
+      phase: '',
+      defCode: '',
+      status: '',
+      commentary: ''
+    }
+    mockGetServiceStandards.mockResolvedValue([])
+    mockFetch.mockResolvedValue({ id: 'created-project-id' })
+
+    // Act
+    const result = await createProject(projectData)
+
+    // Assert
+    expect(result.id).toBe('created-project-id')
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/projects',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"name":""')
+      })
+    )
+  })
+
+  test('should handle getProfessionHistory with empty data array', async () => {
+    // Arrange
+    mockFetch.mockResolvedValue([])
+
+    // Act
+    const result = await getProfessionHistory('project-1', 'prof-1')
+
+    // Assert
+    expect(result).toEqual([])
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      { historyCount: 0 },
+      'Profession history retrieved successfully'
+    )
+  })
+
+  test('should handle getStandardHistory with authenticated request', async () => {
+    // Arrange
+    const mockHistory = [{ id: '1', status: 'GREEN' }]
+    const mockRequest = { auth: { credentials: { token: 'test' } } }
+    const mockAuthedFetch = jest.fn().mockResolvedValue(mockHistory)
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    // Act
+    const result = await getStandardHistory('project-1', 'std-1', mockRequest)
+
+    // Assert
+    expect(result).toEqual(mockHistory)
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/projects/project-1/standards/std-1/history'
+    )
+  })
+})

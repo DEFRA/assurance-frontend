@@ -66,7 +66,6 @@
       <h2 class="govuk-heading-m">Service Standards</h2>
       <p class="govuk-body">Currently {{ standardsCount }} standards loaded</p>
       
-      {% if not isTestEnvironment %}
       <div class="govuk-button-group">
         <form method="POST" action="/admin/standards/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
           <button class="govuk-button" data-module="govuk-button">
@@ -74,6 +73,7 @@
           </button>
         </form>
         
+        {% if not isTestEnvironment %}
         <div class="govuk-!-display-inline">
           {{ govukButton({
             text: "Delete All Standards",
@@ -81,8 +81,8 @@
             classes: "govuk-button--warning"
           }) }}
         </div>
+        {% endif %}
       </div>
-      {% endif %}
       
       <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
       
@@ -94,7 +94,6 @@
         The UI will show default profession data until the backend is ready.
       </div>
       
-      {% if not isTestEnvironment %}
       <div class="govuk-button-group">
         <form method="POST" action="/admin/professions/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
           <button class="govuk-button" data-module="govuk-button">
@@ -102,6 +101,7 @@
           </button>
         </form>
         
+        {% if not isTestEnvironment %}
         <div class="govuk-!-display-inline">
           {{ govukButton({
             text: "Delete All Professions",
@@ -109,8 +109,8 @@
             classes: "govuk-button--warning"
           }) }}
         </div>
+        {% endif %}
       </div>
-      {% endif %}
       
       <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
       

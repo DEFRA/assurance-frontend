@@ -276,10 +276,6 @@ export const adminController = {
 
   seedProfessions: async (request, h) => {
     try {
-      if (config.get('env') !== 'development') {
-        throw new Error('Only available in development environment')
-      }
-
       const authedFetch = authedFetchJsonDecorator(request)
 
       await authedFetch('/professions/seed', {

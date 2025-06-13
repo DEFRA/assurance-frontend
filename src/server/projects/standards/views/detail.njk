@@ -111,11 +111,22 @@
                 actions: {
                   items: [
                     {
-                      href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history/" + assessment.mostRecentHistoryId + "/archive?returnTo=standard",
+                      href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
+                      text: "History",
+                      visuallyHiddenText: "for " + assessment.professionDisplayName
+                    },
+                    {
+                      href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history/" + assessment.mostRecentHistoryId + "/archive?returnTo=detail",
                       text: "Archive",
                       visuallyHiddenText: "assessment for " + assessment.professionDisplayName
                     }
-                  ] if (isAdmin and assessment.mostRecentHistoryId) else []
+                  ] if isAdmin and assessment.mostRecentHistoryId else [
+                    {
+                      href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
+                      text: "History",
+                      visuallyHiddenText: "for " + assessment.professionDisplayName
+                    }
+                  ]
                 }
               },
               rows: [

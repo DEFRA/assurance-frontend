@@ -3,22 +3,17 @@
  * @satisfies {Partial<ServerRoute>}
  */
 import Boom from '@hapi/boom'
-import { getProfessions } from '~/src/server/services/professions.js'
+import {
+  getProfessions,
+  getProfessionById
+} from '~/src/server/services/professions.js'
 import { getProjects } from '~/src/server/services/projects.js'
+import { getServiceStandards } from '~/src/server/services/service-standards.js'
+import { filterStandardsByProfessionAndPhase } from '~/src/server/services/profession-standard-matrix.js'
 import {
   PAGE_TITLES,
   VIEW_TEMPLATES
 } from '~/src/server/constants/notifications.js'
-
-// Constants
-const STATUS_PRIORITY = {
-  RED: 0,
-  AMBER_RED: 1,
-  AMBER: 2,
-  GREEN_AMBER: 3,
-  GREEN: 4,
-  TBC: 5
-}
 
 // Helper function to format profession name to title case
 function formatDisplayName(name) {
@@ -42,79 +37,90 @@ function createEmptyProfessionsView(h, isAuthenticated) {
   })
 }
 
-// Helper function to process profession assessments for a project
-function processProfessionAssessments(project, professionId, summary) {
-  if (!project.professions || !Array.isArray(project.professions)) {
-    return null
+// Helper function to build filtered standards set
+function buildFilteredStandardsSet(projects, allStandards, professionId) {
+  const standardsSet = new Map()
+  for (const project of projects) {
+    const filtered = filterStandardsByProfessionAndPhase(
+      allStandards,
+      project.phase,
+      professionId
+    )
+    for (const standard of filtered) {
+      standardsSet.set(standard.id, standard)
+    }
   }
-
-  const professionAssessment = project.professions.find(
-    (p) => p.professionId === professionId
-  )
-
-  if (!professionAssessment) {
-    return null
-  }
-
-  // Update summary counts
-  summary.total++
-  const status = professionAssessment.status
-  if (status === 'RED') {
-    summary.red++
-  } else if (status === 'AMBER_RED') {
-    summary.amberRed++
-  } else if (status === 'AMBER') {
-    summary.amber++
-  } else if (status === 'GREEN_AMBER') {
-    summary.amberGreen++
-  } else if (status === 'GREEN') {
-    summary.green++
-  } else {
-    summary.notUpdated++
-  }
-
-  return {
-    ...project,
-    professionAssessment
-  }
+  return Array.from(standardsSet.values())
 }
 
-// Helper function to build relevant projects list
-function buildRelevantProjects(projects, professionId) {
-  const relevantProjects = []
-  const summary = {
-    total: 0,
-    red: 0,
-    amberRed: 0,
-    amber: 0,
-    amberGreen: 0,
-    green: 0,
-    notUpdated: 0
-  }
+// Helper function to get profession assessment for a project and standard
+function getProfessionAssessment(project, standardId, professionId) {
+  const standardsSummaryArr = Array.isArray(project.standardsSummary)
+    ? project.standardsSummary
+    : []
 
-  if (!projects || !Array.isArray(projects)) {
-    return { relevantProjects, summary }
-  }
+  const standardSummary = standardsSummaryArr.find(
+    (s) => s.standardId === standardId
+  )
 
-  for (const project of projects) {
-    const processedProject = processProfessionAssessments(
-      project,
-      professionId,
-      summary
-    )
-    if (processedProject) {
-      relevantProjects.push(processedProject)
+  const professionsArr = Array.isArray(standardSummary?.professions)
+    ? standardSummary.professions
+    : []
+
+  return professionsArr.find((p) => p.professionId === professionId)
+}
+
+// Helper function to build the matrix
+function buildMatrix(filteredStandards, projects, professionId) {
+  const matrix = {}
+
+  for (const standard of filteredStandards) {
+    matrix[standard.id] = {}
+
+    for (const project of projects) {
+      const professionAssessment = getProfessionAssessment(
+        project,
+        standard.id,
+        professionId
+      )
+
+      matrix[standard.id][project.id] = {
+        rag: professionAssessment?.status || 'TBC',
+        commentary: professionAssessment?.commentary || ''
+      }
     }
   }
 
-  // Sort projects by status priority (RED first, GREEN last)
-  relevantProjects.sort((a, b) => {
-    const statusA = a.professionAssessment?.status || 'TBC'
-    const statusB = b.professionAssessment?.status || 'TBC'
-    return STATUS_PRIORITY[statusA] - STATUS_PRIORITY[statusB]
-  })
+  return matrix
+}
 
-  return { relevantProjects, summary }
+// Helper function to categorize RAG status
+function categorizeRagStatus(rag) {
+  if (rag === 'RED') {
+    return 'RED'
+  }
+  if (rag === 'AMBER' || rag === 'AMBER_RED' || rag === 'GREEN_AMBER') {
+    return 'AMBER'
+  }
+  if (rag === 'GREEN') {
+    return 'GREEN'
+  }
+  return 'TBC'
+}
+
+// Helper function to compute summary counts
+function computeSummaryCounts(matrix) {
+  const summaryCounts = { RED: 0, AMBER: 0, GREEN: 0, TBC: 0 }
+
+  for (const standardId of Object.keys(matrix)) {
+    for (const projectId of Object.keys(matrix[standardId])) {
+      const rag = matrix[standardId][projectId].rag
+      const category = categorizeRagStatus(rag)
+      summaryCounts[category]++
+    }
+  }
+
+  return summaryCounts
 }
 
 export const professionsController = {
@@ -146,48 +152,47 @@ export const professionsController = {
   },
 
   get: async (request, h) => {
-    const { id } = request.params
-
+    const { id: professionId } = request.params
     try {
-      const [professions, projects] = await Promise.all([
-        getProfessions(request),
-        getProjects(request)
+      const [profession, projects, allStandards] = await Promise.all([
+        getProfessionById(professionId, request),
+        getProjects(request),
+        getServiceStandards(request)
       ])
 
-      const profession = professions?.find((p) => p.id === id)
-
       if (!profession) {
-        request.logger.warn({ professionId: id }, 'Profession not found')
-        return h
-          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
-            pageTitle: PAGE_TITLES.PROFESSION_NOT_FOUND
-          })
-          .code(404)
+        request.logger.error('Profession not found')
+        throw Boom.boomify(new Error('Profession not found'), {
+          statusCode: 404
+        })
       }
 
-      // Format the profession data for display
-      const formattedProfession = {
-        ...profession,
-        displayName: formatDisplayName(profession.name),
-        name: profession.name || `Profession ${id}`
-      }
+      // Build filtered standards, matrix, and summary counts using helper functions
+      const filteredStandards = buildFilteredStandardsSet(
+        projects,
+        allStandards,
+        professionId
+      )
 
-      // Build relevant projects and summary
-      const { relevantProjects, summary } = buildRelevantProjects(projects, id)
+      const matrix = buildMatrix(filteredStandards, projects, professionId)
+      const summaryCounts = computeSummaryCounts(matrix)
 
       return h.view(VIEW_TEMPLATES.PROFESSIONS_DETAIL, {
-        pageTitle: `${formattedProfession.displayName} overview`,
-        heading: formattedProfession.displayName,
-        profession: formattedProfession,
-        projects: relevantProjects,
-        summary,
+        pageTitle: `${profession.name} overview`,
+        heading: profession.name,
+        profession,
+        projects,
+        standards: filteredStandards,
+        matrix,
+        summaryCounts,
         isAuthenticated: request.auth.isAuthenticated
       })
     } catch (error) {
-      request.logger.error(
-        { error, professionId: id },
-        'Error fetching profession details'
-      )
+      // If it's already a Boom error with a specific status code, don't re-wrap it
+      if (error.isBoom) {
+        throw error
+      }
+      request.logger.error(error)
       throw Boom.boomify(error, { statusCode: 500 })
     }
   }

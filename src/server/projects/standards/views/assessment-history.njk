@@ -66,39 +66,46 @@
         <div class="timeline">
           {% for entry in history %}
             <div class="timeline__event {% if entry.archived %}timeline__event--archived{% endif %}">
-              <div class="timeline__event-header">
-                <h3 class="timeline__event-title">
-                  {% if entry.changes.status %}
-                    Status changed to: {{ renderStatusTag(entry.changes.status.to) }}
-                  {% else %}
-                    Assessment updated
-                  {% endif %}
-                </h3>
-                
-                <div class="timeline__event-meta">
-                  <span class="govuk-tag govuk-tag--grey timeline__event-user">
-                    {{ entry.changedBy | upper }}
-                  </span>
-                  <span class="timeline__event-date">
-                    {{ entry.timestamp | formatDate }}
-                  </span>
-                  
-                  {% if entry.archived %}
-                    <span class="govuk-tag govuk-tag--red timeline__event-archived">
-                      ARCHIVED
-                    </span>
-                  {% endif %}
-                </div>
-              </div>
+              <h3 class="timeline__event-title govuk-heading-s">
+                {% if entry.changes.status %}
+                  Status changed to: {{ renderStatusTag(entry.changes.status.to) }}
+                {% else %}
+                  Assessment updated
+                {% endif %}
+              </h3>
               
-              {% if entry.changes.commentary and entry.changes.commentary.to %}
-                <div class="timeline__event-content">
-                  <p class="govuk-body">{{ entry.changes.commentary.to }}</p>
-                </div>
+              {% if entry.archived %}
+                <span class="govuk-tag govuk-tag--red govuk-!-margin-left-2" style="white-space: nowrap; font-size: 10px; line-height: 1; padding: 3px 6px;">
+                  ARCHIVED
+                </span>
               {% endif %}
               
+              {% if entry.changes.commentary and entry.changes.commentary.to %}
+                {% set displayCommentary = entry.changes.commentary.to %}
+                {% if "Path to green:" in displayCommentary %}
+                  {% set parts = displayCommentary.split("Path to green:") %}
+                  {% set issue = parts[0] | trim if parts[0] else "" %}
+                  {% set path = parts[1] | trim if parts[1] else "" %}
+                  
+                  {% if issue and path %}
+                    {% set displayCommentary = (issue + "\r\n\r\n" + path) | trim %}
+                  {% elif issue %}
+                    {% set displayCommentary = issue | trim %}
+                  {% elif path %}
+                    {% set displayCommentary = path | trim %}
+                  {% endif %}
+                {% else %}
+                  {% set displayCommentary = displayCommentary | trim %}
+                {% endif %}
+                <div class="govuk-body" style="white-space: pre-wrap;">{{ displayCommentary }}</div>
+              {% endif %}
+              
+              <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-margin-top-2 govuk-!-font-size-16">
+                Last updated: {{ entry.timestamp | formatDate }}
+              </p>
+              
               {% if isAdmin and not entry.archived %}
-                <div class="timeline__event-actions">
+                <div class="govuk-!-margin-top-2">
                   <a href="/projects/{{ project.id }}/standards/{{ standard.id }}/professions/{{ profession.id }}/history/{{ entry.id }}/archive" 
                      class="govuk-link govuk-link--destructive">
                     Archive this entry
@@ -135,14 +142,7 @@
 
 {% block pageStyles %}
 <style>
-  .timeline {
-    border-left: 3px solid #b1b4b6;
-    margin-left: 20px;
-    padding-left: 30px;
-  }
-
   .timeline__event {
-    position: relative;
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 1px solid #f3f2f1;
@@ -151,64 +151,6 @@
   .timeline__event:last-child {
     border-bottom: none;
     margin-bottom: 0;
-  }
-
-  .timeline__event::before {
-    content: '';
-    position: absolute;
-    left: -39px;
-    top: 8px;
-    width: 12px;
-    height: 12px;
-    background-color: #1d70b8;
-    border-radius: 50%;
-    border: 3px solid #ffffff;
-  }
-
-  .timeline__event--archived::before {
-    background-color: #d4351c;
-  }
-
-  .timeline__event-header {
-    margin-bottom: 15px;
-  }
-
-  .timeline__event-title {
-    margin: 0 0 10px 0;
-    font-size: 19px;
-    font-weight: 700;
-  }
-
-  .timeline__event-meta {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    flex-wrap: wrap;
-  }
-
-  .timeline__event-user {
-    font-size: 12px;
-    line-height: 1.2;
-    padding: 3px 6px;
-  }
-
-  .timeline__event-date {
-    font-size: 14px;
-    color: #626a6e;
-  }
-
-  .timeline__event-archived {
-    font-size: 12px;
-    line-height: 1.2;
-    padding: 3px 6px;
-  }
-
-  .timeline__event-content {
-    margin-bottom: 15px;
-  }
-
-  .timeline__event-actions {
-    margin-top: 15px;
   }
 
   .timeline__event--archived {

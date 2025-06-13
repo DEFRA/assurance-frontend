@@ -37,6 +37,92 @@ function createEmptyProfessionsView(h, isAuthenticated) {
   })
 }
 
+// Helper function to build filtered standards set
+function buildFilteredStandardsSet(projects, allStandards, professionId) {
+  const standardsSet = new Map()
+  for (const project of projects) {
+    const filtered = filterStandardsByProfessionAndPhase(
+      allStandards,
+      project.phase,
+      professionId
+    )
+    for (const standard of filtered) {
+      standardsSet.set(standard.id, standard)
+    }
+  }
+  return Array.from(standardsSet.values())
+}
+
+// Helper function to get profession assessment for a project and standard
+function getProfessionAssessment(project, standardId, professionId) {
+  const standardsSummaryArr = Array.isArray(project.standardsSummary)
+    ? project.standardsSummary
+    : []
+
+  const standardSummary = standardsSummaryArr.find(
+    (s) => s.standardId === standardId
+  )
+
+  const professionsArr = Array.isArray(standardSummary?.professions)
+    ? standardSummary.professions
+    : []
+
+  return professionsArr.find((p) => p.professionId === professionId)
+}
+
+// Helper function to build the matrix
+function buildMatrix(filteredStandards, projects, professionId) {
+  const matrix = {}
+
+  for (const standard of filteredStandards) {
+    matrix[standard.id] = {}
+
+    for (const project of projects) {
+      const professionAssessment = getProfessionAssessment(
+        project,
+        standard.id,
+        professionId
+      )
+
+      matrix[standard.id][project.id] = {
+        rag: professionAssessment?.status || 'TBC',
+        commentary: professionAssessment?.commentary || ''
+      }
+    }
+  }
+
+  return matrix
+}
+
+// Helper function to categorize RAG status
+function categorizeRagStatus(rag) {
+  if (rag === 'RED') {
+    return 'RED'
+  }
+  if (rag === 'AMBER' || rag === 'AMBER_RED' || rag === 'GREEN_AMBER') {
+    return 'AMBER'
+  }
+  if (rag === 'GREEN') {
+    return 'GREEN'
+  }
+  return 'TBC'
+}
+
+// Helper function to compute summary counts
+function computeSummaryCounts(matrix) {
+  const summaryCounts = { RED: 0, AMBER: 0, GREEN: 0, TBC: 0 }
+
+  for (const standardId of Object.keys(matrix)) {
+    for (const projectId of Object.keys(matrix[standardId])) {
+      const rag = matrix[standardId][projectId].rag
+      const category = categorizeRagStatus(rag)
+      summaryCounts[category]++
+    }
+  }
+
+  return summaryCounts
+}
+
 export const professionsController = {
   getAll: async (request, h) => {
     try {
@@ -81,61 +167,15 @@ export const professionsController = {
         })
       }
 
-      // For each project, filter standards by profession and phase
-      // Build a set of all relevant standards for this profession across all projects
-      const standardsSet = new Map()
-      for (const project of projects) {
-        const filtered = filterStandardsByProfessionAndPhase(
-          allStandards,
-          project.phase,
-          professionId
-        )
-        for (const s of filtered) {
-          standardsSet.set(s.id, s)
-        }
-      }
-      const filteredStandards = Array.from(standardsSet.values())
+      // Build filtered standards, matrix, and summary counts using helper functions
+      const filteredStandards = buildFilteredStandardsSet(
+        projects,
+        allStandards,
+        professionId
+      )
 
-      // Build the matrix: filteredStandards x projects, robust to missing data
-      const matrix = {}
-      for (const standard of filteredStandards) {
-        matrix[standard.id] = {}
-        for (const project of projects) {
-          const standardsSummaryArr = Array.isArray(project.standardsSummary)
-            ? project.standardsSummary
-            : []
-          const standardSummary = standardsSummaryArr.find(
-            (s) => s.standardId === standard.id
-          )
-          const professionsArr = Array.isArray(standardSummary?.professions)
-            ? standardSummary.professions
-            : []
-          const professionAssessment = professionsArr.find(
-            (p) => p.professionId === professionId
-          )
-          matrix[standard.id][project.id] = {
-            rag: professionAssessment?.status || 'TBC',
-            commentary: professionAssessment?.commentary || ''
-          }
-        }
-      }
-
-      // Compute summary counts (3 RAGs + TBC)
-      const summaryCounts = { RED: 0, AMBER: 0, GREEN: 0, TBC: 0 }
-      for (const standardId of Object.keys(matrix)) {
-        for (const projectId of Object.keys(matrix[standardId])) {
-          const rag = matrix[standardId][projectId].rag
-          if (rag === 'RED') summaryCounts.RED++
-          else if (
-            rag === 'AMBER' ||
-            rag === 'AMBER_RED' ||
-            rag === 'GREEN_AMBER'
-          )
-            summaryCounts.AMBER++
-          else if (rag === 'GREEN') summaryCounts.GREEN++
-          else summaryCounts.TBC++
-        }
-      }
+      const matrix = buildMatrix(filteredStandards, projects, professionId)
+      const summaryCounts = computeSummaryCounts(matrix)
 
       return h.view(VIEW_TEMPLATES.PROFESSIONS_DETAIL, {
         pageTitle: `${profession.name} overview`,

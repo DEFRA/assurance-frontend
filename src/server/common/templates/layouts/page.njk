@@ -25,12 +25,14 @@
   }) }}
   {% include "partials/navigation/navigation.njk" %}
   <div class="govuk-width-container">
+    <div role="complementary" aria-label="Service information">
     {{ govukPhaseBanner({
       tag: {
         text: "Beta"
       },
       html: 'This is a new service – <a class="govuk-link" href="mailto:CCTSAssurance@defra.gov.uk?subject=Assurance%20Service%20feedback">give your feedback by email</a>.'
     }) }}
+    </div>
   </div>
 {% endblock %}
 
@@ -40,9 +42,11 @@
 
 {% block beforeContent %}
   {% if breadcrumbs.length > 1 %}
+    <nav aria-label="Breadcrumb">
     {{ govukBreadcrumbs({
       items: breadcrumbs
     }) }}
+    </nav>
   {% endif %}
 {% endblock %}
 

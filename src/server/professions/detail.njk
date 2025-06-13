@@ -32,120 +32,97 @@
 {% endblock %}
 
 {% block content %}
-  {{ appHeading({
-    text: heading
-  }) }}
-
-  {% if profession.description %}
-    <div class="govuk-grid-row">
-      <div class="govuk-grid-column-two-thirds">
-        <p class="govuk-body">{{ profession.description }}</p>
-      </div>
-    </div>
-  {% endif %}
-  
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
+      {{ appHeading({
+        text: heading
+      }) }}
+      {% if profession.description %}
+        <p class="govuk-body">{{ profession.description }}</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-one-third">
       <div class="govuk-summary-card">
         <div class="govuk-summary-card__title-wrapper">
           <h2 class="govuk-summary-card__title">Summary</h2>
         </div>
         <div class="govuk-summary-card__content">
-          <dl class="govuk-summary-list">
+          <dl class="govuk-summary-list govuk-!-margin-bottom-0">
             <div class="govuk-summary-list__row">
-              <dt class="govuk-summary-list__key">Total projects</dt>
-              <dd class="govuk-summary-list__value">{{ summary.total }}</dd>
-            </div>
-            <div class="govuk-summary-list__row">
-              <dt class="govuk-summary-list__key">Red status</dt>
+              <dt class="govuk-summary-list__key">Red</dt>
               <dd class="govuk-summary-list__value">
-                <strong class="govuk-tag govuk-tag--red">{{ summary.red }}</strong>
+                <strong class="govuk-tag govuk-tag--red">{{ summaryCounts.RED }}</strong>
               </dd>
             </div>
             <div class="govuk-summary-list__row">
-              <dt class="govuk-summary-list__key">Amber status</dt>
+              <dt class="govuk-summary-list__key">Amber</dt>
               <dd class="govuk-summary-list__value">
-                <strong class="govuk-tag govuk-tag--yellow">{{ summary.amber }}</strong>
+                <strong class="govuk-tag govuk-tag--yellow">{{ summaryCounts.AMBER }}</strong>
               </dd>
             </div>
             <div class="govuk-summary-list__row">
-              <dt class="govuk-summary-list__key">Green status</dt>
+              <dt class="govuk-summary-list__key">Green</dt>
               <dd class="govuk-summary-list__value">
-                <strong class="govuk-tag govuk-tag--green">{{ summary.green }}</strong>
+                <strong class="govuk-tag govuk-tag--green">{{ summaryCounts.GREEN }}</strong>
               </dd>
             </div>
             <div class="govuk-summary-list__row">
-              <dt class="govuk-summary-list__key">Not updated</dt>
-              <dd class="govuk-summary-list__value">{{ summary.notUpdated }}</dd>
-            </div>
-            <div class="govuk-summary-list__row">
-              <dt class="govuk-summary-list__key">Amber Red status</dt>
+              <dt class="govuk-summary-list__key">TBC</dt>
               <dd class="govuk-summary-list__value">
-                <strong class="govuk-tag govuk-tag--red">{{ summary.amberRed }}</strong>
-                <strong class="govuk-tag govuk-tag--yellow">{{ summary.amberRed }}</strong>
-              </dd>
-            </div>
-            <div class="govuk-summary-list__row">
-              <dt class="govuk-summary-list__key">Green Amber status</dt>
-              <dd class="govuk-summary-list__value">
-                <strong class="govuk-tag govuk-tag--yellow">{{ summary.amberGreen }}</strong>
-                <strong class="govuk-tag govuk-tag--green">{{ summary.amberGreen }}</strong>
+                <strong class="govuk-tag govuk-tag--grey">{{ summaryCounts.TBC }}</strong>
               </dd>
             </div>
           </dl>
         </div>
       </div>
-      
-      <h2 class="govuk-heading-m">Projects</h2>
-      
-      {% if projects and projects.length > 0 %}
-        <table class="govuk-table">
-          <thead class="govuk-table__head">
-            <tr class="govuk-table__row">
-              <th scope="col" class="govuk-table__header">Project</th>
-              <th scope="col" class="govuk-table__header">Project Status</th>
-              <th scope="col" class="govuk-table__header">{{ profession.displayName }} update</th>
-              <th scope="col" class="govuk-table__header">Commentary</th>
-              <th scope="col" class="govuk-table__header">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="govuk-table__body">
-            {% for project in projects %}
-              <tr class="govuk-table__row">
-                <td class="govuk-table__cell">
-                  <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
-                </td>
-                <td class="govuk-table__cell">
-                  {{ renderStatusTag(project.status) }}
-                </td>
-                <td class="govuk-table__cell">
-                  {% if project.professionAssessment.status == "RED" %}
-                    <strong class="govuk-tag govuk-tag--red">{{ project.professionAssessment.status }}</strong>
-                  {% elif project.professionAssessment.status == "AMBER" %}
-                    <strong class="govuk-tag govuk-tag--yellow">{{ project.professionAssessment.status }}</strong>
-                  {% elif project.professionAssessment.status == "GREEN" %}
-                    <strong class="govuk-tag govuk-tag--green">{{ project.professionAssessment.status }}</strong>
-                  {% else %}
-                    <strong class="govuk-tag govuk-tag--grey">{{ project.professionAssessment.status }}</strong>
-                  {% endif %}
-                </td>
-                <td class="govuk-table__cell">
-                  {% if project.professionAssessment.commentary %}
-                    {{ project.professionAssessment.commentary | truncate(100) }}
-                  {% else %}
-                    <em>No commentary</em>
-                  {% endif %}
-                </td>
-                <td class="govuk-table__cell">
-                  <a href="/projects/{{ project.id }}/edit?tab=professions" class="govuk-link">Add update</a>
-                </td>
-              </tr>
+    </div>
+  </div>
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h2 class="govuk-heading-m">Standards by Project</h2>
+      <table class="govuk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th class="govuk-table__header">Project</th>
+            {% for standard in standards %}
+              <th class="govuk-table__header">
+                {% if standard.number %}
+                  {{ standard.number }}: {{ standard.name }}
+                {% else %}
+                  {{ standard.name }}
+                {% endif %}
+              </th>
             {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <p class="govuk-body">No projects found with this profession update.</p>
-      {% endif %}
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for project in projects %}
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell">
+                <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
+              </td>
+              {% for standard in standards %}
+                {% set cell = matrix[standard.id][project.id] %}
+                <td class="govuk-table__cell">
+                  {% if cell.rag == 'TBC' %}
+                    <strong class="govuk-tag govuk-tag--grey">TBC</strong>
+                  {% elif cell.rag == 'AMBER' or cell.rag == 'AMBER_RED' or cell.rag == 'GREEN_AMBER' %}
+                    <strong class="govuk-tag govuk-tag--yellow">AMBER</strong>
+                  {% elif cell.rag == 'RED' %}
+                    <strong class="govuk-tag govuk-tag--red">RED</strong>
+                  {% elif cell.rag == 'GREEN' %}
+                    <strong class="govuk-tag govuk-tag--green">GREEN</strong>
+                  {% else %}
+                    <strong class="govuk-tag govuk-tag--grey">{{ cell.rag }}</strong>
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 {% endblock %}

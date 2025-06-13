@@ -1,9 +1,10 @@
 import { professionsController } from './controller.js'
 import Boom from '@hapi/boom'
 
-// Mocking dependencies
-const mockGetProfessions = jest.fn()
-const mockGetProjects = jest.fn()
+let mockGetProfessions,
+  mockGetProfessionById,
+  mockGetProjects,
+  mockGetServiceStandards
 const mockLogger = {
   info: jest.fn(),
   error: jest.fn(),
@@ -12,635 +13,624 @@ const mockLogger = {
 }
 
 jest.mock('~/src/server/services/professions.js', () => ({
-  getProfessions: (...args) => mockGetProfessions(...args)
+  getProfessions: (...args) => mockGetProfessions(...args),
+  getProfessionById: (...args) => mockGetProfessionById(...args)
 }))
-
 jest.mock('~/src/server/services/projects.js', () => ({
   getProjects: (...args) => mockGetProjects(...args)
+}))
+jest.mock('~/src/server/services/service-standards.js', () => ({
+  getServiceStandards: (...args) => mockGetServiceStandards(...args)
+}))
+
+// Use a simple filterStandardsByProfessionAndPhase for tests
+jest.mock('~/src/server/services/profession-standard-matrix.js', () => ({
+  filterStandardsByProfessionAndPhase: (allStandards) => allStandards
 }))
 
 // Mock Boom to check error handling
 jest.mock('@hapi/boom', () => ({
   boomify: jest.fn((error, options) => {
-    return {
-      ...error,
-      isBoom: true,
-      statusCode: options?.statusCode || 500
-    }
+    const boomError = new Error(error.message)
+    boomError.isBoom = true
+    boomError.statusCode = options?.statusCode || 500
+    return boomError
   })
 }))
 
 describe('Professions Controller', () => {
-  // Sample test data
-  const sampleProfessions = [
-    {
-      id: 'prof-1',
-      name: 'delivery management',
-      description: 'Delivery Management professionals'
-    },
-    {
-      id: 'prof-2',
-      name: 'software engineering',
-      description: 'Software Engineering professionals'
-    },
-    {
-      id: 'test-profession-id',
-      name: 'test profession',
-      description: 'Test profession for testing'
-    }
-  ]
-
-  const sampleProjects = [
-    {
-      id: 'project-1',
-      name: 'Project 1',
-      status: 'GREEN',
-      lastUpdated: '2023-01-01',
-      professions: [
-        {
-          professionId: 'test-profession-id',
-          status: 'RED',
-          commentary: 'Needs attention'
-        },
-        {
-          professionId: 'prof-2',
-          status: 'AMBER',
-          commentary: 'Some engineering challenges'
-        }
-      ]
-    },
-    {
-      id: 'project-2',
-      name: 'Project 2',
-      status: 'AMBER',
-      lastUpdated: '2023-01-02',
-      professions: [
-        {
-          professionId: 'test-profession-id',
-          status: 'AMBER_RED',
-          commentary: 'Some delivery issues'
-        }
-      ]
-    },
-    {
-      id: 'project-3',
-      name: 'Project 3',
-      status: 'RED',
-      lastUpdated: '2023-01-03',
-      professions: [
-        {
-          professionId: 'test-profession-id',
-          status: 'AMBER',
-          commentary: 'Minor issues'
-        }
-      ]
-    }
-  ]
-
-  // Common test objects
-  let mockH
-  let mockRequest
+  let mockH, mockRequest
 
   beforeEach(() => {
     jest.clearAllMocks()
-
-    // Set up response toolkit mock with chainable methods
+    mockGetProfessions = jest.fn()
+    mockGetProfessionById = jest.fn()
+    mockGetProjects = jest.fn()
+    mockGetServiceStandards = jest.fn()
     mockH = {
       view: jest.fn().mockReturnThis(),
       code: jest.fn().mockReturnThis()
     }
-
-    // Set up request mock
     mockRequest = {
       logger: mockLogger,
       auth: { isAuthenticated: true },
       params: { id: 'test-profession-id' }
     }
-
-    // Default mock implementations
-    mockGetProfessions.mockResolvedValue(sampleProfessions)
-    mockGetProjects.mockResolvedValue(sampleProjects)
   })
 
   describe('getAll', () => {
-    it('should return all professions with formatted display names', async () => {
-      // Act
+    it('should return formatted professions with display names', async () => {
+      const mockProfessions = [
+        { id: '1', name: 'software ENGINEER' },
+        { id: '2', name: 'data SCIENTIST' },
+        { id: '3', name: 'product MANAGER' }
+      ]
+      mockGetProfessions.mockResolvedValue(mockProfessions)
+
       await professionsController.getAll(mockRequest, mockH)
 
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith(
-        'professions/index',
-        expect.objectContaining({
-          professions: expect.arrayContaining([
-            expect.objectContaining({
-              id: 'prof-1',
-              name: 'delivery management',
-              displayName: 'Delivery Management'
-            }),
-            expect.objectContaining({
-              id: 'prof-2',
-              name: 'software engineering',
-              displayName: 'Software Engineering'
-            })
-          ])
-        })
-      )
+      expect(mockGetProfessions).toHaveBeenCalledWith(mockRequest)
+      expect(mockH.view).toHaveBeenCalledWith('professions/index', {
+        pageTitle: 'Professions',
+        heading: 'Professions',
+        professions: [
+          {
+            id: '1',
+            name: 'software ENGINEER',
+            displayName: 'Software Engineer'
+          },
+          { id: '2', name: 'data SCIENTIST', displayName: 'Data Scientist' },
+          { id: '3', name: 'product MANAGER', displayName: 'Product Manager' }
+        ],
+        isAuthenticated: true
+      })
     })
 
     it('should handle empty professions list', async () => {
-      // Arrange
       mockGetProfessions.mockResolvedValue([])
 
-      // Act
       await professionsController.getAll(mockRequest, mockH)
 
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith(
-        'professions/index',
-        expect.objectContaining({
-          professions: [],
-          message: expect.stringContaining('No professions found')
-        })
-      )
+      expect(mockH.view).toHaveBeenCalledWith('professions/index', {
+        pageTitle: 'Professions',
+        heading: 'Professions',
+        professions: [],
+        message: 'No professions found. Please contact an administrator.',
+        isAuthenticated: true
+      })
     })
 
-    it('should handle null professions response', async () => {
-      // Arrange
+    it('should handle null professions', async () => {
       mockGetProfessions.mockResolvedValue(null)
 
-      // Act
       await professionsController.getAll(mockRequest, mockH)
 
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith(
-        'professions/index',
-        expect.objectContaining({
-          professions: [],
-          message: expect.stringContaining('No professions found')
-        })
-      )
+      expect(mockH.view).toHaveBeenCalledWith('professions/index', {
+        pageTitle: 'Professions',
+        heading: 'Professions',
+        professions: [],
+        message: 'No professions found. Please contact an administrator.',
+        isAuthenticated: true
+      })
+    })
+
+    it('should handle profession with no name', async () => {
+      const mockProfessions = [
+        { id: '1', name: null },
+        { id: '2', name: '' },
+        { id: '3' } // no name property
+      ]
+      mockGetProfessions.mockResolvedValue(mockProfessions)
+
+      await professionsController.getAll(mockRequest, mockH)
+
+      expect(mockH.view).toHaveBeenCalledWith('professions/index', {
+        pageTitle: 'Professions',
+        heading: 'Professions',
+        professions: [
+          { id: '1', name: null, displayName: 'Unknown' },
+          { id: '2', name: '', displayName: 'Unknown' },
+          { id: '3', displayName: 'Unknown' }
+        ],
+        isAuthenticated: true
+      })
+    })
+
+    it('should handle unauthenticated users', async () => {
+      mockRequest.auth.isAuthenticated = false
+      mockGetProfessions.mockResolvedValue([])
+
+      await professionsController.getAll(mockRequest, mockH)
+
+      expect(mockH.view).toHaveBeenCalledWith('professions/index', {
+        pageTitle: 'Professions',
+        heading: 'Professions',
+        professions: [],
+        message: 'No professions found. Please contact an administrator.',
+        isAuthenticated: false
+      })
     })
 
     it('should handle API errors', async () => {
-      // Arrange
-      const testError = new Error('API failure')
-      mockGetProfessions.mockRejectedValue(testError)
+      const error = new Error('API Error')
+      mockGetProfessions.mockRejectedValue(error)
 
-      // Act & Assert
       await expect(
         professionsController.getAll(mockRequest, mockH)
-      ).rejects.toHaveProperty('isBoom', true)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        statusCode: 500
+      })
 
-      expect(mockLogger.error).toHaveBeenCalled()
-      expect(Boom.boomify).toHaveBeenCalledWith(testError, { statusCode: 500 })
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error fetching professions'
+      )
+      expect(Boom.boomify).toHaveBeenCalledWith(error, { statusCode: 500 })
     })
   })
 
   describe('get', () => {
-    it('should return profession details with projects', async () => {
-      // Act
-      await professionsController.get(mockRequest, mockH)
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith(
-        'professions/detail',
-        expect.objectContaining({
-          pageTitle: 'Test Profession overview',
-          heading: 'Test Profession',
-          profession: expect.objectContaining({
-            id: 'test-profession-id',
-            name: 'test profession',
-            displayName: 'Test Profession'
-          }),
-          projects: expect.arrayContaining([
-            expect.objectContaining({
-              id: 'project-1',
-              name: 'Project 1',
-              professionAssessment: expect.objectContaining({
-                status: 'RED',
-                commentary: 'Needs attention'
-              })
-            })
-          ]),
-          summary: expect.objectContaining({
-            total: 3,
-            red: 1,
-            amberRed: 1,
-            amber: 1,
-            amberGreen: 0,
-            green: 0,
-            notUpdated: 0
-          })
-        })
-      )
-    })
-
-    it('should sort projects based on the profession status', async () => {
-      // Arrange - projects should be sorted by status (RED first, then AMBER_RED, etc.)
-      const expectedOrder = [
-        expect.objectContaining({
-          id: 'project-1',
-          professionAssessment: expect.objectContaining({ status: 'RED' })
-        }),
-        expect.objectContaining({
-          id: 'project-2',
-          professionAssessment: expect.objectContaining({ status: 'AMBER_RED' })
-        }),
-        expect.objectContaining({
-          id: 'project-3',
-          professionAssessment: expect.objectContaining({ status: 'AMBER' })
-        })
-      ]
-
-      // Act
-      await professionsController.get(mockRequest, mockH)
-
-      // Assert
-      const viewArgs = mockH.view.mock.calls[0][1]
-      expect(viewArgs.projects).toEqual(expectedOrder)
-    })
-
-    it('should handle profession not found', async () => {
-      // Arrange
-      mockGetProfessions.mockResolvedValue([])
-
-      // Act
-      await professionsController.get(mockRequest, mockH)
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith('errors/not-found', {
-        pageTitle: 'Profession Not Found'
-      })
-      expect(mockH.view().code).toHaveBeenCalledWith(404)
-    })
-
-    it('should handle projects with missing professions array', async () => {
-      // Arrange
-      mockGetProjects.mockResolvedValue([
-        { id: 'project-1', name: 'Project 1' } // No professions array
-      ])
-
-      // Act
-      await professionsController.get(mockRequest, mockH)
-
-      // Assert
-      const viewArgs = mockH.view.mock.calls[0][1]
-      expect(viewArgs.projects).toEqual([])
-    })
-
-    it('should handle projects with no matching profession assessments', async () => {
-      // Arrange
-      mockGetProjects.mockResolvedValue([
-        {
-          id: 'project-1',
-          name: 'Project 1',
-          professions: [
-            { professionId: 'different-profession-id', status: 'GREEN' }
-          ]
-        }
-      ])
-
-      // Act
-      await professionsController.get(mockRequest, mockH)
-
-      // Assert
-      // Get the arguments from the view call
-      const viewArgs = mockH.view.mock.calls[0][1]
-      expect(viewArgs.projects).toEqual([])
-    })
-
-    it('should handle API errors', async () => {
-      // Arrange
-      const testError = new Error('API Error')
-      mockGetProfessions.mockRejectedValue(testError)
-
-      // Act & Assert
-      await expect(
-        professionsController.get(mockRequest, mockH)
-      ).rejects.toHaveProperty('isBoom', true)
-
-      expect(mockLogger.error).toHaveBeenCalled()
-      expect(Boom.boomify).toHaveBeenCalledWith(testError, { statusCode: 500 })
-    })
-
-    it('should handle errors when fetching projects', async () => {
-      // Arrange
-      mockGetProjects.mockRejectedValue(new Error('Projects API Error'))
-
-      // Act & Assert
-      await expect(
-        professionsController.get(mockRequest, mockH)
-      ).rejects.toHaveProperty('isBoom', true)
-
-      expect(mockLogger.error).toHaveBeenCalled()
-    })
-  })
-
-  describe('Helper functions and edge cases', () => {
-    describe('formatDisplayName', () => {
-      it('should handle null or undefined names', async () => {
-        // This tests the formatDisplayName function indirectly
-        mockGetProfessions.mockResolvedValue([
-          { id: 'prof-1', name: null },
-          { id: 'prof-2', name: undefined },
-          { id: 'prof-3', name: '' }
-        ])
-
-        // Act
-        await professionsController.getAll(mockRequest, mockH)
-
-        // Assert - should handle null/undefined names gracefully
-        expect(mockH.view).toHaveBeenCalledWith(
-          'professions/index',
-          expect.objectContaining({
-            professions: expect.arrayContaining([
-              expect.objectContaining({
-                id: 'prof-1',
-                displayName: 'Unknown'
-              }),
-              expect.objectContaining({
-                id: 'prof-2',
-                displayName: 'Unknown'
-              })
-            ])
-          })
-        )
-      })
-    })
-
-    describe('processProfessionAssessments', () => {
-      it('should handle projects with null professions array', async () => {
-        // Arrange
-        const projectsWithNullProfessions = [
-          { id: 'project-1', name: 'Project 1', professions: null },
-          { id: 'project-2', name: 'Project 2', professions: undefined }
-        ]
-        mockGetProjects.mockResolvedValue(projectsWithNullProfessions)
-
-        // Act
-        await professionsController.get(mockRequest, mockH)
-
-        // Assert
-        const viewArgs = mockH.view.mock.calls[0][1]
-        expect(viewArgs.projects).toEqual([])
-        expect(viewArgs.summary.total).toBe(0)
-      })
-
-      it('should handle professions with different status values', async () => {
-        // Arrange
-        const projectsWithVariousStatuses = [
+    const mockProfession = {
+      id: 'test-profession-id',
+      name: 'Software Engineer'
+    }
+    const mockProjects = [
+      {
+        id: 'project-1',
+        name: 'Project One',
+        phase: 'DISCOVERY',
+        standardsSummary: [
           {
-            id: 'project-1',
-            name: 'Project 1',
+            standardId: 'standard-1',
             professions: [
-              { professionId: 'test-profession-id', status: 'GREEN' }
+              {
+                professionId: 'test-profession-id',
+                status: 'GREEN',
+                commentary: 'All good'
+              }
             ]
           },
           {
-            id: 'project-2',
-            name: 'Project 2',
-            professions: [
-              { professionId: 'test-profession-id', status: 'GREEN_AMBER' }
-            ]
-          },
-          {
-            id: 'project-3',
-            name: 'Project 3',
-            professions: [
-              { professionId: 'test-profession-id', status: 'UNKNOWN_STATUS' }
-            ]
-          }
-        ]
-        mockGetProjects.mockResolvedValue(projectsWithVariousStatuses)
-
-        // Act
-        await professionsController.get(mockRequest, mockH)
-
-        // Assert
-        const viewArgs = mockH.view.mock.calls[0][1]
-        expect(viewArgs.summary).toEqual({
-          total: 3,
-          red: 0,
-          amberRed: 0,
-          amber: 0,
-          amberGreen: 1,
-          green: 1,
-          notUpdated: 1 // UNKNOWN_STATUS falls into this category
-        })
-      })
-    })
-
-    describe('buildRelevantProjects sorting', () => {
-      it('should sort projects by status priority correctly', async () => {
-        // Arrange
-        const projectsForSorting = [
-          {
-            id: 'project-green',
-            name: 'Green Project',
-            professions: [
-              { professionId: 'test-profession-id', status: 'GREEN' }
-            ]
-          },
-          {
-            id: 'project-red',
-            name: 'Red Project',
-            professions: [{ professionId: 'test-profession-id', status: 'RED' }]
-          },
-          {
-            id: 'project-amber',
-            name: 'Amber Project',
-            professions: [
-              { professionId: 'test-profession-id', status: 'AMBER' }
-            ]
-          },
-          {
-            id: 'project-tbc',
-            name: 'TBC Project',
-            professions: [{ professionId: 'test-profession-id', status: 'TBC' }]
-          }
-        ]
-        mockGetProjects.mockResolvedValue(projectsForSorting)
-
-        // Act
-        await professionsController.get(mockRequest, mockH)
-
-        // Assert
-        const viewArgs = mockH.view.mock.calls[0][1]
-        const projectOrder = viewArgs.projects.map((p) => p.id)
-
-        // Should be sorted: RED (0), AMBER (2), GREEN (4), TBC (5)
-        expect(projectOrder).toEqual([
-          'project-red',
-          'project-amber',
-          'project-green',
-          'project-tbc'
-        ])
-      })
-    })
-
-    describe('Authentication scenarios', () => {
-      it('should handle unauthenticated users in getAll', async () => {
-        // Arrange
-        const unauthenticatedRequest = {
-          ...mockRequest,
-          auth: { isAuthenticated: false }
-        }
-
-        // Act
-        await professionsController.getAll(unauthenticatedRequest, mockH)
-
-        // Assert
-        expect(mockH.view).toHaveBeenCalledWith(
-          'professions/index',
-          expect.objectContaining({
-            isAuthenticated: false
-          })
-        )
-      })
-
-      it('should handle unauthenticated users in get', async () => {
-        // Arrange
-        const unauthenticatedRequest = {
-          ...mockRequest,
-          auth: { isAuthenticated: false }
-        }
-
-        // Act
-        await professionsController.get(unauthenticatedRequest, mockH)
-
-        // Assert
-        expect(mockH.view).toHaveBeenCalledWith(
-          'professions/detail',
-          expect.objectContaining({
-            isAuthenticated: false
-          })
-        )
-      })
-    })
-
-    describe('Error boundary cases', () => {
-      it('should handle malformed profession data', async () => {
-        // Arrange
-        const malformedProfessions = [
-          { id: 'prof-1' }, // Missing name
-          { name: 'test profession' }, // Missing id
-          { id: 'prof-3', name: 'valid profession' }
-        ]
-        mockGetProfessions.mockResolvedValue(malformedProfessions)
-
-        // Act
-        await professionsController.getAll(mockRequest, mockH)
-
-        // Assert - should not crash and handle gracefully
-        expect(mockH.view).toHaveBeenCalled()
-      })
-
-      it('should handle concurrent API failures', async () => {
-        // Arrange
-        mockGetProfessions.mockRejectedValue(new Error('Professions API Error'))
-        mockGetProjects.mockRejectedValue(new Error('Projects API Error'))
-
-        // Act & Assert
-        await expect(
-          professionsController.get(mockRequest, mockH)
-        ).rejects.toHaveProperty('isBoom', true)
-
-        // Should log the error from the profession fetch failure
-        expect(mockLogger.error).toHaveBeenCalled()
-      })
-
-      it('should handle large datasets efficiently', async () => {
-        // Arrange
-        const largeProfessionsList = Array.from({ length: 100 }, (_, i) => ({
-          id: `prof-${i}`,
-          name: `profession ${i}`,
-          description: `Description for profession ${i}`
-        }))
-        mockGetProfessions.mockResolvedValue(largeProfessionsList)
-
-        // Act
-        await professionsController.getAll(mockRequest, mockH)
-
-        // Assert
-        expect(mockH.view).toHaveBeenCalledWith(
-          'professions/index',
-          expect.objectContaining({
-            professions: expect.arrayContaining([
-              expect.objectContaining({
-                displayName: expect.any(String)
-              })
-            ])
-          })
-        )
-
-        const viewArgs = mockH.view.mock.calls[0][1]
-        expect(viewArgs.professions).toHaveLength(100)
-      })
-    })
-
-    describe('Complex project scenarios', () => {
-      it('should handle projects with multiple professions including target', async () => {
-        // Arrange
-        const complexProjects = [
-          {
-            id: 'multi-prof-project',
-            name: 'Multi Profession Project',
+            standardId: 'standard-2',
             professions: [
               {
                 professionId: 'test-profession-id',
                 status: 'RED',
-                commentary: 'Target profession'
-              },
-              {
-                professionId: 'other-prof-1',
-                status: 'GREEN',
-                commentary: 'Other profession 1'
-              },
-              {
-                professionId: 'other-prof-2',
-                status: 'AMBER',
-                commentary: 'Other profession 2'
+                commentary: 'Needs work'
               }
             ]
           }
         ]
-        mockGetProjects.mockResolvedValue(complexProjects)
-
-        // Act
-        await professionsController.get(mockRequest, mockH)
-
-        // Assert
-        const viewArgs = mockH.view.mock.calls[0][1]
-        expect(viewArgs.projects).toHaveLength(1)
-        expect(viewArgs.projects[0].professionAssessment).toEqual({
-          professionId: 'test-profession-id',
-          status: 'RED',
-          commentary: 'Target profession'
-        })
-        expect(viewArgs.summary.total).toBe(1)
-        expect(viewArgs.summary.red).toBe(1)
-      })
-
-      it('should handle projects with empty profession assessment', async () => {
-        // Arrange
-        const projectsWithEmptyAssessments = [
+      },
+      {
+        id: 'project-2',
+        name: 'Project Two',
+        phase: 'ALPHA',
+        standardsSummary: [
           {
-            id: 'empty-project',
-            name: 'Empty Assessment Project',
+            standardId: 'standard-1',
             professions: [
-              { professionId: 'test-profession-id', status: '', commentary: '' }
+              {
+                professionId: 'test-profession-id',
+                status: 'AMBER',
+                commentary: 'In progress'
+              }
             ]
           }
         ]
-        mockGetProjects.mockResolvedValue(projectsWithEmptyAssessments)
+      }
+    ]
+    const mockStandards = [
+      { id: 'standard-1', name: 'Standard One', number: 1 },
+      { id: 'standard-2', name: 'Standard Two', number: 2 }
+    ]
 
-        // Act
-        await professionsController.get(mockRequest, mockH)
+    it('should return profession details with standards x projects matrix and summary', async () => {
+      mockGetProfessionById.mockResolvedValue(mockProfession)
+      mockGetProjects.mockResolvedValue(mockProjects)
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
 
-        // Assert
-        const viewArgs = mockH.view.mock.calls[0][1]
-        expect(viewArgs.summary.notUpdated).toBe(1)
+      await professionsController.get(mockRequest, mockH)
+
+      expect(mockGetProfessionById).toHaveBeenCalledWith(
+        'test-profession-id',
+        mockRequest
+      )
+      expect(mockGetProjects).toHaveBeenCalledWith(mockRequest)
+      expect(mockGetServiceStandards).toHaveBeenCalledWith(mockRequest)
+
+      expect(mockH.view).toHaveBeenCalledWith('professions/detail', {
+        pageTitle: 'Software Engineer overview',
+        heading: 'Software Engineer',
+        profession: mockProfession,
+        projects: mockProjects,
+        standards: mockStandards,
+        matrix: {
+          'standard-1': {
+            'project-1': { rag: 'GREEN', commentary: 'All good' },
+            'project-2': { rag: 'AMBER', commentary: 'In progress' }
+          },
+          'standard-2': {
+            'project-1': { rag: 'RED', commentary: 'Needs work' },
+            'project-2': { rag: 'TBC', commentary: '' }
+          }
+        },
+        summaryCounts: { RED: 1, AMBER: 1, GREEN: 1, TBC: 1 },
+        isAuthenticated: true
       })
+    })
+
+    it('should handle no standards for profession', async () => {
+      mockGetProfessionById.mockResolvedValue(mockProfession)
+      mockGetProjects.mockResolvedValue(mockProjects)
+      mockGetServiceStandards.mockResolvedValue([])
+
+      await professionsController.get(mockRequest, mockH)
+
+      expect(mockH.view).toHaveBeenCalledWith('professions/detail', {
+        pageTitle: 'Software Engineer overview',
+        heading: 'Software Engineer',
+        profession: mockProfession,
+        projects: mockProjects,
+        standards: [],
+        matrix: {},
+        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, TBC: 0 },
+        isAuthenticated: true
+      })
+    })
+
+    it('should handle profession not found', async () => {
+      mockGetProfessionById.mockResolvedValue(null)
+      mockGetProjects.mockResolvedValue(mockProjects)
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
+
+      await expect(
+        professionsController.get(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        statusCode: 404
+      })
+
+      expect(mockLogger.error).toHaveBeenCalledWith('Profession not found')
+      expect(Boom.boomify).toHaveBeenCalledWith(expect.any(Error), {
+        statusCode: 404
+      })
+    })
+
+    it('should handle API errors', async () => {
+      const error = new Error('API Error')
+      mockGetProfessionById.mockRejectedValue(error)
+
+      await expect(
+        professionsController.get(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        statusCode: 500
+      })
+
+      expect(mockLogger.error).toHaveBeenCalledWith(error)
+      expect(Boom.boomify).toHaveBeenCalledWith(error, { statusCode: 500 })
+    })
+
+    it('should handle projects with missing standardsSummary', async () => {
+      const projectsWithoutSummary = [
+        { id: 'project-1', name: 'Project One', phase: 'DISCOVERY' },
+        {
+          id: 'project-2',
+          name: 'Project Two',
+          phase: 'ALPHA',
+          standardsSummary: null
+        },
+        {
+          id: 'project-3',
+          name: 'Project Three',
+          phase: 'BETA',
+          standardsSummary: 'invalid'
+        }
+      ]
+
+      mockGetProfessionById.mockResolvedValue(mockProfession)
+      mockGetProjects.mockResolvedValue(projectsWithoutSummary)
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
+
+      await professionsController.get(mockRequest, mockH)
+
+      expect(mockH.view).toHaveBeenCalledWith('professions/detail', {
+        pageTitle: 'Software Engineer overview',
+        heading: 'Software Engineer',
+        profession: mockProfession,
+        projects: projectsWithoutSummary,
+        standards: mockStandards,
+        matrix: {
+          'standard-1': {
+            'project-1': { rag: 'TBC', commentary: '' },
+            'project-2': { rag: 'TBC', commentary: '' },
+            'project-3': { rag: 'TBC', commentary: '' }
+          },
+          'standard-2': {
+            'project-1': { rag: 'TBC', commentary: '' },
+            'project-2': { rag: 'TBC', commentary: '' },
+            'project-3': { rag: 'TBC', commentary: '' }
+          }
+        },
+        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, TBC: 6 },
+        isAuthenticated: true
+      })
+    })
+
+    it('should handle standards with missing professions array', async () => {
+      const projectsWithInvalidProfessions = [
+        {
+          id: 'project-1',
+          name: 'Project One',
+          phase: 'DISCOVERY',
+          standardsSummary: [
+            {
+              standardId: 'standard-1',
+              professions: null
+            },
+            {
+              standardId: 'standard-2',
+              professions: 'invalid'
+            },
+            {
+              standardId: 'standard-3'
+              // no professions property
+            }
+          ]
+        }
+      ]
+
+      mockGetProfessionById.mockResolvedValue(mockProfession)
+      mockGetProjects.mockResolvedValue(projectsWithInvalidProfessions)
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
+
+      await professionsController.get(mockRequest, mockH)
+
+      expect(mockH.view).toHaveBeenCalledWith('professions/detail', {
+        pageTitle: 'Software Engineer overview',
+        heading: 'Software Engineer',
+        profession: mockProfession,
+        projects: projectsWithInvalidProfessions,
+        standards: mockStandards,
+        matrix: {
+          'standard-1': {
+            'project-1': { rag: 'TBC', commentary: '' }
+          },
+          'standard-2': {
+            'project-1': { rag: 'TBC', commentary: '' }
+          }
+        },
+        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, TBC: 2 },
+        isAuthenticated: true
+      })
+    })
+
+    it('should handle projects with no matching profession assessments', async () => {
+      const projectsWithOtherProfessions = [
+        {
+          id: 'project-1',
+          name: 'Project One',
+          phase: 'DISCOVERY',
+          standardsSummary: [
+            {
+              standardId: 'standard-1',
+              professions: [
+                {
+                  professionId: 'other-profession-id',
+                  status: 'GREEN',
+                  commentary: 'Different profession'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+
+      mockGetProfessionById.mockResolvedValue(mockProfession)
+      mockGetProjects.mockResolvedValue(projectsWithOtherProfessions)
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
+
+      await professionsController.get(mockRequest, mockH)
+
+      expect(mockH.view).toHaveBeenCalledWith('professions/detail', {
+        pageTitle: 'Software Engineer overview',
+        heading: 'Software Engineer',
+        profession: mockProfession,
+        projects: projectsWithOtherProfessions,
+        standards: mockStandards,
+        matrix: {
+          'standard-1': {
+            'project-1': { rag: 'TBC', commentary: '' }
+          },
+          'standard-2': {
+            'project-1': { rag: 'TBC', commentary: '' }
+          }
+        },
+        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, TBC: 2 },
+        isAuthenticated: true
+      })
+    })
+
+    it('should handle unauthenticated users in get', async () => {
+      mockRequest.auth.isAuthenticated = false
+      mockGetProfessionById.mockResolvedValue(mockProfession)
+      mockGetProjects.mockResolvedValue(mockProjects)
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
+
+      await professionsController.get(mockRequest, mockH)
+
+      expect(mockH.view).toHaveBeenCalledWith(
+        'professions/detail',
+        expect.objectContaining({
+          isAuthenticated: false
+        })
+      )
+    })
+
+    it('should handle projects with multiple professions including target', async () => {
+      const projectsWithMultipleProfessions = [
+        {
+          id: 'project-1',
+          name: 'Project One',
+          phase: 'DISCOVERY',
+          standardsSummary: [
+            {
+              standardId: 'standard-1',
+              professions: [
+                {
+                  professionId: 'other-profession-id',
+                  status: 'RED',
+                  commentary: 'Other profession assessment'
+                },
+                {
+                  professionId: 'test-profession-id',
+                  status: 'GREEN',
+                  commentary: 'Target profession assessment'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+
+      mockGetProfessionById.mockResolvedValue(mockProfession)
+      mockGetProjects.mockResolvedValue(projectsWithMultipleProfessions)
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
+
+      await professionsController.get(mockRequest, mockH)
+
+      expect(mockH.view).toHaveBeenCalledWith(
+        'professions/detail',
+        expect.objectContaining({
+          matrix: {
+            'standard-1': {
+              'project-1': {
+                rag: 'GREEN',
+                commentary: 'Target profession assessment'
+              }
+            },
+            'standard-2': {
+              'project-1': { rag: 'TBC', commentary: '' }
+            }
+          },
+          summaryCounts: { RED: 0, AMBER: 0, GREEN: 1, TBC: 1 }
+        })
+      )
+    })
+
+    it('should handle projects with empty profession assessment', async () => {
+      const projectsWithEmptyAssessment = [
+        {
+          id: 'project-1',
+          name: 'Project One',
+          phase: 'DISCOVERY',
+          standardsSummary: [
+            {
+              standardId: 'standard-1',
+              professions: [
+                {
+                  professionId: 'test-profession-id'
+                  // no status or commentary
+                }
+              ]
+            }
+          ]
+        }
+      ]
+
+      mockGetProfessionById.mockResolvedValue(mockProfession)
+      mockGetProjects.mockResolvedValue(projectsWithEmptyAssessment)
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
+
+      await professionsController.get(mockRequest, mockH)
+
+      expect(mockH.view).toHaveBeenCalledWith(
+        'professions/detail',
+        expect.objectContaining({
+          matrix: {
+            'standard-1': {
+              'project-1': { rag: 'TBC', commentary: '' }
+            },
+            'standard-2': {
+              'project-1': { rag: 'TBC', commentary: '' }
+            }
+          },
+          summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, TBC: 2 }
+        })
+      )
+    })
+
+    it('should correctly map 5-RAG system to 3-RAG summary counts', async () => {
+      const projectsWith5RagStatuses = [
+        {
+          id: 'project-1',
+          name: 'Project One',
+          phase: 'DISCOVERY',
+          standardsSummary: [
+            {
+              standardId: 'standard-1',
+              professions: [
+                {
+                  professionId: 'test-profession-id',
+                  status: 'RED',
+                  commentary: 'Red status'
+                }
+              ]
+            },
+            {
+              standardId: 'standard-2',
+              professions: [
+                {
+                  professionId: 'test-profession-id',
+                  status: 'AMBER_RED',
+                  commentary: 'Amber-red status'
+                }
+              ]
+            }
+          ]
+        },
+        {
+          id: 'project-2',
+          name: 'Project Two',
+          phase: 'ALPHA',
+          standardsSummary: [
+            {
+              standardId: 'standard-1',
+              professions: [
+                {
+                  professionId: 'test-profession-id',
+                  status: 'GREEN_AMBER',
+                  commentary: 'Green-amber status'
+                }
+              ]
+            },
+            {
+              standardId: 'standard-2',
+              professions: [
+                {
+                  professionId: 'test-profession-id',
+                  status: 'GREEN',
+                  commentary: 'Green status'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+
+      mockGetProfessionById.mockResolvedValue(mockProfession)
+      mockGetProjects.mockResolvedValue(projectsWith5RagStatuses)
+      mockGetServiceStandards.mockResolvedValue(mockStandards)
+
+      await professionsController.get(mockRequest, mockH)
+
+      expect(mockH.view).toHaveBeenCalledWith(
+        'professions/detail',
+        expect.objectContaining({
+          summaryCounts: { RED: 1, AMBER: 2, GREEN: 1, TBC: 0 }
+        })
+      )
     })
   })
 })

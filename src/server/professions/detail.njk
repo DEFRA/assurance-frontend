@@ -25,10 +25,12 @@
 {% endmacro %}
 
 {% block beforeContent %}
-  {{ govukBackLink({
-    text: "Back to all professions",
-    href: "/professions"
-  }) }}
+  <nav aria-label="Back navigation">
+    {{ govukBackLink({
+      text: "Back to all professions",
+      href: "/professions"
+    }) }}
+  </nav>
 {% endblock %}
 
 {% block content %}

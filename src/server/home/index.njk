@@ -41,8 +41,6 @@
         </p>
       {% endif %}
 
-      <p class="govuk-body">{{ description }}</p>
-
       {% if projects and projects.length > 0 %}
         {% set tableRows = [] %}
         {% for project in projects %}
@@ -58,6 +56,8 @@
         {% endfor %}
 
         {{ govukTable({
+          caption: "List of projects and their current status",
+          captionClasses: "govuk-visually-hidden",
           head: [
             {
               text: "Project name"

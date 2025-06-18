@@ -17,8 +17,7 @@
         href: "/"
       },
       {
-        text: project.name,
-        href: "/projects/" + project.id
+        text: project.name
       },
       {
         text: "Manage project",
@@ -33,7 +32,7 @@
 
 {% block content %}
   <h1 class="govuk-heading-xl">Update Project Status and Commentary</h1>
-  <p class="govuk-body-l">{{ project.name }}</p>
+  <h2 class="govuk-heading-l govuk-!-margin-bottom-6">{{ project.name }}</h2>
   
   {% if errorMessage %}
     {{ govukErrorSummary({

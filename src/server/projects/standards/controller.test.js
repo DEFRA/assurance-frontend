@@ -1195,6 +1195,46 @@ describe('Standards Controller', () => {
       )
       expect(result).toBe('redirect-response')
     })
+
+    test('should redirect when standard found but profession not found', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue([]) // No professions
+      getServiceStandards.mockResolvedValue(mockServiceStandards) // Standards exist
+      getAssessmentHistory.mockResolvedValue(mockAssessmentHistory)
+
+      // Act
+      const result = await standardsController.getArchiveAssessment(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        `/projects/project-123?notification=${NOTIFICATIONS.STANDARD_OR_PROFESSION_NOT_FOUND}`
+      )
+      expect(result).toBe('redirect-response')
+    })
+
+    test('should redirect when profession found but standard not found', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions) // Professions exist
+      getServiceStandards.mockResolvedValue([]) // No standards
+      getAssessmentHistory.mockResolvedValue(mockAssessmentHistory)
+
+      // Act
+      const result = await standardsController.getArchiveAssessment(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        `/projects/project-123?notification=${NOTIFICATIONS.STANDARD_OR_PROFESSION_NOT_FOUND}`
+      )
+      expect(result).toBe('redirect-response')
+    })
   })
 
   describe('postArchiveAssessment', () => {

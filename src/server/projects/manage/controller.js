@@ -95,6 +95,8 @@ function createPhaseOptions(selectedPhase = '') {
   phaseOptions.forEach((option) => {
     if (option.value === selectedPhase) {
       option.selected = true
+    } else {
+      option.selected = false // Explicitly set false for non-selected options
     }
   })
 
@@ -531,7 +533,7 @@ export const manageController = {
           LOG_MESSAGES.FAILED_TO_UPDATE_PROJECT_DETAILS
         )
 
-        const phaseOptions = createPhaseOptions()
+        const phaseOptions = createPhaseOptions(phase)
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
           pageTitle: `Update Project Details | ${project.name}`,

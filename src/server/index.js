@@ -108,11 +108,8 @@ export async function createServer() {
         `Auth state for ${currentPath}: ${isAuthenticated ? 'authenticated' : 'not authenticated'}, admin: ${isAdmin}`
       )
 
-      // Create the navigation with auth status
-      const nav = navigation(
-        { isAuthenticated, isAdmin, credentials },
-        currentPath
-      )
+      // Create the navigation
+      const nav = navigation()
 
       // Update response context with consistent auth data
       response.source.context = {

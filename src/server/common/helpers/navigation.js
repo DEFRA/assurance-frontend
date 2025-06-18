@@ -1,18 +1,12 @@
 /**
- * Builds the navigation structure based on current path
- * @param {object} auth - The authentication state object
- * @param {boolean} auth.isAuthenticated - Whether the user is authenticated
- * @param {string} [currentPath] - The current request path (for active state)
+ * Builds the navigation structure
  * @returns {object} Navigation items organized by section
  */
-export const navigation = (auth, currentPath = '') => {
+export const navigation = () => {
   return {
     primary: [
-      {
-        text: 'Home',
-        url: '/',
-        isActive: currentPath === '/'
-      }
+      // Home link removed to avoid redundant navigation with service name link in header
+      // The service name in the header already provides navigation to the home page
     ]
   }
 }

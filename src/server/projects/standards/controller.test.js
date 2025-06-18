@@ -339,6 +339,22 @@ describe('Standards Controller', () => {
       // Assert
       expect(getStandardHistory).toHaveBeenCalledWith('1', 'std-1', mockRequest)
     })
+
+    test('should handle error when fetching standard detail data', async () => {
+      // Arrange
+      getProjectById.mockRejectedValue(new Error('Database error'))
+
+      // Act & Assert
+      await expect(
+        standardsController.getStandardDetail(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Error loading standard detail'
+      )
+    })
   })
 
   describe('getStandardHistory', () => {
@@ -406,6 +422,19 @@ describe('Standards Controller', () => {
         `/projects/project-123?notification=${NOTIFICATIONS.STANDARD_NOT_FOUND}`
       )
       expect(result).toBe('redirect-response')
+    })
+
+    test('should handle error when fetching standard history data', async () => {
+      // Arrange
+      getProjectById.mockRejectedValue(new Error('Database error'))
+
+      // Act & Assert
+      await expect(
+        standardsController.getStandardHistory(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(expect.any(Error))
     })
   })
 
@@ -1145,6 +1174,26 @@ describe('Standards Controller', () => {
       ).rejects.toMatchObject({
         isBoom: true
       })
+    })
+
+    test('should redirect when neither standard nor profession found', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue([]) // No professions
+      getServiceStandards.mockResolvedValue([]) // No standards
+      getAssessmentHistory.mockResolvedValue(mockAssessmentHistory)
+
+      // Act
+      const result = await standardsController.getArchiveAssessment(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        `/projects/project-123?notification=${NOTIFICATIONS.STANDARD_OR_PROFESSION_NOT_FOUND}`
+      )
+      expect(result).toBe('redirect-response')
     })
   })
 

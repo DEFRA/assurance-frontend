@@ -4,7 +4,7 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_assurance-frontend&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=DEFRA_assurance-frontend)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_assurance-frontend&metric=coverage)](https://sonarcloud.io/summary/new_code?id=DEFRA_assurance-frontend)
 
-Core delivery platform Node.js Frontend Template.
+Assurance frontend from the Core delivery platform Node.js Frontend Template.
 
 - [Requirements](#requirements)
   - [Node.js](#nodejs)
@@ -79,6 +79,16 @@ return await fetch(url, {
   })
 })
 ```
+
+### Authed Fetch
+
+Fetch from undici is extended to make authenticated API requests using the request's auth to make use of this call `authedFetchJsonDecorator`.
+
+## Configuration
+
+The assurance application is integrated with Entra ID, in order to sign-in the following configuations must be set `AZURE_TENANT_ID` `AZURE_CLIENT_ID` `AZURE_CLIENT_SECRET`
+
+> To test this in docker compose you need to set `AZURE_CLIENT_SECRET` in your environment variables and add this to docker compose.
 
 ## Local Development
 

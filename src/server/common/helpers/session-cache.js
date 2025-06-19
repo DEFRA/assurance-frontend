@@ -10,6 +10,7 @@ export const plugin = {
   register: async (server) => {
     // Create session cache
     const sessionCache = server.cache({
+      cache: config.get('session.cache.name'),
       segment: 'sessions',
       expiresIn: config.get('session.cache.ttl'),
       shared: true

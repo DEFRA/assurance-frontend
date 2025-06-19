@@ -177,7 +177,7 @@ export const plugin = {
         path: '/',
         isHttpOnly: true,
         isSameSite: 'Lax',
-        clearInvalid: false 
+        clearInvalid: true
       },
       redirectTo: false,
       validate: async (request, session) => {

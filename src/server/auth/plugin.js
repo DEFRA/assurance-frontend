@@ -177,7 +177,7 @@ export const plugin = {
         path: '/',
         isHttpOnly: true,
         isSameSite: 'Lax',
-        clearInvalid: false // ✅ Make cookie errors visible for debugging
+        clearInvalid: false 
       },
       redirectTo: false,
       validate: async (request, session) => {

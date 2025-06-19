@@ -486,8 +486,7 @@ describe('Manage Controller', () => {
           values: mockRequest.payload,
           errors: {
             name: true,
-            phase: true,
-            defCode: true
+            phase: true
           },
           errorMessage: 'Please fill in all required fields'
         })

@@ -503,7 +503,7 @@ export const manageController = {
       }
 
       // Validate required fields
-      if (!name || !phase || !defCode) {
+      if (!name || !phase) {
         const phaseOptions = createPhaseOptions(phase)
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
@@ -513,8 +513,7 @@ export const manageController = {
           values: request.payload,
           errors: {
             name: !name,
-            phase: !phase,
-            defCode: !defCode
+            phase: !phase
           },
           errorMessage: 'Please fill in all required fields'
         })

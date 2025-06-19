@@ -137,7 +137,8 @@ export const plugin = {
     // Setup cache for temporary auth state
     const authStateCache = server.cache({
       segment: 'auth:state',
-      expiresIn: 10 * 60 * 1000 // 10 minutes
+      expiresIn: 10 * 60 * 1000, // 10 minutes
+      shared: true
     })
 
     // Setup Azure AD OIDC Issuer and Client

@@ -136,6 +136,7 @@ export const plugin = {
 
     // Setup cache for temporary auth state
     const authStateCache = server.cache({
+      cache: 'session', // ✅ Use the named Redis cache provider
       segment: 'auth:state',
       expiresIn: 10 * 60 * 1000, // 10 minutes
       shared: true

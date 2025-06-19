@@ -136,6 +136,7 @@ export const plugin = {
 
     // Setup cache for temporary auth state
     const authStateCache = server.cache({
+      cache: 'session', // ✅ Use the named Redis cache provider
       segment: 'auth:state',
       expiresIn: 10 * 60 * 1000, // 10 minutes
       shared: true
@@ -176,8 +177,7 @@ export const plugin = {
         path: '/',
         isHttpOnly: true,
         isSameSite: 'Lax',
-        clearInvalid: true,
-        ignoreErrors: true
+        clearInvalid: false // ✅ Make cookie errors visible for debugging
       },
       redirectTo: false,
       validate: async (request, session) => {

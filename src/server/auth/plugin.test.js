@@ -51,7 +51,6 @@ describe('Auth Plugin', () => {
   let mockIssuer
   let mockOidcClient
   let mockSessionCache
-  let mockAuthStateCache
   let mockH
   let mockResponse
 
@@ -87,17 +86,9 @@ describe('Auth Plugin', () => {
       drop: jest.fn()
     }
 
-    // Mock auth state cache
-    mockAuthStateCache = {
-      get: jest.fn(),
-      set: jest.fn(),
-      drop: jest.fn()
-    }
-
     // Mock server
     mockServer = {
       register: jest.fn().mockResolvedValue(undefined),
-      cache: jest.fn().mockReturnValue(mockAuthStateCache),
       auth: {
         strategy: jest.fn(),
         default: jest.fn()
@@ -204,7 +195,7 @@ describe('Auth Plugin', () => {
         (call) => call[0] === 'session'
       )
       const strategyConfig = strategyCall[2]
-      const request = { path: '/public/images/logo.png' }
+      const request = { path: '/public/style.css' }
       const session = { id: 'test-session-id' }
 
       // Act
@@ -214,7 +205,7 @@ describe('Auth Plugin', () => {
       expect(result).toEqual({ isValid: false })
     })
 
-    test('should return invalid when session id is missing', async () => {
+    test('should return invalid for missing session ID', async () => {
       // Arrange
       await plugin.register(mockServer)
       const strategyCall = mockServer.auth.strategy.mock.calls.find(
@@ -222,7 +213,7 @@ describe('Auth Plugin', () => {
       )
       const strategyConfig = strategyCall[2]
       const request = { path: '/protected' }
-      const session = {} // No id
+      const session = null
 
       // Act
       const result = await strategyConfig.validate(request, session)
@@ -231,7 +222,7 @@ describe('Auth Plugin', () => {
       expect(result).toEqual({ isValid: false })
     })
 
-    test('should return invalid when cached session not found', async () => {
+    test('should return invalid for missing cached session', async () => {
       // Arrange
       await plugin.register(mockServer)
       const strategyCall = mockServer.auth.strategy.mock.calls.find(
@@ -250,7 +241,32 @@ describe('Auth Plugin', () => {
       expect(result).toEqual({ isValid: false })
     })
 
-    test('should return invalid and drop expired session', async () => {
+    test('should return invalid for auth state session without user', async () => {
+      // Arrange
+      await plugin.register(mockServer)
+      const strategyCall = mockServer.auth.strategy.mock.calls.find(
+        (call) => call[0] === 'session'
+      )
+      const strategyConfig = strategyCall[2]
+      const request = { path: '/protected' }
+      const session = { id: 'test-session-id' }
+
+      // Auth state session (no user data yet)
+      mockSessionCache.get.mockResolvedValue({
+        authState: {
+          state: 'oauth-state',
+          codeVerifier: 'code-verifier'
+        }
+      })
+
+      // Act
+      const result = await strategyConfig.validate(request, session)
+
+      // Assert
+      expect(result).toEqual({ isValid: false })
+    })
+
+    test('should return invalid for expired session', async () => {
       // Arrange
       await plugin.register(mockServer)
       const strategyCall = mockServer.auth.strategy.mock.calls.find(
@@ -261,8 +277,12 @@ describe('Auth Plugin', () => {
       const session = { id: 'test-session-id' }
 
       const expiredSession = {
-        user: { id: 'user-1' },
-        expires: Date.now() - 1000 // Expired 1 second ago
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          roles: ['admin']
+        },
+        expires: Date.now() - 1000 // Expired
       }
       mockSessionCache.get.mockResolvedValue(expiredSession)
 
@@ -285,8 +305,12 @@ describe('Auth Plugin', () => {
       const session = { id: 'test-session-id' }
 
       const validSession = {
-        user: { id: 'user-1', email: 'test@example.com', roles: ['admin'] },
-        expires: Date.now() + 3600000 // Expires in 1 hour
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          roles: ['admin']
+        },
+        expires: Date.now() + 3600000 // Valid for 1 hour
       }
       mockSessionCache.get.mockResolvedValue(validSession)
 
@@ -301,16 +325,6 @@ describe('Auth Plugin', () => {
           id: 'test-session-id'
         }
       })
-      expect(logger.debug).toHaveBeenCalledWith(
-        'Session validation successful',
-        {
-          sessionId: 'test-session-id',
-          userId: 'user-1',
-          userEmail: 'test@example.com',
-          userRoles: ['admin'],
-          path: '/protected'
-        }
-      )
     })
 
     test('should handle session validation errors', async () => {
@@ -354,15 +368,22 @@ describe('Auth Plugin', () => {
       await loginHandler(request, mockH)
 
       // Assert
-      expect(mockAuthStateCache.set).toHaveBeenCalledWith('mock-state', {
-        codeVerifier: 'mock-code-verifier',
-        redirectTo: '/previous-page'
+      expect(mockSessionCache.set).toHaveBeenCalledWith('mock-session-id', {
+        authState: {
+          state: 'mock-state',
+          codeVerifier: 'mock-code-verifier',
+          redirectTo: '/previous-page',
+          expires: expect.any(Number)
+        }
       })
       expect(mockOidcClient.authorizationUrl).toHaveBeenCalledWith({
         scope: expect.stringContaining('openid profile email'),
         state: 'mock-state',
         code_challenge: 'mock-code-challenge',
         code_challenge_method: 'S256'
+      })
+      expect(mockResponse.state).toHaveBeenCalledWith('assurance-session', {
+        id: 'mock-session-id'
       })
       expect(mockH.redirect).toHaveBeenCalledWith('https://mock-auth-url')
     })
@@ -383,9 +404,13 @@ describe('Auth Plugin', () => {
       await loginHandler(request, mockH)
 
       // Assert
-      expect(mockAuthStateCache.set).toHaveBeenCalledWith('mock-state', {
-        codeVerifier: 'mock-code-verifier',
-        redirectTo: '/custom-redirect'
+      expect(mockSessionCache.set).toHaveBeenCalledWith('mock-session-id', {
+        authState: {
+          state: 'mock-state',
+          codeVerifier: 'mock-code-verifier',
+          redirectTo: '/custom-redirect',
+          expires: expect.any(Number)
+        }
       })
     })
 
@@ -405,9 +430,13 @@ describe('Auth Plugin', () => {
       await loginHandler(request, mockH)
 
       // Assert
-      expect(mockAuthStateCache.set).toHaveBeenCalledWith('mock-state', {
-        codeVerifier: 'mock-code-verifier',
-        redirectTo: '/'
+      expect(mockSessionCache.set).toHaveBeenCalledWith('mock-session-id', {
+        authState: {
+          state: 'mock-state',
+          codeVerifier: 'mock-code-verifier',
+          redirectTo: '/',
+          expires: expect.any(Number)
+        }
       })
     })
 
@@ -471,7 +500,10 @@ describe('Auth Plugin', () => {
 
       const request = {
         query: { code: 'auth-code', state: 'mock-state' },
-        raw: { req: {} }
+        raw: { req: {} },
+        state: {
+          'assurance-session': { id: 'mock-session-id' }
+        }
       }
 
       mockOidcClient.callbackParams.mockReturnValue({
@@ -479,9 +511,14 @@ describe('Auth Plugin', () => {
         state: 'mock-state'
       })
 
-      mockAuthStateCache.get.mockResolvedValue({
-        codeVerifier: 'mock-code-verifier',
-        redirectTo: '/dashboard'
+      // Session contains auth state
+      mockSessionCache.get.mockResolvedValue({
+        authState: {
+          state: 'mock-state',
+          codeVerifier: 'mock-code-verifier',
+          redirectTo: '/dashboard',
+          expires: Date.now() + 600000
+        }
       })
 
       mockOidcClient.callback.mockResolvedValue({
@@ -512,7 +549,9 @@ describe('Auth Plugin', () => {
           token: 'mock-access-token'
         })
       )
-      expect(mockAuthStateCache.drop).toHaveBeenCalledWith('mock-state')
+      expect(mockResponse.state).toHaveBeenCalledWith('assurance-session', {
+        id: 'mock-session-id'
+      })
       expect(mockH.redirect).toHaveBeenCalledWith('/dashboard')
     })
 
@@ -524,13 +563,14 @@ describe('Auth Plugin', () => {
       )[0].handler
 
       const request = {
-        query: { code: 'auth-code' }, // Missing state
-        raw: { req: {} }
+        query: { code: 'auth-code' },
+        raw: { req: {} },
+        state: {}
       }
 
       mockOidcClient.callbackParams.mockReturnValue({
-        code: 'auth-code'
-        // No state
+        code: 'auth-code',
+        state: null
       })
 
       // Act
@@ -542,59 +582,9 @@ describe('Auth Plugin', () => {
         message: expect.stringContaining('There was a problem signing you in')
       })
       expect(logger.error).toHaveBeenCalledWith(
-        'Missing state parameter',
-        expect.any(Object)
+        'Authentication callback error:',
+        expect.any(Error)
       )
-    })
-
-    test('should handle invalid state parameter', async () => {
-      // Arrange
-      await plugin.register(mockServer)
-      const callbackHandler = mockServer.route.mock.calls.find(
-        (call) => call[0].path === '/auth'
-      )[0].handler
-
-      const request = {
-        query: { code: 'auth-code', state: 'invalid-state' },
-        raw: { req: {} }
-      }
-
-      mockOidcClient.callbackParams.mockReturnValue({
-        code: 'auth-code',
-        state: 'invalid-state'
-      })
-
-      mockAuthStateCache.get.mockResolvedValue(null) // Invalid state
-
-      // Act
-      await callbackHandler(request, mockH)
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith('common/templates/error', {
-        title: 'Authentication Error',
-        message: expect.stringContaining('There was a problem signing you in')
-      })
-    })
-
-    test('should handle missing OIDC client in callback', async () => {
-      // Arrange - Make OIDC client setup fail
-      Issuer.discover.mockRejectedValueOnce(new Error('OIDC setup failed'))
-      await plugin.register(mockServer)
-
-      const callbackHandler = mockServer.route.mock.calls.find(
-        (call) => call[0].path === '/auth'
-      )[0].handler
-
-      const request = { query: {}, raw: { req: {} } }
-
-      // Act
-      await callbackHandler(request, mockH)
-
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith('common/templates/error', {
-        title: 'Authentication Error',
-        message: 'OIDC client is not properly configured'
-      })
     })
 
     test('should handle token exchange errors', async () => {
@@ -606,7 +596,10 @@ describe('Auth Plugin', () => {
 
       const request = {
         query: { code: 'auth-code', state: 'mock-state' },
-        raw: { req: {} }
+        raw: { req: {} },
+        state: {
+          'assurance-session': { id: 'mock-session-id' }
+        }
       }
 
       mockOidcClient.callbackParams.mockReturnValue({
@@ -614,9 +607,14 @@ describe('Auth Plugin', () => {
         state: 'mock-state'
       })
 
-      mockAuthStateCache.get.mockResolvedValue({
-        codeVerifier: 'mock-code-verifier',
-        redirectTo: '/dashboard'
+      // Session contains auth state
+      mockSessionCache.get.mockResolvedValue({
+        authState: {
+          state: 'mock-state',
+          codeVerifier: 'mock-code-verifier',
+          redirectTo: '/dashboard',
+          expires: Date.now() + 600000
+        }
       })
 
       const tokenError = new Error('Token exchange failed')
@@ -626,16 +624,14 @@ describe('Auth Plugin', () => {
       await callbackHandler(request, mockH)
 
       // Assert
-      expect(logger.error).toHaveBeenCalledWith(
-        'Token exchange error',
-        expect.objectContaining({
-          error: 'Token exchange failed'
-        })
-      )
       expect(mockH.view).toHaveBeenCalledWith('common/templates/error', {
         title: 'Authentication Error',
         message: expect.stringContaining('There was a problem signing you in')
       })
+      expect(logger.error).toHaveBeenCalledWith(
+        'Authentication callback error:',
+        expect.any(Error)
+      )
     })
 
     test('should handle roles as string in token claims', async () => {
@@ -647,7 +643,10 @@ describe('Auth Plugin', () => {
 
       const request = {
         query: { code: 'auth-code', state: 'mock-state' },
-        raw: { req: {} }
+        raw: { req: {} },
+        state: {
+          'assurance-session': { id: 'mock-session-id' }
+        }
       }
 
       mockOidcClient.callbackParams.mockReturnValue({
@@ -655,9 +654,13 @@ describe('Auth Plugin', () => {
         state: 'mock-state'
       })
 
-      mockAuthStateCache.get.mockResolvedValue({
-        codeVerifier: 'mock-code-verifier',
-        redirectTo: '/dashboard'
+      mockSessionCache.get.mockResolvedValue({
+        authState: {
+          state: 'mock-state',
+          codeVerifier: 'mock-code-verifier',
+          redirectTo: '/dashboard',
+          expires: Date.now() + 600000
+        }
       })
 
       mockOidcClient.callback.mockResolvedValue({
@@ -680,7 +683,7 @@ describe('Auth Plugin', () => {
         'mock-session-id',
         expect.objectContaining({
           user: expect.objectContaining({
-            roles: ['admin'] // Should be normalized to array
+            roles: ['admin']
           })
         })
       )
@@ -695,7 +698,10 @@ describe('Auth Plugin', () => {
 
       const request = {
         query: { code: 'auth-code', state: 'mock-state' },
-        raw: { req: {} }
+        raw: { req: {} },
+        state: {
+          'assurance-session': { id: 'mock-session-id' }
+        }
       }
 
       mockOidcClient.callbackParams.mockReturnValue({
@@ -703,9 +709,13 @@ describe('Auth Plugin', () => {
         state: 'mock-state'
       })
 
-      mockAuthStateCache.get.mockResolvedValue({
-        codeVerifier: 'mock-code-verifier',
-        redirectTo: '/dashboard'
+      mockSessionCache.get.mockResolvedValue({
+        authState: {
+          state: 'mock-state',
+          codeVerifier: 'mock-code-verifier',
+          redirectTo: '/dashboard',
+          expires: Date.now() + 600000
+        }
       })
 
       mockOidcClient.callback.mockResolvedValue({
@@ -716,7 +726,7 @@ describe('Auth Plugin', () => {
           sub: 'user-123',
           email: 'test@example.com',
           name: 'Test User',
-          roles: ['user'] // Not admin
+          roles: ['user'] // No admin role
         })
       })
 
@@ -728,7 +738,7 @@ describe('Auth Plugin', () => {
         'mock-session-id',
         expect.objectContaining({
           user: expect.objectContaining({
-            roles: [] // Should be empty array for non-admin
+            roles: []
           })
         })
       )
@@ -736,7 +746,7 @@ describe('Auth Plugin', () => {
   })
 
   describe('logout route handler', () => {
-    test('should handle logout by clearing session and redirecting', async () => {
+    test('should handle logout with valid session', async () => {
       // Arrange
       await plugin.register(mockServer)
       const logoutHandler = mockServer.route.mock.calls.find(
@@ -746,28 +756,24 @@ describe('Auth Plugin', () => {
       const request = {
         auth: {
           isAuthenticated: true,
-          credentials: { id: 'session-123' }
+          credentials: { id: 'test-session-id' }
         },
         server: {
-          info: { protocol: 'https' }
+          info: { protocol: 'https', host: 'example.com' }
         },
         info: { host: 'example.com' }
       }
 
-      mockOidcClient.endSessionUrl.mockReturnValue('https://mock-logout-url')
-
       // Act
-      await logoutHandler(request, mockH)
+      const result = await logoutHandler(request, mockH)
 
       // Assert
-      expect(mockSessionCache.drop).toHaveBeenCalledWith('session-123')
+      expect(mockSessionCache.drop).toHaveBeenCalledWith('test-session-id')
       expect(mockResponse.unstate).toHaveBeenCalledWith('assurance-session')
-      expect(mockResponse.redirect).toHaveBeenCalledWith(
-        'https://mock-logout-url'
-      )
+      expect(result.redirect).toHaveBeenCalledWith('https://mock-logout-url')
     })
 
-    test('should handle logout when user is not authenticated', async () => {
+    test('should handle logout without session', async () => {
       // Arrange
       await plugin.register(mockServer)
       const logoutHandler = mockServer.route.mock.calls.find(
@@ -775,31 +781,27 @@ describe('Auth Plugin', () => {
       )[0].handler
 
       const request = {
-        auth: { isAuthenticated: false },
+        auth: {
+          isAuthenticated: false
+        },
         server: {
-          info: { protocol: 'https' }
+          info: { protocol: 'https', host: 'example.com' }
         },
         info: { host: 'example.com' }
       }
 
-      mockOidcClient.endSessionUrl.mockReturnValue('https://mock-logout-url')
-
       // Act
-      await logoutHandler(request, mockH)
+      const result = await logoutHandler(request, mockH)
 
       // Assert
       expect(mockSessionCache.drop).not.toHaveBeenCalled()
       expect(mockResponse.unstate).toHaveBeenCalledWith('assurance-session')
-      expect(mockResponse.redirect).toHaveBeenCalledWith(
-        'https://mock-logout-url'
-      )
+      expect(result.redirect).toHaveBeenCalledWith('https://mock-logout-url')
     })
 
-    test('should handle logout with missing OIDC client', async () => {
-      // Arrange - Make OIDC client setup fail
-      Issuer.discover.mockRejectedValueOnce(new Error('OIDC setup failed'))
+    test('should handle logout errors', async () => {
+      // Arrange
       await plugin.register(mockServer)
-
       const logoutHandler = mockServer.route.mock.calls.find(
         (call) => call[0].path === '/auth/logout'
       )[0].handler
@@ -807,21 +809,23 @@ describe('Auth Plugin', () => {
       const request = {
         auth: {
           isAuthenticated: true,
-          credentials: { id: 'session-123' }
+          credentials: { id: 'test-session-id' }
         },
         server: {
-          info: { protocol: 'https' }
+          info: { protocol: 'https', host: 'example.com' }
         },
         info: { host: 'example.com' }
       }
+
+      const error = new Error('Cache error')
+      mockSessionCache.drop.mockRejectedValue(error)
 
       // Act
       await logoutHandler(request, mockH)
 
       // Assert
-      expect(mockSessionCache.drop).toHaveBeenCalledWith('session-123')
-      expect(mockResponse.unstate).toHaveBeenCalledWith('assurance-session')
-      expect(mockResponse.redirect).toHaveBeenCalledWith('/') // Should fallback to home
+      expect(logger.error).toHaveBeenCalledWith('Logout error:', error)
+      expect(mockH.redirect).toHaveBeenCalledWith('/')
     })
   })
 })

@@ -1,7 +1,5 @@
 import { Cluster, Redis } from 'ioredis'
 
-import { logger } from '~/src/server/common/helpers/logging/logger.js'
-
 /**
  * @typedef {object} RedisConfig
  * @property {string} host
@@ -65,14 +63,6 @@ export function buildRedisClient(redisConfig) {
       }
     )
   }
-
-  redisClient.on('connect', () => {
-    logger.info('Connected to Redis server')
-  })
-
-  redisClient.on('error', (error) => {
-    logger.error(`Redis connection error ${error}`)
-  })
 
   return redisClient
 }

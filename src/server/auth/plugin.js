@@ -23,23 +23,39 @@ export const plugin = {
     // Register cookie plugin
     await server.register(Cookie)
 
-    // Helper functions for auth callback processing
+    // Validate the authentication state from session
+    async function validateAuthState(state, request) {
+      try {
+        const sessionCookie = request.state[AUTH_SESSION_COOKIE_NAME]
 
-    // Validate the authentication state
-    async function validateAuthState(state, cache) {
-      const stateData = await cache.get(state)
-      logger.debug('Retrieved state data from cache:', {
-        found: !!stateData,
-        state,
-        stateData: stateData ? { redirectTo: stateData.redirectTo } : null
-      })
+        if (!sessionCookie?.id) {
+          throw Boom.badRequest('No session found')
+        }
 
-      if (!stateData) {
-        logger.error('Invalid or expired auth state', { state })
-        throw Boom.badRequest('Invalid or expired auth state')
+        const sessionData = await server.app.sessionCache?.get(sessionCookie.id)
+
+        if (!sessionData?.authState) {
+          throw Boom.badRequest('Invalid or expired auth state')
+        }
+
+        const authState = sessionData.authState
+
+        if (authState.state !== state) {
+          throw Boom.badRequest('Invalid auth state - state mismatch')
+        }
+
+        if (authState.expires < Date.now()) {
+          throw Boom.badRequest('Auth state expired')
+        }
+
+        return authState
+      } catch (error) {
+        if (error.isBoom) {
+          throw error
+        }
+        logger.error('Error validating auth state:', error)
+        throw Boom.badRequest('Invalid auth state')
       }
-
-      return stateData
     }
 
     // Process token exchange and create session
@@ -50,13 +66,9 @@ export const plugin = {
       state,
       stateData,
       sessionCache,
-      logger
+      sessionId
     ) {
       const callbackUrl = appConfig.get('azure.callbackUrl')
-      logger.debug('Initiating token exchange', {
-        hasCode: !!params.code,
-        callbackUrl
-      })
 
       const tokenSet = await client.callback(callbackUrl, params, {
         state,
@@ -65,23 +77,15 @@ export const plugin = {
 
       // Get user info from ID token
       const claims = tokenSet.claims()
-      logger.debug('Received token and claims', {
-        hasIdToken: !!tokenSet.id_token,
-        hasAccessToken: !!tokenSet.access_token,
-        tokenExpiry: tokenSet.expires_in
-      })
 
       // Create session
       let userRoles = []
       if (Array.isArray(claims.roles)) {
-        // Normalize roles to lower case for comparison
         userRoles = claims.roles.map((r) => r.toLowerCase())
       } else if (typeof claims.roles === 'string') {
         userRoles = [claims.roles.toLowerCase()]
-      } else {
-        userRoles = []
       }
-      // Only assign 'admin' if the user has 'admin' (case-insensitive) in their roles
+
       const hasAdminRole = userRoles.includes('admin')
       const sessionData = {
         user: {
@@ -91,41 +95,22 @@ export const plugin = {
           roles: hasAdminRole ? ['admin'] : []
         },
         token: tokenSet.access_token,
-        expires: Date.now() + (tokenSet.expires_in || 3600) * 1000 // Convert to milliseconds
+        expires: Date.now() + (tokenSet.expires_in || 3600) * 1000
       }
 
-      logger.debug('Created session with roles', {
-        userId: sessionData.user.id,
-        roles: sessionData.user.roles
-      })
+      // Update the existing session with user data
+      await sessionCache.set(sessionId, sessionData)
 
-      // Store session in server cache
-      const sid = crypto.randomBytes(16).toString('hex')
-      await sessionCache.set(sid, sessionData)
-      logger.debug('Session created and stored in cache', { sid })
-
-      return { sid }
+      return { sid: sessionId }
     }
 
     // Handle authentication errors
     function handleAuthError(error, h) {
       logger.error('Authentication callback error:', error)
 
-      // Create a more detailed error message
       let errorMessage = 'There was a problem signing you in.'
       if (error.message) {
         errorMessage += ` Error: ${error.message}`
-      } else {
-        errorMessage += ' (No additional error details provided.)'
-      }
-
-      // Add troubleshooting info for specific errors
-      if (error.message?.includes('invalid IncomingMessage')) {
-        errorMessage +=
-          ' (This is a technical issue with how the request is being processed.)'
-      } else if (error.message?.includes('state')) {
-        errorMessage +=
-          ' (This may be due to an expired or invalid authentication session.)'
       }
 
       return h.view(ERROR_TEMPLATE, {
@@ -133,23 +118,6 @@ export const plugin = {
         message: errorMessage
       })
     }
-
-    // Setup cache for temporary auth state
-    logger.info('Setting up auth state cache', {
-      sessionCacheName: config.get('session.cache.name'),
-      sessionCacheEngine: config.get('session.cache.engine'),
-      redisHost: config.get('redis.host'),
-      nodeEnv: process.env.NODE_ENV,
-      isDevelopment: config.get('isDevelopment'),
-      isProduction: config.get('isProduction')
-    })
-
-    const authStateCache = server.cache({
-      cache: 'session', // ✅ Use the named Redis cache provider
-      segment: 'auth:state',
-      expiresIn: 10 * 60 * 1000, // 10 minutes
-      shared: true
-    })
 
     // Setup Azure AD OIDC Issuer and Client
     let oidcClient
@@ -170,7 +138,6 @@ export const plugin = {
         response_types: ['code']
       })
 
-      // Store on server app for easy access
       server.app.oidcClient = oidcClient
     } catch (error) {
       logger.error('Failed to setup OIDC client', error)
@@ -191,7 +158,6 @@ export const plugin = {
       redirectTo: false,
       validate: async (request, session) => {
         try {
-          // Skip validation for auth routes and public assets
           if (
             request.path === AUTH_LOGOUT_PATH ||
             request.path.startsWith('/public/')
@@ -209,19 +175,20 @@ export const plugin = {
             return { isValid: false }
           }
 
+          // Check if this is an auth session (has authState but no user)
+          if (cached.authState && !cached.user) {
+            return { isValid: false }
+          }
+
+          // Check if this is a user session
+          if (!cached.user) {
+            return { isValid: false }
+          }
+
           if (cached.expires && cached.expires < Date.now()) {
             await server.app.sessionCache?.drop(session.id)
             return { isValid: false }
           }
-
-          // Add debugging for session validation
-          logger.debug('Session validation successful', {
-            sessionId: session.id,
-            userId: cached.user?.id,
-            userEmail: cached.user?.email,
-            userRoles: cached.user?.roles || [],
-            path: request.path
-          })
 
           return {
             isValid: true,
@@ -275,12 +242,17 @@ export const plugin = {
             redirectPath = HOME_PATH
           }
 
-          // Store auth state and code verifier in cache
-          // Use the state parameter itself as the cache key
-          await authStateCache.set(state, {
+          // Create temporary session to store auth state
+          const sessionId = crypto.randomBytes(16).toString('hex')
+          const authState = {
+            state,
             codeVerifier,
-            redirectTo: redirectPath
-          })
+            redirectTo: redirectPath,
+            expires: Date.now() + 10 * 60 * 1000 // 10 minutes
+          }
+
+          // Store auth state in session cache
+          await server.app.sessionCache.set(sessionId, { authState })
 
           // Create authorization URL
           const authUrl = oidcClient.authorizationUrl({
@@ -290,8 +262,11 @@ export const plugin = {
             code_challenge_method: 'S256'
           })
 
-          // Redirect to Azure AD
-          return h.redirect(authUrl)
+          // Create response with session cookie and redirect to Azure AD
+          const response = h.redirect(authUrl)
+          response.state(AUTH_SESSION_COOKIE_NAME, { id: sessionId })
+
+          return response
         } catch (error) {
           logger.error('Login initialization error:', error)
           return h.view(ERROR_TEMPLATE, {
@@ -320,51 +295,30 @@ export const plugin = {
           const params = oidcClient.callbackParams(request.raw.req || request)
           const state = params.state
 
-          logger.debug('Auth callback received', {
-            hasCode: !!params.code,
-            hasState: !!state,
-            queryParams: Object.keys(request.query)
-          })
-
           if (!state) {
-            logger.error('Missing state parameter', { query: request.query })
             throw Boom.badRequest('Missing state parameter')
           }
 
-          // Validate state and get stored data
-          const stateData = await validateAuthState(state, authStateCache)
+          // Validate state and get stored data from session
+          const stateData = await validateAuthState(state, request)
+          const sessionCookie = request.state[AUTH_SESSION_COOKIE_NAME]
 
-          try {
-            // Process the token exchange and create session
-            const sessionResult = await processTokenExchange(
-              oidcClient,
-              config,
-              params,
-              state,
-              stateData,
-              server.app.sessionCache,
-              logger
-            )
+          // Process the token exchange and create session
+          const sessionResult = await processTokenExchange(
+            oidcClient,
+            config,
+            params,
+            state,
+            stateData,
+            server.app.sessionCache,
+            sessionCookie.id
+          )
 
-            // Create response with session cookie
-            const response = h.redirect(stateData.redirectTo || HOME_PATH)
-            response.state(AUTH_SESSION_COOKIE_NAME, { id: sessionResult.sid })
+          // Create response with updated session cookie
+          const response = h.redirect(stateData.redirectTo || HOME_PATH)
+          response.state(AUTH_SESSION_COOKIE_NAME, { id: sessionResult.sid })
 
-            // Clear temporary auth state from cache
-            await authStateCache.drop(state)
-
-            return response
-          } catch (tokenError) {
-            logger.error('Token exchange error', {
-              error: tokenError.message,
-              stack: tokenError.stack,
-              params: {
-                code: params.code ? '***' : undefined,
-                state: params.state
-              }
-            })
-            throw tokenError
-          }
+          return response
         } catch (error) {
           return handleAuthError(error, h)
         }
@@ -386,27 +340,15 @@ export const plugin = {
           // Clear session from cache if we have the session ID
           if (request.auth.isAuthenticated && request.auth.credentials?.id) {
             await server.app.sessionCache?.drop(request.auth.credentials.id)
-          } else {
-            logger.debug('No session ID found for logout')
           }
 
           // Prepare response
           const response = h.redirect(HOME_PATH)
-
-          // Clear session cookie
           response.unstate(AUTH_SESSION_COOKIE_NAME)
 
           // Construct Azure AD logout URL if we have an OIDC client
           if (oidcClient) {
             const homeUrl = `${request.server.info.protocol}://${request.info.host}/`
-            logger.debug(
-              'Redirecting to Azure AD logout with post-logout redirect',
-              {
-                homeUrl
-              }
-            )
-
-            // Use the endSessionUrl to redirect to Azure AD's logout page
             const logoutUrl = oidcClient.endSessionUrl({
               post_logout_redirect_uri: homeUrl
             })

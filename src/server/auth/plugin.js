@@ -135,6 +135,15 @@ export const plugin = {
     }
 
     // Setup cache for temporary auth state
+    logger.info('Setting up auth state cache', {
+      sessionCacheName: config.get('session.cache.name'),
+      sessionCacheEngine: config.get('session.cache.engine'),
+      redisHost: config.get('redis.host'),
+      nodeEnv: process.env.NODE_ENV,
+      isDevelopment: config.get('isDevelopment'),
+      isProduction: config.get('isProduction')
+    })
+
     const authStateCache = server.cache({
       cache: 'session', // ✅ Use the named Redis cache provider
       segment: 'auth:state',

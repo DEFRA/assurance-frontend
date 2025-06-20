@@ -23,7 +23,8 @@ jest.mock('node:crypto', () => ({
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   logger: {
     debug: jest.fn(),
-    error: jest.fn()
+    error: jest.fn(),
+    info: jest.fn()
   }
 }))
 

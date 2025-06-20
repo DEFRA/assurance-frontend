@@ -182,16 +182,6 @@ describe('Auth Middleware', () => {
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/auth/insufficient-permissions'
       )
-      expect(logger.warn).toHaveBeenCalledWith(
-        'Access denied - insufficient permissions',
-        {
-          requiredRoles: ['admin'],
-          userRoles: ['editor'],
-          userId: 'test-user-id',
-          path: '/protected-path',
-          userEmail: 'test@example.com'
-        }
-      )
     })
 
     test('should redirect to insufficient permissions if user has no roles', () => {

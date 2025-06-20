@@ -60,14 +60,6 @@ export const requireRole = (requiredRoles) => {
       const hasRole = roles.some((role) => user.roles?.includes(role))
 
       if (!hasRole) {
-        logger.warn('Access denied - insufficient permissions', {
-          requiredRoles: roles,
-          userRoles: user.roles || [],
-          userId: user.id,
-          path: request.url.pathname,
-          userEmail: user.email
-        })
-
         return h.redirect(INSUFFICIENT_PERMISSIONS_URL).takeover()
       }
 

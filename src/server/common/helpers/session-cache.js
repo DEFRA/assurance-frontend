@@ -22,7 +22,7 @@ export const plugin = {
         try {
           const result = await sessionCache.get(id)
           if (!result) {
-            logger.debug(`Session cache miss for id: ${id}`)
+            logger.info(`Session cache miss for id: ${id}`)
           }
           return result
         } catch (error) {
@@ -34,7 +34,7 @@ export const plugin = {
       async set(id, value, ttl = 0) {
         try {
           await sessionCache.set(id, value, ttl)
-          logger.debug(`Session cache set for id: ${id}`)
+          logger.info(`Session cache set for id: ${id}`)
           return true
         } catch (error) {
           logger.error(`Session cache set error for id: ${id}`, error)
@@ -45,7 +45,7 @@ export const plugin = {
       async drop(id) {
         try {
           await sessionCache.drop(id)
-          logger.debug(`Session cache dropped for id: ${id}`)
+          logger.info(`Session cache dropped for id: ${id}`)
           return true
         } catch (error) {
           logger.error(`Session cache drop error for id: ${id}`, error)

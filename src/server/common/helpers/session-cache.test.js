@@ -6,6 +6,7 @@ import { config } from '~/src/config/config.js'
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   logger: {
     debug: jest.fn(),
+    info: jest.fn(),
     error: jest.fn()
   }
 }))
@@ -28,6 +29,9 @@ describe('Session Cache Plugin', () => {
     config.get.mockImplementation((key) => {
       if (key === 'session.cache.ttl') {
         return 3600000 // 1 hour in milliseconds
+      }
+      if (key === 'session.cache.name') {
+        return 'session'
       }
       return undefined
     })
@@ -61,6 +65,7 @@ describe('Session Cache Plugin', () => {
 
       // Assert
       expect(mockServer.cache).toHaveBeenCalledWith({
+        cache: 'session',
         segment: 'sessions',
         expiresIn: 3600000,
         shared: true
@@ -99,7 +104,7 @@ describe('Session Cache Plugin', () => {
       // Assert
       expect(result).toEqual(sessionData)
       expect(mockSessionCache.get).toHaveBeenCalledWith(sessionId)
-      expect(logger.debug).not.toHaveBeenCalled() // No cache miss log
+      expect(logger.info).not.toHaveBeenCalled() // No cache miss log
     })
 
     test('should handle cache miss and log debug message', async () => {
@@ -113,7 +118,7 @@ describe('Session Cache Plugin', () => {
       // Assert
       expect(result).toBeNull()
       expect(mockSessionCache.get).toHaveBeenCalledWith(sessionId)
-      expect(logger.debug).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         `Session cache miss for id: ${sessionId}`
       )
     })
@@ -146,7 +151,7 @@ describe('Session Cache Plugin', () => {
 
       // Assert
       expect(result).toBeUndefined()
-      expect(logger.debug).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         `Session cache miss for id: ${sessionId}`
       )
     })
@@ -177,7 +182,7 @@ describe('Session Cache Plugin', () => {
         sessionData,
         ttl
       )
-      expect(logger.debug).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         `Session cache set for id: ${sessionId}`
       )
     })
@@ -198,7 +203,7 @@ describe('Session Cache Plugin', () => {
         sessionData,
         0
       )
-      expect(logger.debug).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         `Session cache set for id: ${sessionId}`
       )
     })
@@ -280,7 +285,7 @@ describe('Session Cache Plugin', () => {
       // Assert
       expect(result).toBe(true)
       expect(mockSessionCache.drop).toHaveBeenCalledWith(sessionId)
-      expect(logger.debug).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         `Session cache dropped for id: ${sessionId}`
       )
     })
@@ -314,7 +319,7 @@ describe('Session Cache Plugin', () => {
       // Assert
       expect(result).toBe(true)
       expect(mockSessionCache.drop).toHaveBeenCalledWith(sessionId)
-      expect(logger.debug).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         `Session cache dropped for id: ${sessionId}`
       )
     })

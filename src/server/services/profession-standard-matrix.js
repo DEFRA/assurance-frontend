@@ -18,48 +18,48 @@ export const PROFESSION_STANDARD_MATRIX = {
     'business-analysis': [7, 11],
     'delivery-management': [4, 5, 6, 7, 8],
     'product-management': [2, 3, 6, 7, 10],
-    'quality-assurance': [3, 4, 5, 8, 9],
+    'quality-assurance': [3, 4, 5, 8, 9, 11],
     'release-management': [14],
-    'technical-architecture': [6, 8, 11, 12, 13, 14],
-    architecture: [6, 8, 11, 12, 13, 14], // Same as technical-architecture
-    'software-development': [6, 8, 11, 12, 13, 14], // Same as technical-architecture
-    'user-centred-design': [1, 2, 3, 4, 5, 9]
+    'technical-architecture': [6, 8, 9, 11, 12, 13, 14],
+    architecture: [6, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
+    'software-development': [6, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
+    'user-centred-design': [1, 2, 3, 4, 5]
   },
 
   'Private Beta': {
     'business-analysis': [7, 11],
     'delivery-management': [4, 5, 6, 7, 8],
     'product-management': [2, 3, 6, 7, 10, 14],
-    'quality-assurance': [3, 4, 5, 8, 9, 14],
+    'quality-assurance': [3, 4, 5, 8, 9, 11, 14],
     'release-management': [7, 14],
-    'technical-architecture': [8, 11, 12, 13],
-    architecture: [8, 11, 12, 13], // Same as technical-architecture
-    'software-development': [8, 11, 12, 13], // Same as technical-architecture
-    'user-centred-design': [1, 2, 3, 4, 5, 9]
+    'technical-architecture': [8, 9, 11, 12, 13],
+    architecture: [8, 9, 11, 12, 13], // Same as technical-architecture
+    'software-development': [8, 9, 11, 12, 13], // Same as technical-architecture
+    'user-centred-design': [1, 2, 3, 4, 5]
   },
 
   'Public Beta': {
     'business-analysis': [7],
     'delivery-management': [4, 5, 6, 7, 8],
     'product-management': [2, 3, 6, 7, 10, 14],
-    'quality-assurance': [3, 4, 5, 8, 9, 14],
+    'quality-assurance': [3, 4, 5, 8, 9, 11, 14],
     'release-management': [14],
-    'technical-architecture': [8, 11, 12, 13],
-    architecture: [8, 11, 12, 13], // Same as technical-architecture
-    'software-development': [8, 11, 12, 13], // Same as technical-architecture
-    'user-centred-design': [1, 2, 3, 4, 5, 9]
+    'technical-architecture': [8, 9, 11, 12, 13],
+    architecture: [8, 9, 11, 12, 13], // Same as technical-architecture
+    'software-development': [8, 9, 11, 12, 13], // Same as technical-architecture
+    'user-centred-design': [1, 2, 3, 4, 5]
   },
 
   Live: {
     'business-analysis': [],
     'delivery-management': [7, 8, 10, 14],
     'product-management': [3, 6, 8, 10, 14],
-    'quality-assurance': [3, 8, 9, 14],
+    'quality-assurance': [3, 8, 9, 11, 14],
     'release-management': [14],
-    'technical-architecture': [8, 11, 12, 13],
-    architecture: [8, 11, 12, 13], // Same as technical-architecture
-    'software-development': [8, 11, 12, 13], // Same as technical-architecture
-    'user-centred-design': [1, 2, 3, 4, 5, 9]
+    'technical-architecture': [8, 9, 11, 12, 13],
+    architecture: [8, 9, 11, 12, 13], // Same as technical-architecture
+    'software-development': [8, 9, 11, 12, 13], // Same as technical-architecture
+    'user-centred-design': [1, 2, 3, 4, 5]
   }
 }
 

@@ -122,7 +122,7 @@ describe('Profession Standard Matrix Service', () => {
 
       // Assert
       expect(Array.isArray(result)).toBe(true)
-      expect(result).toHaveLength(6) // Should include standards 6, 8, 11, 12, 13, 14
+      expect(result).toHaveLength(7) // Should include standards 6, 8, 9, 11, 12, 13, 14
 
       const expectedStandardNumbers =
         PROFESSION_STANDARD_MATRIX.Alpha['technical-architecture']
@@ -292,9 +292,9 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      // Discovery should have 6 standards [1,2,3,4,5,6], Live should have 6 standards [1,2,3,4,5,9]
+      // Discovery should have 6 standards [1,2,3,4,5,6], Live should have 5 standards [1,2,3,4,5]
       expect(discoveryResults).toHaveLength(6)
-      expect(liveResults).toHaveLength(6)
+      expect(liveResults).toHaveLength(5)
       expect(discoveryResults).not.toEqual(liveResults)
     })
 

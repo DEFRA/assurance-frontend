@@ -26,6 +26,18 @@ jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   }
 }))
 
+// Mock config to return old endpoint format for backward compatibility in tests
+jest.mock('~/src/config/config.js', () => ({
+  config: {
+    get: jest.fn((key) => {
+      if (key === 'api.version') {
+        return '' // Return empty string to use legacy endpoints
+      }
+      return undefined
+    })
+  }
+}))
+
 describe('Professions service', () => {
   const mockRequest = {
     auth: {
@@ -167,8 +179,7 @@ describe('Professions service', () => {
   describe('deleteProfession', () => {
     test('should delete profession with authenticated request', async () => {
       // Arrange
-      const mockResult = { success: true }
-      mockAuthedFetch.mockResolvedValue(mockResult)
+      mockAuthedFetch.mockResolvedValue(null) // API returns no content for delete
 
       // Act
       const result = await deleteProfession('1', mockRequest)
@@ -178,13 +189,12 @@ describe('Professions service', () => {
       expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/1', {
         method: 'DELETE'
       })
-      expect(result).toEqual(mockResult)
+      expect(result).toBe(true)
     })
 
     test('should delete profession without authenticated request', async () => {
       // Arrange
-      const mockResult = { success: true }
-      fetcher.mockResolvedValue(mockResult)
+      fetcher.mockResolvedValue(null) // API returns no content for delete
 
       // Act
       const result = await deleteProfession('1')
@@ -193,7 +203,7 @@ describe('Professions service', () => {
       expect(fetcher).toHaveBeenCalledWith('/professions/1', {
         method: 'DELETE'
       })
-      expect(result).toEqual(mockResult)
+      expect(result).toBe(true)
     })
 
     test('should throw error when API call fails', async () => {

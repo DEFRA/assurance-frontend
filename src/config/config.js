@@ -228,6 +228,12 @@ export const config = convict({
       format: String,
       default: 'http://localhost:5000',
       env: 'API_BASE_URL'
+    },
+    version: {
+      doc: 'API version to use for versioned endpoints',
+      format: String,
+      default: 'v1.0',
+      env: 'API_VERSION'
     }
   },
   azure: {

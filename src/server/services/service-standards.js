@@ -1,10 +1,15 @@
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
+import { config } from '~/src/config/config.js'
 
 export async function getServiceStandards(request) {
   try {
-    const endpoint = '/serviceStandards'
+    const apiVersion = config.get('api.version')
+    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
+    const endpoint = apiVersion
+      ? `/api/${apiVersion}/servicestandards`
+      : '/serviceStandards'
     logger.info({ endpoint }, 'Fetching service standards from API')
 
     let data
@@ -49,7 +54,11 @@ export async function getServiceStandards(request) {
  */
 export async function getAllServiceStandards(request) {
   try {
-    const endpoint = '/serviceStandards?includeInactive=true'
+    const apiVersion = config.get('api.version')
+    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
+    const endpoint = apiVersion
+      ? `/api/${apiVersion}/servicestandards?includeInactive=true`
+      : '/serviceStandards?includeInactive=true'
     logger.info(
       { endpoint },
       'Fetching all service standards (including inactive) from API'
@@ -100,7 +109,11 @@ export async function getAllServiceStandards(request) {
  */
 export async function deleteServiceStandard(id, request) {
   try {
-    const endpoint = `/serviceStandards/${id}`
+    const apiVersion = config.get('api.version')
+    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
+    const endpoint = apiVersion
+      ? `/api/${apiVersion}/servicestandards/${id}`
+      : `/serviceStandards/${id}`
     logger.info({ endpoint, id }, 'Soft deleting service standard')
 
     if (request) {
@@ -134,7 +147,11 @@ export async function deleteServiceStandard(id, request) {
  */
 export async function restoreServiceStandard(id, request) {
   try {
-    const endpoint = `/serviceStandards/${id}/restore`
+    const apiVersion = config.get('api.version')
+    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
+    const endpoint = apiVersion
+      ? `/api/${apiVersion}/servicestandards/${id}/restore`
+      : `/serviceStandards/${id}/restore`
     logger.info({ endpoint, id }, 'Restoring service standard')
 
     if (request) {

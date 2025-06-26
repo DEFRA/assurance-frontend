@@ -38,6 +38,13 @@ jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   }
 }))
 
+// Mock config module
+jest.mock('~/src/config/config.js', () => ({
+  config: {
+    get: jest.fn()
+  }
+}))
+
 // Then initialize the mock logger
 const mockLogger = jest.requireMock(
   '~/src/server/common/helpers/logging/logger.js'
@@ -52,10 +59,18 @@ const { getServiceStandards: mockGetServiceStandards } = jest.requireMock(
 )
 const { authedFetchJsonDecorator: mockAuthedFetchJsonDecorator } =
   jest.requireMock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
+const { config: mockConfig } = jest.requireMock('~/src/config/config.js')
 
 describe('Projects service', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Mock config to return empty string for api.version to use legacy endpoints in tests
+    mockConfig.get.mockImplementation((key) => {
+      if (key === 'api.version') {
+        return ''
+      }
+      return undefined
+    })
   })
 
   afterAll(() => {

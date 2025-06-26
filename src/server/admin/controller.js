@@ -82,17 +82,27 @@ export const adminController = {
       request.logger.info(LOG_MESSAGES.STANDARDS_DELETED)
 
       const authedFetch = authedFetchJsonDecorator(request)
-      await authedFetch('/serviceStandards/seed', {
-        method: 'POST',
-        body: JSON.stringify([])
-      })
+      const apiVersion = config.get('api.version')
 
-      request.logger.info(LOG_MESSAGES.STANDARDS_DELETED)
+      if (apiVersion) {
+        // Use the new versioned controller endpoint for deleting all standards
+        await authedFetch(`/api/${apiVersion}/servicestandards/deleteAll`, {
+          method: 'POST'
+        })
+      } else {
+        // Use legacy endpoint (seed with empty array)
+        await authedFetch('/serviceStandards/seed', {
+          method: 'POST',
+          body: JSON.stringify([])
+        })
+      }
+
+      request.logger.info('Standards deleted successfully')
       return h.redirect(
         `/admin?notification=${ADMIN_NOTIFICATIONS.STANDARDS_DELETED_SUCCESSFULLY}`
       )
     } catch (error) {
-      request.logger.error({ error }, LOG_MESSAGES.FAILED_TO_DELETE_STANDARDS)
+      request.logger.error({ error }, 'Failed to delete standards')
       return h.redirect(
         `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_DELETE_STANDARDS}`
       )
@@ -228,18 +238,33 @@ export const adminController = {
 
   deleteProfessions: async (request, h) => {
     try {
-      // Use the correct endpoint and HTTP method for the backend API
-      const result = await authedFetchJsonDecorator(request)(
-        '/professions/deleteAll',
-        {
-          method: 'POST'
-        }
-      )
+      const authedFetch = authedFetchJsonDecorator(request)
+      const apiVersion = config.get('api.version')
 
-      request.logger.info(
-        { result: result || 'no response data' },
-        'Delete professions result'
-      )
+      if (apiVersion) {
+        // Use the new versioned controller endpoint for deleting all professions
+        const result = await authedFetch(
+          `/api/${apiVersion}/professions/deleteAll`,
+          {
+            method: 'POST'
+          }
+        )
+
+        request.logger.info(
+          { result: result || 'no response data' },
+          'Delete professions result via new controller'
+        )
+      } else {
+        // Use legacy endpoint
+        const result = await authedFetch('/professions/deleteAll', {
+          method: 'POST'
+        })
+
+        request.logger.info(
+          { result: result || 'no response data' },
+          'Delete professions result via legacy endpoint'
+        )
+      }
 
       return h.redirect(
         `/admin?notification=${ADMIN_NOTIFICATIONS.PROFESSIONS_DELETED_SUCCESSFULLY}`
@@ -256,18 +281,28 @@ export const adminController = {
   seedStandards: async (request, h) => {
     try {
       const authedFetch = authedFetchJsonDecorator(request)
+      const apiVersion = config.get('api.version')
 
-      await authedFetch('/serviceStandards/seed', {
-        method: 'POST',
-        body: JSON.stringify(defaultServiceStandards)
-      })
+      if (apiVersion) {
+        // Use the new versioned controller endpoint for seeding standards
+        await authedFetch(`/api/${apiVersion}/servicestandards/seed`, {
+          method: 'POST',
+          body: JSON.stringify(defaultServiceStandards)
+        })
+      } else {
+        // Use legacy endpoint
+        await authedFetch('/serviceStandards/seed', {
+          method: 'POST',
+          body: JSON.stringify(defaultServiceStandards)
+        })
+      }
 
-      request.logger.info(LOG_MESSAGES.SERVICE_STANDARDS_SEEDED)
+      request.logger.info('Service standards seeded successfully')
       return h.redirect(
         `/admin?notification=${ADMIN_NOTIFICATIONS.SERVICE_STANDARDS_SEEDED_SUCCESSFULLY}`
       )
     } catch (error) {
-      request.logger.error(error, LOG_MESSAGES.FAILED_TO_SEED_SERVICE_STANDARDS)
+      request.logger.error(error, 'Failed to seed service standards')
       return h.redirect(
         `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SEED_SERVICE_STANDARDS}`
       )
@@ -277,17 +312,28 @@ export const adminController = {
   seedProfessions: async (request, h) => {
     try {
       const authedFetch = authedFetchJsonDecorator(request)
+      const apiVersion = config.get('api.version')
 
-      await authedFetch('/professions/seed', {
-        method: 'POST',
-        body: JSON.stringify(defaultProfessions)
-      })
+      if (apiVersion) {
+        // Use the new versioned controller endpoint for seeding professions
+        await authedFetch(`/api/${apiVersion}/professions/seed`, {
+          method: 'POST',
+          body: JSON.stringify(defaultProfessions)
+        })
+      } else {
+        // Use legacy endpoint
+        await authedFetch('/professions/seed', {
+          method: 'POST',
+          body: JSON.stringify(defaultProfessions)
+        })
+      }
 
+      request.logger.info('Professions seeded successfully')
       return h.redirect(
         `/admin?notification=${ADMIN_NOTIFICATIONS.PROFESSIONS_SEEDED_SUCCESSFULLY}`
       )
     } catch (error) {
-      request.logger.error(error, LOG_MESSAGES.FAILED_TO_SEED_PROFESSIONS)
+      request.logger.error(error, 'Failed to seed professions')
       return h.redirect(
         `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SEED_PROFESSIONS}`
       )

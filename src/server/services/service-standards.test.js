@@ -8,9 +8,35 @@ import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 
-jest.mock('~/src/server/common/helpers/fetch/fetcher.js')
-jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
-jest.mock('~/src/server/common/helpers/logging/logger.js')
+// Mock dependencies
+jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn()
+  }
+}))
+
+jest.mock('~/src/server/common/helpers/fetch/fetcher.js', () => ({
+  fetcher: jest.fn()
+}))
+
+jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js', () => ({
+  authedFetchJsonDecorator: jest.fn()
+}))
+
+// Mock config to return empty API version for backward compatibility in tests
+jest.mock('~/src/config/config.js', () => ({
+  config: {
+    get: jest.fn((key) => {
+      if (key === 'api.version') {
+        return '' // Return empty string to use legacy endpoints
+      }
+      return undefined
+    })
+  }
+}))
 
 describe('Service Standards Service', () => {
   let mockRequest

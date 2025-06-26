@@ -70,7 +70,12 @@ describe('Admin controller', () => {
     authedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
 
     // Mock config
-    config.get = jest.fn().mockReturnValue('test')
+    config.get = jest.fn().mockImplementation((key) => {
+      if (key === 'api.version') {
+        return '' // Return empty string to use legacy endpoints for tests
+      }
+      return 'test'
+    })
   })
 
   describe('get', () => {
@@ -338,7 +343,6 @@ describe('Admin controller', () => {
   describe('seedProfessions', () => {
     it('should seed professions and redirect', async () => {
       // Arrange
-      config.get.mockReturnValue('development') // Override the default 'test' value
       mockAuthedFetch.mockResolvedValue({ ok: true })
 
       // Act
@@ -350,13 +354,12 @@ describe('Admin controller', () => {
         body: JSON.stringify(defaultProfessions)
       })
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Professions seeded (dev only)'
+        '/admin?notification=Professions seeded successfully'
       )
     })
 
     it('should handle errors', async () => {
       // Arrange
-      config.get.mockReturnValue('development') // Override the default 'test' value
       mockAuthedFetch.mockRejectedValue(new Error('API Error'))
 
       // Act
@@ -364,7 +367,7 @@ describe('Admin controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Failed to seed professions (dev only)'
+        '/admin?notification=Failed to seed professions'
       )
     })
   })
@@ -593,19 +596,27 @@ describe('Admin controller', () => {
   describe('seedProfessions - environment restrictions', () => {
     test('should seed professions in development environment', async () => {
       // Arrange
-      config.get.mockReturnValue('development')
+      config.get.mockImplementation((key) => {
+        if (key === 'api.version') {
+          return 'v1.0' // Use versioned endpoint for this test
+        }
+        return 'development'
+      })
       mockAuthedFetch.mockResolvedValue({ ok: true })
 
       // Act
       await adminController.seedProfessions(mockRequest, mockH)
 
       // Assert
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/seed', {
-        method: 'POST',
-        body: JSON.stringify(defaultProfessions)
-      })
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/api/v1.0/professions/seed',
+        {
+          method: 'POST',
+          body: JSON.stringify(defaultProfessions)
+        }
+      )
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Professions seeded (dev only)'
+        '/admin?notification=Professions seeded successfully'
       )
     })
   })

@@ -52,14 +52,16 @@
         {% if project.commentary %}
           <div class="govuk-body" style="white-space: pre-wrap;">{{ project.commentary }}</div>
         {% endif %}
-        {% if project.lastUpdated %}
-          <p class="govuk-body-s govuk-!-margin-bottom-0">Last updated: {{ project.lastUpdated | formatDate }}</p>
-        {% endif %}
       {% endset %}
       {% if commentaryContent.trim() %}
         {{ govukInsetText({
           html: commentaryContent
         }) }}
+      {% endif %}
+      
+      <!-- Last updated date below inset box -->
+      {% if project.lastUpdated %}
+        <p class="govuk-body govuk-!-margin-top-3">Last updated: {{ project.lastUpdated | formatDate }}</p>
       {% endif %}
     </div>
   </div>

@@ -20,6 +20,9 @@ const ERROR_TEMPLATE = 'common/templates/error'
 // Time constants to avoid magic numbers
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000
 const TEN_MINUTES_MS = 10 * 60 * 1000
+const ONE_HOUR_SECONDS = 3600
+const TOKEN_REFRESH_THRESHOLD_MINUTES = 5
+const HTTP_BAD_REQUEST = 400
 
 export const plugin = {
   name: 'auth',
@@ -102,7 +105,8 @@ export const plugin = {
         },
         token: tokenSet.access_token,
         refreshToken: tokenSet.refresh_token,
-        tokenExpires: Date.now() + (tokenSet.expires_in || 3600) * 1000,
+        tokenExpires:
+          Date.now() + (tokenSet.expires_in || ONE_HOUR_SECONDS) * 1000,
         expires: Date.now() + appConfig.get('session.cache.ttl')
       }
 
@@ -176,6 +180,10 @@ export const plugin = {
 
           await sessionCache?.set(sessionId, visitorSession)
           logger.debug('Updated visitor session', { sessionId })
+        } else {
+          // Handle case where visitorSession exists but has no visitor property
+          logger.debug('Invalid visitor session format', { sessionId })
+          return null
         }
 
         // Track page view
@@ -205,6 +213,38 @@ export const plugin = {
       return !skipPaths.some((skipPath) => path.startsWith(skipPath))
     }
 
+    // Check if error indicates session expiry
+    function isSessionExpiredError(error) {
+      return (
+        error.error === 'invalid_grant' ||
+        error.error_description?.includes('expired') ||
+        error.error_description?.includes('revoked') ||
+        error.message?.includes('refresh token') ||
+        error.status === HTTP_BAD_REQUEST
+      )
+    }
+
+    // Handle refresh token error
+    async function handleRefreshError(error, sessionId, sessionCache) {
+      if (isSessionExpiredError(error)) {
+        logger.info(
+          'Entra session expired or refresh token invalid, invalidating local session',
+          {
+            sessionId,
+            error: error.error_description || error.message
+          }
+        )
+        await sessionCache.drop(sessionId)
+        return 'session_expired'
+      }
+
+      logger.error('Failed to refresh access token', {
+        sessionId,
+        error: error.message
+      })
+      return false
+    }
+
     // Refresh access token using refresh token
     async function refreshAccessToken(sessionData, sessionId, sessionCache) {
       try {
@@ -216,47 +256,21 @@ export const plugin = {
         }
 
         logger.info('Refreshing access token for session', { sessionId })
-
         const tokenSet = await oidcClient.refresh(sessionData.refreshToken)
 
-        // Update session with new tokens
         const updatedSessionData = {
           ...sessionData,
           token: tokenSet.access_token,
-          refreshToken: tokenSet.refresh_token || sessionData.refreshToken, // Keep old refresh token if new one not provided
-          tokenExpires: Date.now() + (tokenSet.expires_in || 3600) * 1000
-          // Keep the original session expiry time
+          refreshToken: tokenSet.refresh_token || sessionData.refreshToken,
+          tokenExpires:
+            Date.now() + (tokenSet.expires_in || ONE_HOUR_SECONDS) * 1000
         }
 
         await sessionCache.set(sessionId, updatedSessionData)
         logger.info('Access token refreshed successfully', { sessionId })
         return updatedSessionData
       } catch (error) {
-        // Check if this is an Entra session expiry
-        if (
-          error.error === 'invalid_grant' ||
-          error.error_description?.includes('expired') ||
-          error.error_description?.includes('revoked') ||
-          error.message?.includes('refresh token') ||
-          error.status === 400
-        ) {
-          logger.info(
-            'Entra session expired or refresh token invalid, invalidating local session',
-            {
-              sessionId,
-              error: error.error_description || error.message
-            }
-          )
-          // Clean up the local session
-          await sessionCache.drop(sessionId)
-          return 'session_expired'
-        }
-
-        logger.error('Failed to refresh access token', {
-          sessionId,
-          error: error.message
-        })
-        return false
+        return await handleRefreshError(error, sessionId, sessionCache)
       }
     }
 
@@ -284,6 +298,123 @@ export const plugin = {
       logger.error('Failed to setup OIDC client', error)
     }
 
+    // Helper functions for session validation
+    async function handleUnauthenticatedUser(request, sessionCache) {
+      if (shouldTrackPath(request.path)) {
+        const visitorResult = await createOrUpdateVisitorSession(
+          request,
+          sessionCache
+        )
+        if (visitorResult) {
+          request._visitorSessionId = visitorResult.sessionId
+          request.visitor = visitorResult.visitorSession.visitor
+        }
+      }
+      return { isValid: false }
+    }
+
+    async function handleMissingSession(request, sessionCache) {
+      if (shouldTrackPath(request.path)) {
+        const visitorResult = await createOrUpdateVisitorSession(
+          request,
+          sessionCache
+        )
+        if (visitorResult) {
+          request._visitorSessionId = visitorResult.sessionId
+          request.visitor = visitorResult.visitorSession.visitor
+        }
+      }
+      return { isValid: false }
+    }
+
+    function validateSessionState(cached) {
+      // Check if this is an auth session (has authState but no user)
+      if (cached.authState && !cached.user) {
+        return { isValid: false }
+      }
+      // Check if this is a user session
+      if (!cached.user) {
+        return { isValid: false }
+      }
+      return null // Continue validation
+    }
+
+    async function handleSessionExpiry(cached, sessionId, sessionCache) {
+      if (cached.expires && cached.expires < Date.now()) {
+        await sessionCache?.drop(sessionId)
+        return { isValid: false }
+      }
+      return null // Continue validation
+    }
+
+    async function handleSessionExtension(cached, sessionId, sessionCache) {
+      const shouldExtend = config.get('session.extendOnActivity')
+      if (!shouldExtend) {
+        return cached
+      }
+
+      const sessionTtl = config.get('session.cache.ttl')
+      const newExpiry = Date.now() + sessionTtl
+      const extensionThreshold = sessionTtl * 0.1
+
+      if (newExpiry > cached.expires + extensionThreshold) {
+        logger.debug('Extending session on activity', { sessionId })
+        const extendedSession = {
+          ...cached,
+          expires: newExpiry
+        }
+        await sessionCache?.set(sessionId, extendedSession)
+        return extendedSession
+      }
+      return cached
+    }
+
+    async function handleTokenRefresh(
+      cached,
+      sessionId,
+      sessionCache,
+      sessionToReturn
+    ) {
+      const tokenExpiry = cached.tokenExpires || 0
+      const refreshThreshold = TOKEN_REFRESH_THRESHOLD_MINUTES * 60 * 1000
+      const shouldRefresh = tokenExpiry < Date.now() + refreshThreshold
+
+      if (!shouldRefresh || !cached.refreshToken) {
+        return null // No refresh needed
+      }
+
+      logger.info('Token expiring soon, attempting refresh', { sessionId })
+      const refreshResult = await refreshAccessToken(
+        cached,
+        sessionId,
+        sessionCache
+      )
+
+      if (refreshResult === 'session_expired') {
+        logger.info(
+          'Entra session expired during refresh, invalidating session',
+          { sessionId }
+        )
+        return { isValid: false, sessionExpired: true }
+      }
+
+      if (refreshResult) {
+        const finalSession = {
+          ...refreshResult,
+          expires: sessionToReturn.expires
+        }
+        return {
+          isValid: true,
+          credentials: { ...finalSession, id: sessionId }
+        }
+      }
+
+      // Refresh failed, invalidate session
+      logger.warn('Token refresh failed, invalidating session', { sessionId })
+      await sessionCache?.drop(sessionId)
+      return { isValid: false }
+    }
+
     // Configure authentication strategy using cookie
     server.auth.strategy('session', 'cookie', {
       cookie: {
@@ -299,6 +430,7 @@ export const plugin = {
       redirectTo: false,
       validate: async (request, session) => {
         try {
+          // Skip validation for logout and public paths
           if (
             request.path === AUTH_LOGOUT_PATH ||
             request.path.startsWith('/public/')
@@ -306,48 +438,23 @@ export const plugin = {
             return { isValid: false }
           }
 
-          // Handle visitor tracking for unauthenticated users
+          // Handle unauthenticated users
           if (!session?.id) {
-            // Create visitor session for analytics if on trackable path
-            if (shouldTrackPath(request.path)) {
-              const visitorResult = await createOrUpdateVisitorSession(
-                request,
-                server.app.sessionCache
-              )
-              if (visitorResult) {
-                // Set session cookie for visitor tracking
-                request._visitorSessionId = visitorResult.sessionId
-                request.visitor = visitorResult.visitorSession.visitor
-              }
-            }
-            return { isValid: false }
+            return await handleUnauthenticatedUser(
+              request,
+              server.app.sessionCache
+            )
           }
 
           const cached = await server.app.sessionCache?.get(session.id)
 
+          // Handle missing session
           if (!cached) {
-            // Try to create visitor session if on trackable path
-            if (shouldTrackPath(request.path)) {
-              const visitorResult = await createOrUpdateVisitorSession(
-                request,
-                server.app.sessionCache
-              )
-              if (visitorResult) {
-                request._visitorSessionId = visitorResult.sessionId
-                request.visitor = visitorResult.visitorSession.visitor
-              }
-            }
-            return { isValid: false }
+            return await handleMissingSession(request, server.app.sessionCache)
           }
 
-          // Check if this is an auth session (has authState but no user)
-          if (cached.authState && !cached.user) {
-            return { isValid: false }
-          }
-
-          // Check if this is a visitor session (has visitor but no user)
+          // Handle visitor sessions (has visitor but no user)
           if (cached.visitor && !cached.user) {
-            // Update visitor session and continue as unauthenticated
             if (shouldTrackPath(request.path)) {
               const visitorResult = await createOrUpdateVisitorSession(
                 request,
@@ -360,88 +467,41 @@ export const plugin = {
             return { isValid: false }
           }
 
-          // Check if this is a user session
-          if (!cached.user) {
-            return { isValid: false }
+          // Validate session state
+          const stateValidation = validateSessionState(cached)
+          if (stateValidation) {
+            return stateValidation
           }
 
-          // Check if overall session has expired
-          if (cached.expires && cached.expires < Date.now()) {
-            await server.app.sessionCache?.drop(session.id)
-            return { isValid: false }
+          // Check session expiry
+          const expiryResult = await handleSessionExpiry(
+            cached,
+            session.id,
+            server.app.sessionCache
+          )
+          if (expiryResult) {
+            return expiryResult
           }
 
-          // Extend session on activity if enabled
-          const shouldExtend = config.get('session.extendOnActivity')
-          let sessionToReturn = cached
+          // Handle session extension
+          const sessionToReturn = await handleSessionExtension(
+            cached,
+            session.id,
+            server.app.sessionCache
+          )
 
-          if (shouldExtend) {
-            const sessionTtl = config.get('session.cache.ttl')
-            const newExpiry = Date.now() + sessionTtl
-
-            // Only update if the extension would be meaningful (more than 10% of TTL)
-            const extensionThreshold = sessionTtl * 0.1
-            if (newExpiry > cached.expires + extensionThreshold) {
-              logger.debug('Extending session on activity', {
-                sessionId: session.id
-              })
-              sessionToReturn = {
-                ...cached,
-                expires: newExpiry
-              }
-              // Update session in cache with new expiry
-              await server.app.sessionCache?.set(session.id, sessionToReturn)
-            }
+          // Handle token refresh if needed
+          const refreshResult = await handleTokenRefresh(
+            cached,
+            session.id,
+            server.app.sessionCache,
+            sessionToReturn
+          )
+          if (refreshResult) {
+            return refreshResult
           }
 
-          // Check if access token needs refreshing (refresh 5 minutes before expiry)
-          const tokenExpiry = cached.tokenExpires || 0
-          const refreshThreshold = 5 * 60 * 1000 // 5 minutes in milliseconds
-          const shouldRefresh = tokenExpiry < Date.now() + refreshThreshold
-
-          if (shouldRefresh && cached.refreshToken) {
-            logger.info('Token expiring soon, attempting refresh', {
-              sessionId: session.id
-            })
-            const refreshResult = await refreshAccessToken(
-              cached,
-              session.id,
-              server.app.sessionCache
-            )
-
-            if (refreshResult === 'session_expired') {
-              // Entra session expired, invalidate local session
-              logger.info(
-                'Entra session expired during refresh, invalidating session',
-                { sessionId: session.id }
-              )
-              return { isValid: false, sessionExpired: true }
-            } else if (refreshResult) {
-              // Return the refreshed session (with potential extension)
-              const finalSession = shouldExtend
-                ? {
-                    ...refreshResult,
-                    expires: sessionToReturn.expires
-                  }
-                : refreshResult
-
-              return {
-                isValid: true,
-                credentials: {
-                  ...finalSession,
-                  id: session.id
-                }
-              }
-            } else {
-              // Refresh failed, invalidate session
-              logger.warn('Token refresh failed, invalidating session', {
-                sessionId: session.id
-              })
-              await server.app.sessionCache?.drop(session.id)
-              return { isValid: false }
-            }
-          }
-
+          // Return valid session
           return {
             isValid: true,
             credentials: {

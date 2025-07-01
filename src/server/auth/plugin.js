@@ -5,7 +5,10 @@ import crypto from 'node:crypto'
 import { URL } from 'url'
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { config } from '~/src/config/config.js'
-import { analytics } from '~/src/server/common/helpers/analytics.js'
+
+// Import extracted modules
+import * as sessionValidator from './session-validator.js'
+import * as visitorSessions from './visitor-sessions.js'
 
 // Constants for repeated literals
 const AUTH_ERROR_TITLE = 'Authentication Error'
@@ -131,94 +134,6 @@ export const plugin = {
       })
     }
 
-    // Create or update visitor session for anonymous users
-    async function createOrUpdateVisitorSession(request, sessionCache) {
-      try {
-        const sessionCookie = request.state?.[AUTH_SESSION_COOKIE_NAME]
-        let sessionId = sessionCookie?.id
-        let visitorSession = null
-        let isNewVisitor = false
-
-        // Try to get existing visitor session
-        if (sessionId) {
-          visitorSession = await sessionCache?.get(sessionId)
-        }
-
-        // Create new visitor session if none exists
-        if (
-          !visitorSession ||
-          (!visitorSession.user && !visitorSession.visitor)
-        ) {
-          sessionId = crypto.randomBytes(16).toString('hex')
-          const now = Date.now()
-
-          visitorSession = {
-            visitor: {
-              id: sessionId,
-              firstVisit: now,
-              lastVisit: now,
-              pageViews: 1,
-              userAgent: request.headers['user-agent'],
-              country: request.headers['cf-ipcountry'] || 'unknown'
-            },
-            expires: now + TWENTY_FOUR_HOURS_MS // 24 hours for visitor sessions
-          }
-
-          isNewVisitor = true
-          await sessionCache?.set(sessionId, visitorSession)
-
-          // Track unique visitor
-          await analytics.trackUniqueVisitor(request, visitorSession.visitor)
-
-          logger.debug('Created new visitor session', { sessionId })
-        } else if (visitorSession.visitor) {
-          // Update existing visitor session
-          const now = Date.now()
-          visitorSession.visitor.lastVisit = now
-          visitorSession.visitor.pageViews += 1
-          visitorSession.expires = now + TWENTY_FOUR_HOURS_MS
-
-          await sessionCache?.set(sessionId, visitorSession)
-          logger.debug('Updated visitor session', { sessionId })
-        } else {
-          // Handle case where visitorSession exists but has no visitor property
-          logger.debug('Invalid visitor session format', { sessionId })
-          return null
-        }
-
-        // Track page view
-        await analytics.trackPageView(
-          request,
-          visitorSession.visitor,
-          isNewVisitor
-        )
-
-        logger.debug('Visitor session result', {
-          sessionId,
-          isNewVisitor,
-          hasVisitor: !!visitorSession?.visitor
-        })
-
-        return { sessionId, visitorSession }
-      } catch (error) {
-        logger.error('Error managing visitor session:', error)
-        return null
-      }
-    }
-
-    // Check if path should be tracked for visitor analytics
-    function shouldTrackPath(path) {
-      const skipPaths = [
-        '/public/',
-        '/favicon.ico',
-        '/robots.txt',
-        '/health',
-        '/_next/',
-        '/api/health'
-      ]
-      return !skipPaths.some((skipPath) => path.startsWith(skipPath))
-    }
-
     // Check if error indicates session expiry
     function isSessionExpiredError(error) {
       return (
@@ -304,85 +219,6 @@ export const plugin = {
       logger.error('Failed to setup OIDC client', error)
     }
 
-    // Helper functions for session validation
-    async function handleUnauthenticatedUser(request, sessionCache) {
-      logger.debug('Handling unauthenticated user', {
-        path: request.path,
-        shouldTrack: shouldTrackPath(request.path)
-      })
-
-      if (shouldTrackPath(request.path)) {
-        const visitorResult = await createOrUpdateVisitorSession(
-          request,
-          sessionCache
-        )
-        if (visitorResult) {
-          request._visitorSessionId = visitorResult.sessionId
-          request.visitor = visitorResult.visitorSession.visitor
-          logger.debug('Visitor session created', {
-            sessionId: visitorResult.sessionId
-          })
-        }
-      }
-      return { isValid: false }
-    }
-
-    async function handleMissingSession(request, sessionCache) {
-      if (shouldTrackPath(request.path)) {
-        const visitorResult = await createOrUpdateVisitorSession(
-          request,
-          sessionCache
-        )
-        if (visitorResult) {
-          request._visitorSessionId = visitorResult.sessionId
-          request.visitor = visitorResult.visitorSession.visitor
-        }
-      }
-      return { isValid: false }
-    }
-
-    function validateSessionState(cached) {
-      // Check if this is an auth session (has authState but no user)
-      if (cached.authState && !cached.user) {
-        return { isValid: false }
-      }
-      // Check if this is a user session
-      if (!cached.user) {
-        return { isValid: false }
-      }
-      return null // Continue validation
-    }
-
-    async function handleSessionExpiry(cached, sessionId, sessionCache) {
-      if (cached.expires && cached.expires < Date.now()) {
-        await sessionCache?.drop(sessionId)
-        return { isValid: false }
-      }
-      return null // Continue validation
-    }
-
-    async function handleSessionExtension(cached, sessionId, sessionCache) {
-      const shouldExtend = config.get('session.extendOnActivity')
-      if (!shouldExtend) {
-        return cached
-      }
-
-      const sessionTtl = config.get('session.cache.ttl')
-      const newExpiry = Date.now() + sessionTtl
-      const extensionThreshold = sessionTtl * 0.1
-
-      if (newExpiry > cached.expires + extensionThreshold) {
-        logger.debug('Extending session on activity', { sessionId })
-        const extendedSession = {
-          ...cached,
-          expires: newExpiry
-        }
-        await sessionCache?.set(sessionId, extendedSession)
-        return extendedSession
-      }
-      return cached
-    }
-
     async function handleTokenRefresh(
       cached,
       sessionId,
@@ -429,6 +265,61 @@ export const plugin = {
       return { isValid: false }
     }
 
+    // Main session validation orchestrator - reduced complexity
+    async function validateSessionRequest(request, session, sessionCache) {
+      try {
+        logger.debug('Auth validation called', {
+          path: request.path,
+          hasSession: !!session,
+          sessionId: session?.id
+        })
+
+        // Guard: Skip validation for public paths
+        if (sessionValidator.isPublicPath(request.path)) {
+          return { isValid: false }
+        }
+
+        // Guard: Handle unauthenticated users
+        if (!session?.id) {
+          return await sessionValidator.handleUnauthenticatedRequest(
+            request,
+            sessionCache,
+            visitorSessions.handleUnauthenticatedUser
+          )
+        }
+
+        // Get cached session
+        const cached = await sessionCache?.get(session.id)
+        if (!cached) {
+          return await visitorSessions.handleMissingSession(
+            request,
+            sessionCache
+          )
+        }
+
+        // Handle visitor-only sessions
+        if (cached.visitor && !cached.user) {
+          return await sessionValidator.handleVisitorSession(
+            request,
+            sessionCache,
+            visitorSessions.createOrUpdateVisitorSession,
+            visitorSessions.shouldTrackPath
+          )
+        }
+
+        // Validate and process authenticated session
+        return await sessionValidator.processAuthenticatedSession(
+          cached,
+          session.id,
+          sessionCache,
+          handleTokenRefresh
+        )
+      } catch (error) {
+        logger.error('Session validation error:', { error: error.message })
+        return { isValid: false }
+      }
+    }
+
     // Configure authentication strategy using cookie
     server.auth.strategy('session', 'cookie', {
       cookie: {
@@ -443,106 +334,7 @@ export const plugin = {
       },
       redirectTo: false,
       validate: async (request, session) => {
-        try {
-          logger.debug('Auth validation called', {
-            path: request.path,
-            hasSession: !!session,
-            sessionId: session?.id
-          })
-
-          // Skip validation for logout and public paths
-          if (
-            request.path === AUTH_LOGOUT_PATH ||
-            request.path.startsWith('/public/')
-          ) {
-            logger.debug('Skipping auth for public/logout path', {
-              path: request.path
-            })
-            return { isValid: false }
-          }
-
-          // Handle unauthenticated users
-          if (!session?.id) {
-            logger.debug(
-              'No session ID found, handling as unauthenticated user',
-              {
-                path: request.path
-              }
-            )
-            return await handleUnauthenticatedUser(
-              request,
-              server.app.sessionCache
-            )
-          }
-
-          const cached = await server.app.sessionCache?.get(session.id)
-
-          // Handle missing session
-          if (!cached) {
-            return await handleMissingSession(request, server.app.sessionCache)
-          }
-
-          // Handle visitor sessions (has visitor but no user)
-          if (cached.visitor && !cached.user) {
-            if (shouldTrackPath(request.path)) {
-              const visitorResult = await createOrUpdateVisitorSession(
-                request,
-                server.app.sessionCache
-              )
-              if (visitorResult) {
-                request._visitorSessionId = visitorResult.sessionId
-                request.visitor = visitorResult.visitorSession.visitor
-              }
-            }
-            return { isValid: false }
-          }
-
-          // Validate session state
-          const stateValidation = validateSessionState(cached)
-          if (stateValidation) {
-            return stateValidation
-          }
-
-          // Check session expiry
-          const expiryResult = await handleSessionExpiry(
-            cached,
-            session.id,
-            server.app.sessionCache
-          )
-          if (expiryResult) {
-            return expiryResult
-          }
-
-          // Handle session extension
-          const sessionToReturn = await handleSessionExtension(
-            cached,
-            session.id,
-            server.app.sessionCache
-          )
-
-          // Handle token refresh if needed
-          const refreshResult = await handleTokenRefresh(
-            cached,
-            session.id,
-            server.app.sessionCache,
-            sessionToReturn
-          )
-          if (refreshResult) {
-            return refreshResult
-          }
-
-          // Return valid session
-          return {
-            isValid: true,
-            credentials: {
-              ...sessionToReturn,
-              id: session.id
-            }
-          }
-        } catch (error) {
-          logger.error('Session validation error:', { error: error.message })
-          return { isValid: false }
-        }
+        return validateSessionRequest(request, session, server.app.sessionCache)
       }
     })
 
@@ -560,11 +352,16 @@ export const plugin = {
       const isAuthPath = request.path.startsWith('/auth')
 
       // If no cookie and path should be tracked (and not auth path), create visitor session
-      if (!sessionCookie && !isAuthPath && shouldTrackPath(request.path)) {
-        const visitorResult = await createOrUpdateVisitorSession(
-          request,
-          server.app.sessionCache
-        )
+      if (
+        !sessionCookie &&
+        !isAuthPath &&
+        visitorSessions.shouldTrackPath(request.path)
+      ) {
+        const visitorResult =
+          await visitorSessions.createOrUpdateVisitorSession(
+            request,
+            server.app.sessionCache
+          )
         if (visitorResult) {
           request._visitorSessionId = visitorResult.sessionId
           request.visitor = visitorResult.visitorSession.visitor

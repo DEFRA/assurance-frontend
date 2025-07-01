@@ -103,6 +103,9 @@ describe('Auth Plugin - Visitor Tracking', () => {
         'user-agent': 'Test Browser 1.0',
         'cf-ipcountry': 'GB'
       },
+      info: {
+        remoteAddress: '127.0.0.1'
+      },
       state: {}
     }
 
@@ -123,11 +126,21 @@ describe('Auth Plugin - Visitor Tracking', () => {
   })
 
   describe('visitor session creation', () => {
-    test('should create visitor session for new anonymous user', async () => {
-      // No existing session
-      mockSessionCache.get.mockResolvedValue(null)
+    test('should create visitor session for new anonymous user via onRequest extension', async () => {
+      // Get the onRequest handler
+      const onRequestCall = mockServer.ext.mock.calls.find(
+        (call) => call[0] === 'onRequest'
+      )
+      const onRequestHandler = onRequestCall[1]
 
-      const result = await strategyConfig.validate(mockRequest, null)
+      const mockH = {
+        continue: Symbol('continue')
+      }
+
+      // Simulate onRequest for new user (no cookie)
+      mockRequest.state = {} // No cookie
+
+      const result = await onRequestHandler(mockRequest, mockH)
 
       expect(mockSessionCache.set).toHaveBeenCalledWith(
         'mock-visitor-session-id',
@@ -135,11 +148,12 @@ describe('Auth Plugin - Visitor Tracking', () => {
           visitor: expect.objectContaining({
             id: 'mock-visitor-session-id',
             firstVisit: expect.any(Number),
-            lastVisit: expect.any(Number),
-            pageViews: 1,
+            lastActivity: expect.any(Number),
+            pageViews: [],
             userAgent: 'Test Browser 1.0',
-            country: 'GB'
+            ipAddress: expect.any(String)
           }),
+          created: expect.any(Number),
           expires: expect.any(Number)
         })
       )
@@ -147,8 +161,7 @@ describe('Auth Plugin - Visitor Tracking', () => {
       expect(analytics.trackUniqueVisitor).toHaveBeenCalledWith(
         mockRequest,
         expect.objectContaining({
-          id: 'mock-visitor-session-id',
-          country: 'GB'
+          id: 'mock-visitor-session-id'
         })
       )
 
@@ -160,25 +173,25 @@ describe('Auth Plugin - Visitor Tracking', () => {
         true // isNewVisitor
       )
 
+      expect(mockRequest._visitorSessionId).toBe('mock-visitor-session-id')
       expect(mockRequest.visitor).toEqual(
         expect.objectContaining({
-          id: 'mock-visitor-session-id',
-          country: 'GB'
+          id: 'mock-visitor-session-id'
         })
       )
 
-      expect(result.isValid).toBe(false) // Still not authenticated
+      expect(result).toBe(mockH.continue)
     })
 
-    test('should update existing visitor session', async () => {
+    test('should update existing visitor session via auth validation', async () => {
       const existingVisitorSession = {
         visitor: {
           id: 'existing-visitor-id',
           firstVisit: Date.now() - 3600000,
-          lastVisit: Date.now() - 60000,
+          lastActivity: Date.now() - 60000,
           pageViews: 5,
           userAgent: 'Test Browser 1.0',
-          country: 'GB'
+          ipAddress: '127.0.0.1'
         },
         expires: Date.now() + 3600000
       }
@@ -189,6 +202,7 @@ describe('Auth Plugin - Visitor Tracking', () => {
 
       mockSessionCache.get.mockResolvedValue(existingVisitorSession)
 
+      // Test the validation flow with existing visitor session
       const result = await strategyConfig.validate(mockRequest, {
         id: 'existing-session-id'
       })
@@ -199,7 +213,7 @@ describe('Auth Plugin - Visitor Tracking', () => {
           visitor: expect.objectContaining({
             id: 'existing-visitor-id',
             pageViews: 6, // Incremented
-            lastVisit: expect.any(Number)
+            lastActivity: expect.any(Number)
           })
         })
       )
@@ -214,40 +228,73 @@ describe('Auth Plugin - Visitor Tracking', () => {
         false // Not new visitor
       )
 
-      expect(result.isValid).toBe(false) // Still not authenticated
+      expect(result.isValid).toBe(false) // Still not authenticated but visitor session updated
     })
 
     test('should not track on excluded paths', async () => {
-      mockRequest.path = '/public/css/style.css'
+      // Get the onRequest handler
+      const onRequestCall = mockServer.ext.mock.calls.find(
+        (call) => call[0] === 'onRequest'
+      )
+      const onRequestHandler = onRequestCall[1]
 
-      const result = await strategyConfig.validate(mockRequest, null)
+      const mockH = {
+        continue: Symbol('continue')
+      }
+
+      mockRequest.path = '/public/css/style.css'
+      mockRequest.state = {} // No cookie
+
+      const result = await onRequestHandler(mockRequest, mockH)
 
       expect(mockSessionCache.set).not.toHaveBeenCalled()
       expect(analytics.trackUniqueVisitor).not.toHaveBeenCalled()
       expect(analytics.trackPageView).not.toHaveBeenCalled()
-      expect(result.isValid).toBe(false)
+      expect(result).toBe(mockH.continue)
     })
 
     test('should not track favicon requests', async () => {
-      mockRequest.path = '/favicon.ico'
+      // Get the onRequest handler
+      const onRequestCall = mockServer.ext.mock.calls.find(
+        (call) => call[0] === 'onRequest'
+      )
+      const onRequestHandler = onRequestCall[1]
 
-      const result = await strategyConfig.validate(mockRequest, null)
+      const mockH = {
+        continue: Symbol('continue')
+      }
+
+      mockRequest.path = '/favicon.ico'
+      mockRequest.state = {} // No cookie
+
+      const result = await onRequestHandler(mockRequest, mockH)
 
       expect(mockSessionCache.set).not.toHaveBeenCalled()
       expect(analytics.trackUniqueVisitor).not.toHaveBeenCalled()
       expect(analytics.trackPageView).not.toHaveBeenCalled()
-      expect(result.isValid).toBe(false)
+      expect(result).toBe(mockH.continue)
     })
 
     test('should not track health check requests', async () => {
-      mockRequest.path = '/health'
+      // Get the onRequest handler
+      const onRequestCall = mockServer.ext.mock.calls.find(
+        (call) => call[0] === 'onRequest'
+      )
+      const onRequestHandler = onRequestCall[1]
 
-      const result = await strategyConfig.validate(mockRequest, null)
+      const mockH = {
+        continue: Symbol('continue')
+      }
+
+      mockRequest.path = '/health'
+      mockRequest.state = {} // No cookie
+
+      const result = await onRequestHandler(mockRequest, mockH)
 
       expect(mockSessionCache.set).not.toHaveBeenCalled()
       expect(analytics.trackUniqueVisitor).not.toHaveBeenCalled()
       expect(analytics.trackPageView).not.toHaveBeenCalled()
-      expect(result.isValid).toBe(false)
+      expect(result).toBe(mockH.continue)
     })
   })
 
@@ -307,11 +354,21 @@ describe('Auth Plugin - Visitor Tracking', () => {
       )
       analytics.trackPageView.mockRejectedValue(new Error('Analytics error'))
 
-      mockSessionCache.get.mockResolvedValue(null)
+      // Get the onRequest handler
+      const onRequestCall = mockServer.ext.mock.calls.find(
+        (call) => call[0] === 'onRequest'
+      )
+      const onRequestHandler = onRequestCall[1]
 
-      const result = await strategyConfig.validate(mockRequest, null)
+      const mockH = {
+        continue: Symbol('continue')
+      }
 
-      expect(result.isValid).toBe(false)
+      mockRequest.state = {} // No cookie
+
+      const result = await onRequestHandler(mockRequest, mockH)
+
+      expect(result).toBe(mockH.continue)
       // Should still create visitor session even if analytics fails
       expect(mockSessionCache.set).toHaveBeenCalled()
     })

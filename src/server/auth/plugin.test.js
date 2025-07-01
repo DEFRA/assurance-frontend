@@ -1111,4 +1111,85 @@ describe('Auth Plugin', () => {
       expect(result.credentials.token).toBe('valid-access-token')
     })
   })
+
+  describe('processTokenExchange function', () => {
+    test('should work with options object parameter pattern', async () => {
+      // Arrange
+      await plugin.register(mockServer)
+
+      const mockTokenSet = {
+        access_token: 'test-access-token',
+        refresh_token: 'test-refresh-token',
+        expires_in: 3600,
+        claims: jest.fn().mockReturnValue({
+          sub: 'user-123',
+          email: 'test@example.com',
+          name: 'Test User',
+          roles: ['admin']
+        })
+      }
+
+      mockOidcClient.callback.mockResolvedValue(mockTokenSet)
+      mockSessionCache.set.mockResolvedValue(true)
+
+      // Note: Testing processTokenExchange indirectly through the callback route handler
+      // since it's an internal function. The options object pattern is tested implicitly.
+
+      // Since processTokenExchange is an internal function, we need to test it
+      // through the callback route handler. Let's create a mock request.
+      const mockRequest = {
+        state: { 'assurance-session': { id: 'test-session-id' } },
+        raw: { req: {} },
+        path: '/auth'
+      }
+
+      // Mock validateAuthState by adding auth state to session cache
+      const authStateData = {
+        authState: {
+          state: 'test-state',
+          codeVerifier: 'test-verifier',
+          redirectTo: '/',
+          expires: Date.now() + 600000
+        }
+      }
+      mockSessionCache.get.mockResolvedValue(authStateData)
+
+      mockOidcClient.callbackParams.mockReturnValue({
+        code: 'auth-code',
+        state: 'test-state'
+      })
+
+      // Get the callback route handler
+      const callbackRoute = mockServer.route.mock.calls.find(
+        (call) => call[0].path === '/auth'
+      )[0]
+
+      // Act
+      const result = await callbackRoute.handler(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBeDefined() // Should return a response object
+      expect(mockOidcClient.callback).toHaveBeenCalledWith(
+        'https://example.com/auth',
+        { code: 'auth-code', state: 'test-state' },
+        { state: 'test-state', code_verifier: 'test-verifier' }
+      )
+
+      expect(mockSessionCache.set).toHaveBeenCalledWith(
+        'test-session-id',
+        expect.objectContaining({
+          user: expect.objectContaining({
+            id: 'user-123',
+            email: 'test@example.com',
+            name: 'Test User',
+            roles: ['admin']
+          }),
+          token: 'test-access-token',
+          refreshToken: 'test-refresh-token'
+        })
+      )
+
+      expect(mockH.redirect).toHaveBeenCalledWith('/')
+    })
+  })
 })

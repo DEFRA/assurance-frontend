@@ -17,6 +17,10 @@ const AUTH_LOGOUT_PATH = '/auth/logout'
 const AUTH_LOGIN_PATH = '/auth/login'
 const ERROR_TEMPLATE = 'common/templates/error'
 
+// Time constants to avoid magic numbers
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000
+const TEN_MINUTES_MS = 10 * 60 * 1000
+
 export const plugin = {
   name: 'auth',
   version: '1.0.0',
@@ -60,15 +64,16 @@ export const plugin = {
     }
 
     // Process token exchange and create session
-    async function processTokenExchange(
-      client,
-      appConfig,
-      params,
-      state,
-      stateData,
-      sessionCache,
-      sessionId
-    ) {
+    async function processTokenExchange(options) {
+      const {
+        client,
+        appConfig,
+        params,
+        state,
+        stateData,
+        sessionCache,
+        sessionId
+      } = options
       const callbackUrl = appConfig.get('azure.callbackUrl')
 
       const tokenSet = await client.callback(callbackUrl, params, {
@@ -152,7 +157,7 @@ export const plugin = {
               userAgent: request.headers['user-agent'],
               country: request.headers['cf-ipcountry'] || 'unknown'
             },
-            expires: now + 24 * 60 * 60 * 1000 // 24 hours for visitor sessions
+            expires: now + TWENTY_FOUR_HOURS_MS // 24 hours for visitor sessions
           }
 
           isNewVisitor = true
@@ -167,7 +172,7 @@ export const plugin = {
           const now = Date.now()
           visitorSession.visitor.lastVisit = now
           visitorSession.visitor.pageViews += 1
-          visitorSession.expires = now + 24 * 60 * 60 * 1000
+          visitorSession.expires = now + TWENTY_FOUR_HOURS_MS
 
           await sessionCache?.set(sessionId, visitorSession)
           logger.debug('Updated visitor session', { sessionId })
@@ -464,7 +469,7 @@ export const plugin = {
           AUTH_SESSION_COOKIE_NAME,
           { id: request._visitorSessionId },
           {
-            ttl: 24 * 60 * 60 * 1000, // 24 hours
+            ttl: TWENTY_FOUR_HOURS_MS, // 24 hours
             isHttpOnly: true,
             isSecure: config.get('session.cookie.secure'),
             isSameSite: 'Lax',
@@ -513,7 +518,7 @@ export const plugin = {
             state,
             codeVerifier,
             redirectTo: redirectPath,
-            expires: Date.now() + 10 * 60 * 1000 // 10 minutes
+            expires: Date.now() + TEN_MINUTES_MS // 10 minutes
           }
 
           // Store auth state in session cache
@@ -569,15 +574,15 @@ export const plugin = {
           const sessionCookie = request.state[AUTH_SESSION_COOKIE_NAME]
 
           // Process the token exchange and create session
-          const sessionResult = await processTokenExchange(
-            oidcClient,
-            config,
+          const sessionResult = await processTokenExchange({
+            client: oidcClient,
+            appConfig: config,
             params,
             state,
             stateData,
-            server.app.sessionCache,
-            sessionCookie.id
-          )
+            sessionCache: server.app.sessionCache,
+            sessionId: sessionCookie.id
+          })
 
           // Create response with updated session cookie
           const response = h.redirect(stateData.redirectTo || HOME_PATH)

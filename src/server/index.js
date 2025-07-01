@@ -67,8 +67,8 @@ export async function createServer() {
     requestTracing,
     secureContext,
     pulse,
+    sessionCache, // ← Session cache MUST be registered before auth plugin
     authPlugin,
-    sessionCache,
     nunjucksConfig,
     requestExtensionsPlugin,
     router

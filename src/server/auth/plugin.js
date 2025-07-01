@@ -34,7 +34,7 @@ export const plugin = {
     // Validate the authentication state from session
     async function validateAuthState(state, request) {
       try {
-        const sessionCookie = request.state[AUTH_SESSION_COOKIE_NAME]
+        const sessionCookie = request.state?.[AUTH_SESSION_COOKIE_NAME]
 
         if (!sessionCookie?.id) {
           throw Boom.badRequest('No session found')
@@ -134,7 +134,7 @@ export const plugin = {
     // Create or update visitor session for anonymous users
     async function createOrUpdateVisitorSession(request, sessionCache) {
       try {
-        const sessionCookie = request.state[AUTH_SESSION_COOKIE_NAME]
+        const sessionCookie = request.state?.[AUTH_SESSION_COOKIE_NAME]
         let sessionId = sessionCookie?.id
         let visitorSession = null
         let isNewVisitor = false
@@ -192,6 +192,12 @@ export const plugin = {
           visitorSession.visitor,
           isNewVisitor
         )
+
+        logger.debug('Visitor session result', {
+          sessionId,
+          isNewVisitor,
+          hasVisitor: !!visitorSession?.visitor
+        })
 
         return { sessionId, visitorSession }
       } catch (error) {
@@ -300,6 +306,11 @@ export const plugin = {
 
     // Helper functions for session validation
     async function handleUnauthenticatedUser(request, sessionCache) {
+      logger.debug('Handling unauthenticated user', {
+        path: request.path,
+        shouldTrack: shouldTrackPath(request.path)
+      })
+
       if (shouldTrackPath(request.path)) {
         const visitorResult = await createOrUpdateVisitorSession(
           request,
@@ -308,6 +319,9 @@ export const plugin = {
         if (visitorResult) {
           request._visitorSessionId = visitorResult.sessionId
           request.visitor = visitorResult.visitorSession.visitor
+          logger.debug('Visitor session created', {
+            sessionId: visitorResult.sessionId
+          })
         }
       }
       return { isValid: false }
@@ -430,16 +444,31 @@ export const plugin = {
       redirectTo: false,
       validate: async (request, session) => {
         try {
+          logger.debug('Auth validation called', {
+            path: request.path,
+            hasSession: !!session,
+            sessionId: session?.id
+          })
+
           // Skip validation for logout and public paths
           if (
             request.path === AUTH_LOGOUT_PATH ||
             request.path.startsWith('/public/')
           ) {
+            logger.debug('Skipping auth for public/logout path', {
+              path: request.path
+            })
             return { isValid: false }
           }
 
           // Handle unauthenticated users
           if (!session?.id) {
+            logger.debug(
+              'No session ID found, handling as unauthenticated user',
+              {
+                path: request.path
+              }
+            )
             return await handleUnauthenticatedUser(
               request,
               server.app.sessionCache
@@ -461,6 +490,7 @@ export const plugin = {
                 server.app.sessionCache
               )
               if (visitorResult) {
+                request._visitorSessionId = visitorResult.sessionId
                 request.visitor = visitorResult.visitorSession.visitor
               }
             }
@@ -520,6 +550,28 @@ export const plugin = {
     server.auth.default({
       strategy: 'session',
       mode: 'try'
+    })
+
+    // Create visitor sessions for unauthenticated users
+    server.ext('onRequest', async (request, h) => {
+      const sessionCookie = request.state?.[AUTH_SESSION_COOKIE_NAME]
+
+      // Skip visitor session creation for auth paths to avoid interfering with OAuth flow
+      const isAuthPath = request.path.startsWith('/auth')
+
+      // If no cookie and path should be tracked (and not auth path), create visitor session
+      if (!sessionCookie && !isAuthPath && shouldTrackPath(request.path)) {
+        const visitorResult = await createOrUpdateVisitorSession(
+          request,
+          server.app.sessionCache
+        )
+        if (visitorResult) {
+          request._visitorSessionId = visitorResult.sessionId
+          request.visitor = visitorResult.visitorSession.visitor
+        }
+      }
+
+      return h.continue
     })
 
     // Extension to set visitor session cookie when created
@@ -631,7 +683,7 @@ export const plugin = {
 
           // Validate state and get stored data from session
           const stateData = await validateAuthState(state, request)
-          const sessionCookie = request.state[AUTH_SESSION_COOKIE_NAME]
+          const sessionCookie = request.state?.[AUTH_SESSION_COOKIE_NAME]
 
           // Process the token exchange and create session
           const sessionResult = await processTokenExchange({

@@ -1,4 +1,4 @@
-import { init, CounterMetric } from 'aws-embedded-metrics'
+import { createMetricsLogger, Unit } from 'aws-embedded-metrics'
 import { config } from '~/src/config/config.js'
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 
@@ -15,8 +15,8 @@ async function logMetric(metricName, value, properties) {
   }
 
   try {
-    const metrics = init({})
-    metrics.putMetric(metricName, value, CounterMetric)
+    const metrics = createMetricsLogger()
+    metrics.putMetric(metricName, value, Unit.Count)
 
     if (properties) {
       metrics.setProperty('properties', properties)

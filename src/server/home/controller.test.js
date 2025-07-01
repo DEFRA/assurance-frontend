@@ -14,6 +14,13 @@ jest.mock('~/src/server/services/projects.js', () => ({
   getProjects: (...args) => mockGetProjects(...args)
 }))
 
+jest.mock('~/src/server/common/helpers/analytics.js', () => ({
+  analytics: {
+    trackProjectSearch: jest.fn().mockResolvedValue(undefined)
+  },
+  trackProjectSearch: jest.fn().mockResolvedValue(undefined)
+}))
+
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   logger: mockLogger
 }))

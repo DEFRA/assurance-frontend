@@ -14,8 +14,10 @@ const mockMetricsLogger = {
 }
 
 jest.mock('aws-embedded-metrics', () => ({
-  init: () => mockMetricsLogger,
-  CounterMetric: 'CounterMetric'
+  createMetricsLogger: () => mockMetricsLogger,
+  Unit: {
+    Count: 'Count'
+  }
 }))
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   logger: {
@@ -58,7 +60,7 @@ describe('#metrics', () => {
       expect(mockPutMetric).toHaveBeenCalledWith(
         mockMetricsName,
         mockValue,
-        'CounterMetric'
+        'Count'
       )
       expect(mockSetProperty).toHaveBeenCalledWith('properties', mockProperties)
       expect(mockFlush).toHaveBeenCalled()
@@ -70,7 +72,7 @@ describe('#metrics', () => {
       expect(mockPutMetric).toHaveBeenCalledWith(
         mockMetricsName,
         mockValue,
-        'CounterMetric'
+        'Count'
       )
       expect(mockSetProperty).not.toHaveBeenCalled()
       expect(mockFlush).toHaveBeenCalled()

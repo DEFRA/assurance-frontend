@@ -3,6 +3,7 @@ import {
   PAGE_TITLES,
   VIEW_TEMPLATES
 } from '~/src/server/constants/notifications.js'
+import { trackProjectSearch } from '~/src/server/common/helpers/analytics.js'
 
 /**
  * A GET route for the homepage
@@ -30,6 +31,11 @@ export const homeController = {
             project.name.toLowerCase().includes(search.toLowerCase())
           )
         : projects
+
+      // Track search if provided
+      if (search) {
+        await trackProjectSearch(request, search, filteredProjects.length)
+      }
 
       return h.view(VIEW_TEMPLATES.HOME_INDEX, {
         pageTitle: PAGE_TITLES.HOME,

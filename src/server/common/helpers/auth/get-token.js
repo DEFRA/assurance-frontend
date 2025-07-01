@@ -39,4 +39,19 @@ export const getBearerToken = (request) => {
   return null
 }
 
+/**
+ * Check if the current token is about to expire
+ * @param {import('@hapi/hapi').Request} request - Hapi request object
+ * @returns {boolean} True if token expires within 5 minutes
+ */
+export const isTokenExpiringSoon = (request) => {
+  const credentials = request.auth?.credentials
+  if (!credentials?.tokenExpires) {
+    return false
+  }
+
+  const refreshThreshold = 5 * 60 * 1000 // 5 minutes
+  return credentials.tokenExpires < Date.now() + refreshThreshold
+}
+
 export default getBearerToken

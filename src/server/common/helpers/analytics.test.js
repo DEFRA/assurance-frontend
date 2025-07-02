@@ -114,8 +114,7 @@ describe('Analytics Service', () => {
           timestamp: expect.any(String)
         },
         {
-          Path: '/test-path',
-          VisitorType: 'New'
+          Path: '/test-path'
         }
       )
     })
@@ -136,8 +135,7 @@ describe('Analytics Service', () => {
           sessionPageViews: 10
         }),
         {
-          Path: '/test-path',
-          VisitorType: 'Returning'
+          Path: '/test-path'
         }
       )
     })
@@ -178,9 +176,6 @@ describe('Analytics Service', () => {
           projectName: 'Test Project'
         },
         {
-          ProjectId: 'project-123',
-          Action: 'view',
-          UserType: 'Authenticated',
           ProjectName: 'Test Project'
         }
       )
@@ -209,11 +204,7 @@ describe('Analytics Service', () => {
           isAuthenticated: false,
           fileName: 'report.pdf'
         }),
-        {
-          ProjectId: 'project-123',
-          Action: 'download',
-          UserType: 'Anonymous'
-        }
+        {}
       )
     })
 
@@ -228,11 +219,7 @@ describe('Analytics Service', () => {
         expect.objectContaining({
           visitorId: undefined
         }),
-        {
-          ProjectId: 'project-123',
-          Action: 'view',
-          UserType: 'Authenticated'
-        }
+        {}
       )
     })
 
@@ -245,11 +232,7 @@ describe('Analytics Service', () => {
         expect.objectContaining({
           action: 'view'
         }),
-        {
-          ProjectId: 'project-123',
-          Action: 'view',
-          UserType: 'Authenticated'
-        }
+        {}
       )
     })
 

@@ -36,9 +36,9 @@ class AnalyticsService {
    */
   async trackPageView(request, visitor, isNewVisitor) {
     try {
+      // Simplified dimensions - just path for filtering, no visitor type split
       const dimensions = {
-        Path: request.path,
-        VisitorType: isNewVisitor ? 'New' : 'Returning'
+        Path: request.path
       }
 
       const properties = {
@@ -78,13 +78,10 @@ class AnalyticsService {
       const visitor = this.getVisitorFromRequest(request)
       const user = request.auth?.credentials?.user
 
-      const dimensions = {
-        ProjectId: projectId,
-        Action: action,
-        UserType: user ? 'Authenticated' : 'Anonymous'
-      }
+      // Simplified dimensions - just project name for clean grouping
+      const dimensions = {}
 
-      // Add project name as dimension if provided
+      // Only add project name as dimension if provided
       if (additionalData.projectName) {
         dimensions.ProjectName = additionalData.projectName
       }

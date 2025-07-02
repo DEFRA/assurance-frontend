@@ -53,53 +53,36 @@ describe('Analytics Service', () => {
   describe('trackUniqueVisitor', () => {
     test('should track unique visitor with correct data', async () => {
       const visitor = {
-        id: 'visitor-123',
-        country: 'GB'
+        id: 'visitor-123'
       }
 
       await analytics.trackUniqueVisitor(mockRequest, visitor)
 
-      expect(logMetric).toHaveBeenCalledWith(
-        'UniqueVisitors',
-        1,
-        {
-          path: '/test-path',
-          userAgent: 'Test Browser 1.0',
-          referer: 'https://example.com/previous',
-          country: 'GB',
-          timestamp: expect.any(String)
-        },
-        {
-          Country: 'GB',
-          Source: 'Referral'
-        }
-      )
+      expect(logMetric).toHaveBeenCalledWith('UniqueVisitors', 1, {
+        path: '/test-path',
+        visitorId: 'visitor-123',
+        timestamp: expect.any(String)
+      })
     })
 
-    test('should handle direct traffic (no referer)', async () => {
+    test('should track unique visitor without country or referer data', async () => {
       mockRequest.headers.referer = undefined
-      const visitor = { id: 'visitor-123', country: 'US' }
+      const visitor = { id: 'visitor-456' }
 
       await analytics.trackUniqueVisitor(mockRequest, visitor)
 
-      expect(logMetric).toHaveBeenCalledWith(
-        'UniqueVisitors',
-        1,
-        expect.objectContaining({
-          referer: 'direct'
-        }),
-        {
-          Country: 'US',
-          Source: 'Direct'
-        }
-      )
+      expect(logMetric).toHaveBeenCalledWith('UniqueVisitors', 1, {
+        path: '/test-path',
+        visitorId: 'visitor-456',
+        timestamp: expect.any(String)
+      })
     })
 
     test('should handle tracking errors gracefully', async () => {
       const error = new Error('Metrics service error')
       logMetric.mockRejectedValue(error)
 
-      const visitor = { id: 'visitor-123', country: 'GB' }
+      const visitor = { id: 'visitor-123' }
 
       await analytics.trackUniqueVisitor(mockRequest, visitor)
 

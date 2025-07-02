@@ -3,6 +3,50 @@ import { config } from '~/src/config/config.js'
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 
 /**
+ * Clean and validate dimensions object
+ * @param {object} dimensions - Raw dimensions object
+ * @returns {object} - Clean dimensions object with string values
+ */
+function cleanDimensions(dimensions) {
+  if (!dimensions || typeof dimensions !== 'object') {
+    return {}
+  }
+
+  const cleaned = {}
+  Object.entries(dimensions).forEach(([key, value]) => {
+    if (key && value != null) {
+      cleaned[key] = String(value)
+    }
+  })
+
+  return cleaned
+}
+
+/**
+ * Add dimensions to metrics logger with error handling
+ * @param {object} metrics - AWS metrics logger instance
+ * @param {object} dimensions - Dimensions to add
+ * @param {string} metricName - Metric name for error logging
+ */
+function addDimensions(metrics, dimensions, metricName) {
+  const cleanedDimensions = cleanDimensions(dimensions)
+
+  if (Object.keys(cleanedDimensions).length === 0) {
+    return
+  }
+
+  try {
+    metrics.putDimensions(cleanedDimensions)
+  } catch (error) {
+    logger.error('Error adding dimensions:', {
+      error: error.message,
+      metricName,
+      dimensions
+    })
+  }
+}
+
+/**
  * Logs custom application metric to CloudWatch
  * @param {string} metricName - Metric Name
  * @param {number} value - Metric Value
@@ -18,37 +62,12 @@ async function logMetric(metricName, value, properties, dimensions) {
   try {
     const metrics = createMetricsLogger()
 
-    // Add CloudWatch dimensions (these will show up in Grafana)
-    if (dimensions && typeof dimensions === 'object') {
-      try {
-        // Convert all dimension values to strings and filter out null/undefined
-        const cleanDimensions = {}
-        Object.entries(dimensions).forEach(([key, dimensionValue]) => {
-          if (key && dimensionValue != null) {
-            cleanDimensions[key] = String(dimensionValue)
-          }
-        })
+    addDimensions(metrics, dimensions, metricName)
 
-        // Use putDimensions (plural) to add all dimensions at once
-        if (Object.keys(cleanDimensions).length > 0) {
-          metrics.putDimensions(cleanDimensions)
-        }
-      } catch (dimensionError) {
-        logger.error('Error adding dimensions:', {
-          error: dimensionError.message,
-          metricName,
-          dimensions
-        })
-        // Continue with metric without dimensions
-      }
-    }
-
-    // Add properties if provided
     if (properties && typeof properties === 'object') {
       metrics.setProperty('properties', properties)
     }
 
-    // Send the metric
     metrics.putMetric(metricName, value, Unit.Count)
     await metrics.flush()
   } catch (error) {

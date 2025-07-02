@@ -20,8 +20,8 @@ async function logMetric(metricName, value, properties, dimensions) {
 
     // Add CloudWatch dimensions (these will show up in Grafana)
     if (dimensions) {
-      Object.entries(dimensions).forEach(([key, value]) => {
-        metrics.putDimension(key, value)
+      Object.entries(dimensions).forEach(([key, dimensionValue]) => {
+        metrics.putDimension(key, dimensionValue)
       })
     }
 

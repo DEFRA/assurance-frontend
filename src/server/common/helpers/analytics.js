@@ -12,13 +12,20 @@ class AnalyticsService {
    */
   async trackUniqueVisitor(request, visitor) {
     try {
-      await logMetric('UniqueVisitors', 1, {
+      const dimensions = {
+        Country: visitor.country || 'Unknown',
+        Source: request.headers.referer ? 'Referral' : 'Direct'
+      }
+
+      const properties = {
         path: request.path,
         userAgent: request.headers['user-agent'],
         referer: request.headers.referer || 'direct',
         country: visitor.country,
         timestamp: new Date().toISOString()
-      })
+      }
+
+      await logMetric('UniqueVisitors', 1, properties, dimensions)
 
       logger.debug('Tracked unique visitor', { visitorId: visitor.id })
     } catch (error) {
@@ -34,14 +41,21 @@ class AnalyticsService {
    */
   async trackPageView(request, visitor, isNewVisitor) {
     try {
-      await logMetric('PageViews', 1, {
+      const dimensions = {
+        Path: request.path,
+        VisitorType: isNewVisitor ? 'New' : 'Returning'
+      }
+
+      const properties = {
         path: request.path,
         visitorId: visitor.id,
         isNewVisitor,
         sessionPageViews: visitor.pageViews,
         referer: request.headers.referer || 'direct',
         timestamp: new Date().toISOString()
-      })
+      }
+
+      await logMetric('PageViews', 1, properties, dimensions)
 
       logger.debug('Tracked page view', {
         visitorId: visitor.id,
@@ -69,7 +83,18 @@ class AnalyticsService {
       const visitor = this.getVisitorFromRequest(request)
       const user = request.auth?.credentials?.user
 
-      await logMetric('ProjectAccess', 1, {
+      const dimensions = {
+        ProjectId: projectId,
+        Action: action,
+        UserType: user ? 'Authenticated' : 'Anonymous'
+      }
+
+      // Add project name as dimension if provided
+      if (additionalData.projectName) {
+        dimensions.ProjectName = additionalData.projectName
+      }
+
+      const properties = {
         projectId,
         action,
         path: request.path,
@@ -79,7 +104,9 @@ class AnalyticsService {
         userAgent: request.headers['user-agent'],
         timestamp: new Date().toISOString(),
         ...additionalData
-      })
+      }
+
+      await logMetric('ProjectAccess', 1, properties, dimensions)
 
       logger.info('Tracked project access', {
         projectId,
@@ -109,7 +136,13 @@ class AnalyticsService {
       const visitor = this.getVisitorFromRequest(request)
       const user = request.auth?.credentials?.user
 
-      await logMetric('SearchQuery', 1, {
+      const dimensions = {
+        SearchContext: searchContext,
+        HasResults: resultCount > 0 ? 'Yes' : 'No',
+        UserType: user ? 'Authenticated' : 'Anonymous'
+      }
+
+      const properties = {
         searchTerm: searchTerm.toLowerCase(),
         searchLength: searchTerm.length,
         resultCount,
@@ -119,7 +152,9 @@ class AnalyticsService {
         isAuthenticated: !!user,
         hasResults: resultCount > 0,
         timestamp: new Date().toISOString()
-      })
+      }
+
+      await logMetric('SearchQuery', 1, properties, dimensions)
 
       logger.debug('Tracked search query', {
         searchTerm,

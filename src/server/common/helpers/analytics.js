@@ -12,20 +12,15 @@ class AnalyticsService {
    */
   async trackUniqueVisitor(request, visitor) {
     try {
-      const dimensions = {
-        Country: visitor.country || 'Unknown',
-        Source: request.headers.referer ? 'Referral' : 'Direct'
-      }
-
+      // Simplified - no dimensions, just basic properties for debugging
       const properties = {
         path: request.path,
-        userAgent: request.headers['user-agent'],
-        referer: request.headers.referer || 'direct',
-        country: visitor.country,
+        visitorId: visitor.id,
         timestamp: new Date().toISOString()
       }
 
-      await logMetric('UniqueVisitors', 1, properties, dimensions)
+      // No dimensions - just a simple count
+      await logMetric('UniqueVisitors', 1, properties)
 
       logger.debug('Tracked unique visitor', { visitorId: visitor.id })
     } catch (error) {

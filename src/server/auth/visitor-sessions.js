@@ -94,9 +94,6 @@ function shouldTrackPath(path) {
 
 async function handleUnauthenticatedUser(request, sessionCache) {
   if (shouldTrackPath(request.path)) {
-    logger.debug('Creating visitor session for unauthenticated user', {
-      path: request.path
-    })
     const visitorResult = await createOrUpdateVisitorSession(
       request,
       sessionCache
@@ -104,16 +101,12 @@ async function handleUnauthenticatedUser(request, sessionCache) {
     if (visitorResult) {
       request._visitorSessionId = visitorResult.sessionId
       request.visitor = visitorResult.visitorSession.visitor
-      logger.debug('Visitor session created for unauthenticated user', {
-        sessionId: visitorResult.sessionId
-      })
     }
   }
   return { isValid: false }
 }
 
 async function handleMissingSession(request, sessionCache) {
-  logger.debug('Session not found in cache', { path: request.path })
   return await handleUnauthenticatedUser(request, sessionCache)
 }
 

@@ -67,7 +67,7 @@ export async function createServer() {
     requestTracing,
     secureContext,
     pulse,
-    sessionCache, // ← Session cache MUST be registered before auth plugin
+    sessionCache,
     authPlugin,
     nunjucksConfig,
     requestExtensionsPlugin,
@@ -100,8 +100,8 @@ export async function createServer() {
       const credentials = request.auth?.credentials
       const user = credentials?.user
 
-      // Simple and effective authentication check
-      const isAuthenticated = !!credentials
+      // Proper authentication check - must have user data, not just visitor sessions
+      const isAuthenticated = !!user
       const isAdmin = hasAdminRole(user)
 
       logger.debug(
@@ -115,7 +115,7 @@ export async function createServer() {
       response.source.context = {
         ...baseContext,
         ...response.source.context,
-        user: credentials,
+        user: user,
         isAuthenticated,
         isAdmin,
         currentPath,

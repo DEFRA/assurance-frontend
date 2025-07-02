@@ -126,21 +126,21 @@ describe('Auth Plugin - Visitor Tracking', () => {
   })
 
   describe('visitor session creation', () => {
-    test('should create visitor session for new anonymous user via onRequest extension', async () => {
-      // Get the onRequest handler
-      const onRequestCall = mockServer.ext.mock.calls.find(
-        (call) => call[0] === 'onRequest'
+    test('should create visitor session for new anonymous user via onPreAuth extension', async () => {
+      // Get the onPreAuth handler
+      const onPreAuthCall = mockServer.ext.mock.calls.find(
+        (call) => call[0] === 'onPreAuth'
       )
-      const onRequestHandler = onRequestCall[1]
+      const onPreAuthHandler = onPreAuthCall[1]
 
       const mockH = {
         continue: Symbol('continue')
       }
 
-      // Simulate onRequest for new user (no cookie)
+      // Simulate onPreAuth for new user (no cookie)
       mockRequest.state = {} // No cookie
 
-      const result = await onRequestHandler(mockRequest, mockH)
+      const result = await onPreAuthHandler(mockRequest, mockH)
 
       expect(mockSessionCache.set).toHaveBeenCalledWith(
         'mock-visitor-session-id',
@@ -232,11 +232,11 @@ describe('Auth Plugin - Visitor Tracking', () => {
     })
 
     test('should not track on excluded paths', async () => {
-      // Get the onRequest handler
-      const onRequestCall = mockServer.ext.mock.calls.find(
-        (call) => call[0] === 'onRequest'
+      // Get the onPreAuth handler
+      const onPreAuthCall = mockServer.ext.mock.calls.find(
+        (call) => call[0] === 'onPreAuth'
       )
-      const onRequestHandler = onRequestCall[1]
+      const onPreAuthHandler = onPreAuthCall[1]
 
       const mockH = {
         continue: Symbol('continue')
@@ -245,7 +245,7 @@ describe('Auth Plugin - Visitor Tracking', () => {
       mockRequest.path = '/public/css/style.css'
       mockRequest.state = {} // No cookie
 
-      const result = await onRequestHandler(mockRequest, mockH)
+      const result = await onPreAuthHandler(mockRequest, mockH)
 
       expect(mockSessionCache.set).not.toHaveBeenCalled()
       expect(analytics.trackUniqueVisitor).not.toHaveBeenCalled()
@@ -254,11 +254,11 @@ describe('Auth Plugin - Visitor Tracking', () => {
     })
 
     test('should not track favicon requests', async () => {
-      // Get the onRequest handler
-      const onRequestCall = mockServer.ext.mock.calls.find(
-        (call) => call[0] === 'onRequest'
+      // Get the onPreAuth handler
+      const onPreAuthCall = mockServer.ext.mock.calls.find(
+        (call) => call[0] === 'onPreAuth'
       )
-      const onRequestHandler = onRequestCall[1]
+      const onPreAuthHandler = onPreAuthCall[1]
 
       const mockH = {
         continue: Symbol('continue')
@@ -267,7 +267,7 @@ describe('Auth Plugin - Visitor Tracking', () => {
       mockRequest.path = '/favicon.ico'
       mockRequest.state = {} // No cookie
 
-      const result = await onRequestHandler(mockRequest, mockH)
+      const result = await onPreAuthHandler(mockRequest, mockH)
 
       expect(mockSessionCache.set).not.toHaveBeenCalled()
       expect(analytics.trackUniqueVisitor).not.toHaveBeenCalled()
@@ -276,11 +276,11 @@ describe('Auth Plugin - Visitor Tracking', () => {
     })
 
     test('should not track health check requests', async () => {
-      // Get the onRequest handler
-      const onRequestCall = mockServer.ext.mock.calls.find(
-        (call) => call[0] === 'onRequest'
+      // Get the onPreAuth handler
+      const onPreAuthCall = mockServer.ext.mock.calls.find(
+        (call) => call[0] === 'onPreAuth'
       )
-      const onRequestHandler = onRequestCall[1]
+      const onPreAuthHandler = onPreAuthCall[1]
 
       const mockH = {
         continue: Symbol('continue')
@@ -289,7 +289,7 @@ describe('Auth Plugin - Visitor Tracking', () => {
       mockRequest.path = '/health'
       mockRequest.state = {} // No cookie
 
-      const result = await onRequestHandler(mockRequest, mockH)
+      const result = await onPreAuthHandler(mockRequest, mockH)
 
       expect(mockSessionCache.set).not.toHaveBeenCalled()
       expect(analytics.trackUniqueVisitor).not.toHaveBeenCalled()
@@ -354,11 +354,11 @@ describe('Auth Plugin - Visitor Tracking', () => {
       )
       analytics.trackPageView.mockRejectedValue(new Error('Analytics error'))
 
-      // Get the onRequest handler
-      const onRequestCall = mockServer.ext.mock.calls.find(
-        (call) => call[0] === 'onRequest'
+      // Get the onPreAuth handler
+      const onPreAuthCall = mockServer.ext.mock.calls.find(
+        (call) => call[0] === 'onPreAuth'
       )
-      const onRequestHandler = onRequestCall[1]
+      const onPreAuthHandler = onPreAuthCall[1]
 
       const mockH = {
         continue: Symbol('continue')
@@ -366,7 +366,7 @@ describe('Auth Plugin - Visitor Tracking', () => {
 
       mockRequest.state = {} // No cookie
 
-      const result = await onRequestHandler(mockRequest, mockH)
+      const result = await onPreAuthHandler(mockRequest, mockH)
 
       expect(result).toBe(mockH.continue)
       // Should still create visitor session even if analytics fails

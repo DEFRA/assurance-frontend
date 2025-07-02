@@ -268,12 +268,6 @@ export const plugin = {
     // Main session validation orchestrator - reduced complexity
     async function validateSessionRequest(request, session, sessionCache) {
       try {
-        logger.debug('Auth validation called', {
-          path: request.path,
-          hasSession: !!session,
-          sessionId: session?.id
-        })
-
         // Guard: Skip validation for public paths
         if (sessionValidator.isPublicPath(request.path)) {
           return { isValid: false }
@@ -297,22 +291,23 @@ export const plugin = {
           )
         }
 
-        // Handle visitor-only sessions
-        if (cached.visitor && !cached.user) {
-          return await sessionValidator.handleVisitorSession(
-            request,
+        // Check if this is an authenticated session (has user data)
+        if (cached.user) {
+          // Validate and process authenticated session
+          return await sessionValidator.processAuthenticatedSession(
+            cached,
+            session.id,
             sessionCache,
-            visitorSessions.createOrUpdateVisitorSession,
-            visitorSessions.shouldTrackPath
+            handleTokenRefresh
           )
         }
 
-        // Validate and process authenticated session
-        return await sessionValidator.processAuthenticatedSession(
-          cached,
-          session.id,
+        // Handle visitor-only sessions (no user data)
+        return await sessionValidator.handleVisitorSession(
+          request,
           sessionCache,
-          handleTokenRefresh
+          visitorSessions.createOrUpdateVisitorSession,
+          visitorSessions.shouldTrackPath
         )
       } catch (error) {
         logger.error('Session validation error:', { error: error.message })
@@ -345,27 +340,34 @@ export const plugin = {
     })
 
     // Create visitor sessions for unauthenticated users
-    server.ext('onRequest', async (request, h) => {
+    server.ext('onPreAuth', async (request, h) => {
       const sessionCookie = request.state?.[AUTH_SESSION_COOKIE_NAME]
 
       // Skip visitor session creation for auth paths to avoid interfering with OAuth flow
       const isAuthPath = request.path.startsWith('/auth')
 
-      // If no cookie and path should be tracked (and not auth path), create visitor session
-      if (
-        !sessionCookie &&
-        !isAuthPath &&
-        visitorSessions.shouldTrackPath(request.path)
-      ) {
-        const visitorResult =
-          await visitorSessions.createOrUpdateVisitorSession(
-            request,
-            server.app.sessionCache
-          )
-        if (visitorResult) {
-          request._visitorSessionId = visitorResult.sessionId
-          request.visitor = visitorResult.visitorSession.visitor
+      if (isAuthPath || !visitorSessions.shouldTrackPath(request.path)) {
+        return h.continue
+      }
+
+      // If we have a session cookie, check if it's an authenticated session
+      if (sessionCookie?.id) {
+        const cached = await server.app.sessionCache?.get(sessionCookie.id)
+        if (cached?.user) {
+          // This is an authenticated session, don't interfere with it
+          return h.continue
         }
+      }
+
+      // Create or update visitor session for non-authenticated users
+      // This handles both new sessions (no cookie) and existing visitor sessions
+      const visitorResult = await visitorSessions.createOrUpdateVisitorSession(
+        request,
+        server.app.sessionCache
+      )
+      if (visitorResult) {
+        request._visitorSessionId = visitorResult.sessionId
+        request.visitor = visitorResult.visitorSession.visitor
       }
 
       return h.continue

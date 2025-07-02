@@ -82,7 +82,15 @@ async function handleVisitorSession(
       sessionCache
     )
     if (visitorResult) {
-      request._visitorSessionId = visitorResult.sessionId
+      // Only set _visitorSessionId for NEW visitor sessions, not existing ones
+      // This prevents overwriting authenticated session cookies
+      const sessionCookie = request.state?.['assurance-session']
+      const isNewSession =
+        !sessionCookie?.id || sessionCookie.id !== visitorResult.sessionId
+
+      if (isNewSession) {
+        request._visitorSessionId = visitorResult.sessionId
+      }
       request.visitor = visitorResult.visitorSession.visitor
     }
   }

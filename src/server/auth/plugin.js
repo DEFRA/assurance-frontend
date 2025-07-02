@@ -6,6 +6,10 @@ import { URL } from 'url'
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { config } from '~/src/config/config.js'
 
+// Import extracted modules
+import * as sessionValidator from './session-validator.js'
+import * as visitorSessions from './visitor-sessions.js'
+
 // Constants for repeated literals
 const AUTH_ERROR_TITLE = 'Authentication Error'
 const OIDC_CONFIG_ERROR = 'OIDC client is not properly configured'
@@ -15,6 +19,13 @@ const AUTH_PATH = '/auth'
 const AUTH_LOGOUT_PATH = '/auth/logout'
 const AUTH_LOGIN_PATH = '/auth/login'
 const ERROR_TEMPLATE = 'common/templates/error'
+
+// Time constants to avoid magic numbers
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000
+const TEN_MINUTES_MS = 10 * 60 * 1000
+const ONE_HOUR_SECONDS = 3600
+const TOKEN_REFRESH_THRESHOLD_MINUTES = 5
+const HTTP_BAD_REQUEST = 400
 
 export const plugin = {
   name: 'auth',
@@ -26,7 +37,7 @@ export const plugin = {
     // Validate the authentication state from session
     async function validateAuthState(state, request) {
       try {
-        const sessionCookie = request.state[AUTH_SESSION_COOKIE_NAME]
+        const sessionCookie = request.state?.[AUTH_SESSION_COOKIE_NAME]
 
         if (!sessionCookie?.id) {
           throw Boom.badRequest('No session found')
@@ -59,15 +70,16 @@ export const plugin = {
     }
 
     // Process token exchange and create session
-    async function processTokenExchange(
-      client,
-      appConfig,
-      params,
-      state,
-      stateData,
-      sessionCache,
-      sessionId
-    ) {
+    async function processTokenExchange(options) {
+      const {
+        client,
+        appConfig,
+        params,
+        state,
+        stateData,
+        sessionCache,
+        sessionId
+      } = options
       const callbackUrl = appConfig.get('azure.callbackUrl')
 
       const tokenSet = await client.callback(callbackUrl, params, {
@@ -95,7 +107,10 @@ export const plugin = {
           roles: hasAdminRole ? ['admin'] : []
         },
         token: tokenSet.access_token,
-        expires: Date.now() + (tokenSet.expires_in || 3600) * 1000
+        refreshToken: tokenSet.refresh_token,
+        tokenExpires:
+          Date.now() + (tokenSet.expires_in || ONE_HOUR_SECONDS) * 1000,
+        expires: Date.now() + appConfig.get('session.cache.ttl')
       }
 
       // Update the existing session with user data
@@ -117,6 +132,67 @@ export const plugin = {
         title: AUTH_ERROR_TITLE,
         message: errorMessage
       })
+    }
+
+    // Check if error indicates session expiry
+    function isSessionExpiredError(error) {
+      return (
+        error.error === 'invalid_grant' ||
+        error.error_description?.includes('expired') ||
+        error.error_description?.includes('revoked') ||
+        error.message?.includes('refresh token') ||
+        error.status === HTTP_BAD_REQUEST
+      )
+    }
+
+    // Handle refresh token error
+    async function handleRefreshError(error, sessionId, sessionCache) {
+      if (isSessionExpiredError(error)) {
+        logger.info(
+          'Entra session expired or refresh token invalid, invalidating local session',
+          {
+            sessionId,
+            error: error.error_description || error.message
+          }
+        )
+        await sessionCache.drop(sessionId)
+        return 'session_expired'
+      }
+
+      logger.error('Failed to refresh access token', {
+        sessionId,
+        error: error.message
+      })
+      return false
+    }
+
+    // Refresh access token using refresh token
+    async function refreshAccessToken(sessionData, sessionId, sessionCache) {
+      try {
+        if (!oidcClient || !sessionData.refreshToken) {
+          logger.warn(
+            'Cannot refresh token: missing OIDC client or refresh token'
+          )
+          return false
+        }
+
+        logger.info('Refreshing access token for session', { sessionId })
+        const tokenSet = await oidcClient.refresh(sessionData.refreshToken)
+
+        const updatedSessionData = {
+          ...sessionData,
+          token: tokenSet.access_token,
+          refreshToken: tokenSet.refresh_token || sessionData.refreshToken,
+          tokenExpires:
+            Date.now() + (tokenSet.expires_in || ONE_HOUR_SECONDS) * 1000
+        }
+
+        await sessionCache.set(sessionId, updatedSessionData)
+        logger.info('Access token refreshed successfully', { sessionId })
+        return updatedSessionData
+      } catch (error) {
+        return await handleRefreshError(error, sessionId, sessionCache)
+      }
     }
 
     // Setup Azure AD OIDC Issuer and Client
@@ -143,6 +219,102 @@ export const plugin = {
       logger.error('Failed to setup OIDC client', error)
     }
 
+    async function handleTokenRefresh(
+      cached,
+      sessionId,
+      sessionCache,
+      sessionToReturn
+    ) {
+      const tokenExpiry = cached.tokenExpires || 0
+      const refreshThreshold = TOKEN_REFRESH_THRESHOLD_MINUTES * 60 * 1000
+      const shouldRefresh = tokenExpiry < Date.now() + refreshThreshold
+
+      if (!shouldRefresh || !cached.refreshToken) {
+        return null // No refresh needed
+      }
+
+      logger.info('Token expiring soon, attempting refresh', { sessionId })
+      const refreshResult = await refreshAccessToken(
+        cached,
+        sessionId,
+        sessionCache
+      )
+
+      if (refreshResult === 'session_expired') {
+        logger.info(
+          'Entra session expired during refresh, invalidating session',
+          { sessionId }
+        )
+        return { isValid: false, sessionExpired: true }
+      }
+
+      if (refreshResult) {
+        const finalSession = {
+          ...refreshResult,
+          expires: sessionToReturn.expires
+        }
+        return {
+          isValid: true,
+          credentials: { ...finalSession, id: sessionId }
+        }
+      }
+
+      // Refresh failed, invalidate session
+      logger.warn('Token refresh failed, invalidating session', { sessionId })
+      await sessionCache?.drop(sessionId)
+      return { isValid: false }
+    }
+
+    // Main session validation orchestrator - reduced complexity
+    async function validateSessionRequest(request, session, sessionCache) {
+      try {
+        // Guard: Skip validation for public paths
+        if (sessionValidator.isPublicPath(request.path)) {
+          return { isValid: false }
+        }
+
+        // Guard: Handle unauthenticated users
+        if (!session?.id) {
+          return await sessionValidator.handleUnauthenticatedRequest(
+            request,
+            sessionCache,
+            visitorSessions.handleUnauthenticatedUser
+          )
+        }
+
+        // Get cached session
+        const cached = await sessionCache?.get(session.id)
+        if (!cached) {
+          return await visitorSessions.handleMissingSession(
+            request,
+            sessionCache
+          )
+        }
+
+        // Check if this is an authenticated session (has user data)
+        if (cached.user) {
+          // Validate and process authenticated session
+          return await sessionValidator.processAuthenticatedSession(
+            cached,
+            session.id,
+            sessionCache,
+            handleTokenRefresh
+          )
+        }
+
+        // Handle visitor-only sessions (no user data)
+        return await sessionValidator.handleVisitorSession(
+          request,
+          sessionCache,
+          visitorSessions.createOrUpdateVisitorSession,
+          visitorSessions.shouldTrackPath
+        )
+      } catch (error) {
+        logger.error('Session validation error:', { error: error.message })
+        return { isValid: false }
+      }
+    }
+
     // Configure authentication strategy using cookie
     server.auth.strategy('session', 'cookie', {
       cookie: {
@@ -157,50 +329,7 @@ export const plugin = {
       },
       redirectTo: false,
       validate: async (request, session) => {
-        try {
-          if (
-            request.path === AUTH_LOGOUT_PATH ||
-            request.path.startsWith('/public/')
-          ) {
-            return { isValid: false }
-          }
-
-          if (!session?.id) {
-            return { isValid: false }
-          }
-
-          const cached = await server.app.sessionCache?.get(session.id)
-
-          if (!cached) {
-            return { isValid: false }
-          }
-
-          // Check if this is an auth session (has authState but no user)
-          if (cached.authState && !cached.user) {
-            return { isValid: false }
-          }
-
-          // Check if this is a user session
-          if (!cached.user) {
-            return { isValid: false }
-          }
-
-          if (cached.expires && cached.expires < Date.now()) {
-            await server.app.sessionCache?.drop(session.id)
-            return { isValid: false }
-          }
-
-          return {
-            isValid: true,
-            credentials: {
-              ...cached,
-              id: session.id
-            }
-          }
-        } catch (error) {
-          logger.error('Session validation error:', { error: error.message })
-          return { isValid: false }
-        }
+        return validateSessionRequest(request, session, server.app.sessionCache)
       }
     })
 
@@ -208,6 +337,58 @@ export const plugin = {
     server.auth.default({
       strategy: 'session',
       mode: 'try'
+    })
+
+    // Create visitor sessions for unauthenticated users
+    server.ext('onPreAuth', async (request, h) => {
+      const sessionCookie = request.state?.[AUTH_SESSION_COOKIE_NAME]
+
+      // Skip visitor session creation for auth paths to avoid interfering with OAuth flow
+      const isAuthPath = request.path.startsWith('/auth')
+
+      if (isAuthPath || !visitorSessions.shouldTrackPath(request.path)) {
+        return h.continue
+      }
+
+      // If we have a session cookie, check if it's an authenticated session
+      if (sessionCookie?.id) {
+        const cached = await server.app.sessionCache?.get(sessionCookie.id)
+        if (cached?.user) {
+          // This is an authenticated session, don't interfere with it
+          return h.continue
+        }
+      }
+
+      // Create or update visitor session for non-authenticated users
+      // This handles both new sessions (no cookie) and existing visitor sessions
+      const visitorResult = await visitorSessions.createOrUpdateVisitorSession(
+        request,
+        server.app.sessionCache
+      )
+      if (visitorResult) {
+        request._visitorSessionId = visitorResult.sessionId
+        request.visitor = visitorResult.visitorSession.visitor
+      }
+
+      return h.continue
+    })
+
+    // Extension to set visitor session cookie when created
+    server.ext('onPreResponse', (request, h) => {
+      if (request._visitorSessionId) {
+        h.state(
+          AUTH_SESSION_COOKIE_NAME,
+          { id: request._visitorSessionId },
+          {
+            ttl: TWENTY_FOUR_HOURS_MS, // 24 hours
+            isHttpOnly: true,
+            isSecure: config.get('session.cookie.secure'),
+            isSameSite: 'Lax',
+            path: '/'
+          }
+        )
+      }
+      return h.continue
     })
 
     // Route for initiating login flow
@@ -248,7 +429,7 @@ export const plugin = {
             state,
             codeVerifier,
             redirectTo: redirectPath,
-            expires: Date.now() + 10 * 60 * 1000 // 10 minutes
+            expires: Date.now() + TEN_MINUTES_MS // 10 minutes
           }
 
           // Store auth state in session cache
@@ -256,7 +437,7 @@ export const plugin = {
 
           // Create authorization URL
           const authUrl = oidcClient.authorizationUrl({
-            scope: `openid profile email api://${config.get('azure.clientId')}/access_as_user`,
+            scope: `openid profile email offline_access api://${config.get('azure.clientId')}/access_as_user`,
             state,
             code_challenge: codeChallenge,
             code_challenge_method: 'S256'
@@ -301,18 +482,18 @@ export const plugin = {
 
           // Validate state and get stored data from session
           const stateData = await validateAuthState(state, request)
-          const sessionCookie = request.state[AUTH_SESSION_COOKIE_NAME]
+          const sessionCookie = request.state?.[AUTH_SESSION_COOKIE_NAME]
 
           // Process the token exchange and create session
-          const sessionResult = await processTokenExchange(
-            oidcClient,
-            config,
+          const sessionResult = await processTokenExchange({
+            client: oidcClient,
+            appConfig: config,
             params,
             state,
             stateData,
-            server.app.sessionCache,
-            sessionCookie.id
-          )
+            sessionCache: server.app.sessionCache,
+            sessionId: sessionCookie.id
+          })
 
           // Create response with updated session cookie
           const response = h.redirect(stateData.redirectTo || HOME_PATH)

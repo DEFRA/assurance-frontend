@@ -129,11 +129,17 @@ export const config = convict({
         env: 'SESSION_CACHE_NAME'
       },
       ttl: {
-        doc: 'server side session cache ttl',
+        doc: 'Session cache TTL and duration (how long a user stays logged in)',
         format: Number,
-        default: fourHoursMs,
+        default: 8 * 60 * 60 * 1000, // 8 hours (reduced from 4 hours)
         env: 'SESSION_CACHE_TTL'
       }
+    },
+    extendOnActivity: {
+      doc: 'Extend session on user activity',
+      format: Boolean,
+      default: true,
+      env: 'SESSION_EXTEND_ON_ACTIVITY'
     },
     cookie: {
       ttl: {

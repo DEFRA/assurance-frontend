@@ -24,7 +24,8 @@ jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   logger: {
     debug: jest.fn(),
     error: jest.fn(),
-    info: jest.fn()
+    info: jest.fn(),
+    warn: jest.fn()
   }
 }))
 
@@ -39,10 +40,20 @@ jest.mock('~/src/config/config.js', () => ({
         'session.cookie.password':
           'mock-password-must-be-at-least-32-characters-long',
         'session.cookie.secure': false,
-        'session.cookie.ttl': 86400000
+        'session.cookie.ttl': 86400000,
+        'session.cache.ttl': 86400000,
+        'session.extendOnActivity': false
       }
       return configValues[key] || null
     })
+  }
+}))
+
+jest.mock('~/src/server/common/helpers/analytics.js', () => ({
+  analytics: {
+    trackUniqueVisitor: jest.fn().mockResolvedValue(undefined),
+    trackPageView: jest.fn().mockResolvedValue(undefined),
+    trackProjectAccess: jest.fn().mockResolvedValue(undefined)
   }
 }))
 
@@ -94,6 +105,7 @@ describe('Auth Plugin', () => {
         default: jest.fn()
       },
       route: jest.fn(),
+      ext: jest.fn(), // Add ext method for visitor tracking
       app: {
         sessionCache: mockSessionCache
       },
@@ -178,7 +190,11 @@ describe('Auth Plugin', () => {
         (call) => call[0] === 'session'
       )
       const strategyConfig = strategyCall[2] // Third argument contains the config object
-      const request = { path: '/auth/logout' }
+      const request = {
+        path: '/auth/logout',
+        headers: {},
+        state: {}
+      }
       const session = { id: 'test-session-id' }
 
       // Act
@@ -195,7 +211,11 @@ describe('Auth Plugin', () => {
         (call) => call[0] === 'session'
       )
       const strategyConfig = strategyCall[2]
-      const request = { path: '/public/style.css' }
+      const request = {
+        path: '/public/style.css',
+        headers: {},
+        state: {}
+      }
       const session = { id: 'test-session-id' }
 
       // Act
@@ -212,7 +232,11 @@ describe('Auth Plugin', () => {
         (call) => call[0] === 'session'
       )
       const strategyConfig = strategyCall[2]
-      const request = { path: '/protected' }
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
       const session = null
 
       // Act
@@ -229,7 +253,11 @@ describe('Auth Plugin', () => {
         (call) => call[0] === 'session'
       )
       const strategyConfig = strategyCall[2]
-      const request = { path: '/protected' }
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
       const session = { id: 'test-session-id' }
 
       mockSessionCache.get.mockResolvedValue(null)
@@ -248,7 +276,11 @@ describe('Auth Plugin', () => {
         (call) => call[0] === 'session'
       )
       const strategyConfig = strategyCall[2]
-      const request = { path: '/protected' }
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
       const session = { id: 'test-session-id' }
 
       // Auth state session (no user data yet)
@@ -273,7 +305,11 @@ describe('Auth Plugin', () => {
         (call) => call[0] === 'session'
       )
       const strategyConfig = strategyCall[2]
-      const request = { path: '/protected' }
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
       const session = { id: 'test-session-id' }
 
       const expiredSession = {
@@ -301,7 +337,11 @@ describe('Auth Plugin', () => {
         (call) => call[0] === 'session'
       )
       const strategyConfig = strategyCall[2]
-      const request = { path: '/protected' }
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
       const session = { id: 'test-session-id' }
 
       const validSession = {
@@ -334,7 +374,11 @@ describe('Auth Plugin', () => {
         (call) => call[0] === 'session'
       )
       const strategyConfig = strategyCall[2]
-      const request = { path: '/protected' }
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
       const session = { id: 'test-session-id' }
 
       const error = new Error('Cache error')
@@ -825,6 +869,326 @@ describe('Auth Plugin', () => {
 
       // Assert
       expect(logger.error).toHaveBeenCalledWith('Logout error:', error)
+      expect(mockH.redirect).toHaveBeenCalledWith('/')
+    })
+  })
+
+  describe('token refresh functionality', () => {
+    beforeEach(async () => {
+      // Setup complete mock before plugin registration
+      mockOidcClient.refresh = jest.fn()
+
+      // Ensure our mock is returned by the issuer
+      mockIssuer.Client = jest.fn().mockReturnValue(mockOidcClient)
+      Issuer.discover.mockResolvedValue(mockIssuer)
+
+      await plugin.register(mockServer)
+    })
+
+    test('should refresh token when near expiry and return updated session', async () => {
+      // Arrange
+      const strategyCall = mockServer.auth.strategy.mock.calls.find(
+        (call) => call[0] === 'session'
+      )
+      const strategyConfig = strategyCall[2]
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
+      const session = { id: 'test-session-id' }
+
+      // Session with token expiring in 3 minutes (less than 5 minute threshold)
+      const sessionWithExpiringToken = {
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          roles: ['admin']
+        },
+        token: 'old-access-token',
+        refreshToken: 'valid-refresh-token',
+        tokenExpires: Date.now() + 3 * 60 * 1000, // 3 minutes
+        expires: Date.now() + 3600000 // Session valid for 1 hour
+      }
+
+      const refreshedTokenSet = {
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token',
+        expires_in: 3600
+      }
+
+      mockSessionCache.get.mockResolvedValue(sessionWithExpiringToken)
+      mockOidcClient.refresh = jest.fn().mockResolvedValue(refreshedTokenSet)
+      mockSessionCache.set.mockResolvedValue(true)
+
+      // Act
+      const result = await strategyConfig.validate(request, session)
+
+      // Assert
+      expect(mockOidcClient.refresh).toHaveBeenCalledWith('valid-refresh-token')
+      expect(mockSessionCache.set).toHaveBeenCalledWith(
+        'test-session-id',
+        expect.objectContaining({
+          token: 'new-access-token',
+          refreshToken: 'new-refresh-token',
+          tokenExpires: expect.any(Number)
+        })
+      )
+      expect(result.isValid).toBe(true)
+      expect(result.credentials.token).toBe('new-access-token')
+      expect(logger.info).toHaveBeenCalledWith(
+        'Refreshing access token for session',
+        { sessionId: 'test-session-id' }
+      )
+    })
+
+    test('should invalidate session when refresh token is expired (Entra session expired)', async () => {
+      // Arrange
+      const strategyCall = mockServer.auth.strategy.mock.calls.find(
+        (call) => call[0] === 'session'
+      )
+      const strategyConfig = strategyCall[2]
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
+      const session = { id: 'test-session-id' }
+
+      const sessionWithExpiringToken = {
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          roles: ['admin']
+        },
+        token: 'old-access-token',
+        refreshToken: 'expired-refresh-token',
+        tokenExpires: Date.now() + 3 * 60 * 1000,
+        expires: Date.now() + 3600000
+      }
+
+      // Simulate Entra returning invalid_grant error
+      const refreshError = new Error('Token refresh failed')
+      refreshError.error = 'invalid_grant'
+      refreshError.error_description =
+        'AADSTS70008: The provided authorization code or refresh token has expired'
+
+      mockSessionCache.get.mockResolvedValue(sessionWithExpiringToken)
+      mockOidcClient.refresh = jest.fn().mockRejectedValue(refreshError)
+      mockSessionCache.drop.mockResolvedValue(true)
+
+      // Act
+      const result = await strategyConfig.validate(request, session)
+
+      // Assert
+      expect(mockOidcClient.refresh).toHaveBeenCalledWith(
+        'expired-refresh-token'
+      )
+      expect(mockSessionCache.drop).toHaveBeenCalledWith('test-session-id')
+      expect(result).toEqual({ isValid: false, sessionExpired: true })
+      expect(logger.info).toHaveBeenCalledWith(
+        'Entra session expired or refresh token invalid, invalidating local session',
+        expect.objectContaining({ sessionId: 'test-session-id' })
+      )
+    })
+
+    test('should invalidate session when refresh fails for other reasons', async () => {
+      // Arrange
+      const strategyCall = mockServer.auth.strategy.mock.calls.find(
+        (call) => call[0] === 'session'
+      )
+      const strategyConfig = strategyCall[2]
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
+      const session = { id: 'test-session-id' }
+
+      const sessionWithExpiringToken = {
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          roles: ['admin']
+        },
+        token: 'old-access-token',
+        refreshToken: 'valid-refresh-token',
+        tokenExpires: Date.now() + 3 * 60 * 1000,
+        expires: Date.now() + 3600000
+      }
+
+      const refreshError = new Error('Network error')
+
+      mockSessionCache.get.mockResolvedValue(sessionWithExpiringToken)
+      mockOidcClient.refresh.mockRejectedValue(refreshError)
+      mockSessionCache.drop.mockResolvedValue(true)
+
+      // Act
+      const result = await strategyConfig.validate(request, session)
+
+      // Assert
+      expect(mockOidcClient.refresh).toHaveBeenCalledWith('valid-refresh-token')
+      expect(result).toEqual({ isValid: false })
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to refresh access token',
+        expect.objectContaining({ sessionId: 'test-session-id' })
+      )
+      // The session drop happens after the logger.warn call in the main validation function
+      expect(mockSessionCache.drop).toHaveBeenCalledWith('test-session-id')
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Token refresh failed, invalidating session',
+        { sessionId: 'test-session-id' }
+      )
+    })
+
+    test('should not attempt refresh when no refresh token available', async () => {
+      // Arrange
+      const strategyCall = mockServer.auth.strategy.mock.calls.find(
+        (call) => call[0] === 'session'
+      )
+      const strategyConfig = strategyCall[2]
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
+      const session = { id: 'test-session-id' }
+
+      const sessionWithoutRefreshToken = {
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          roles: ['admin']
+        },
+        token: 'old-access-token',
+        tokenExpires: Date.now() + 3 * 60 * 1000, // Expiring soon
+        expires: Date.now() + 3600000
+      }
+
+      mockSessionCache.get.mockResolvedValue(sessionWithoutRefreshToken)
+
+      // Act
+      const result = await strategyConfig.validate(request, session)
+
+      // Assert
+      expect(mockOidcClient.refresh).not.toHaveBeenCalled()
+      expect(result.isValid).toBe(true) // Should still be valid since session itself isn't expired
+    })
+
+    test('should not refresh token when not near expiry', async () => {
+      // Arrange
+      const strategyCall = mockServer.auth.strategy.mock.calls.find(
+        (call) => call[0] === 'session'
+      )
+      const strategyConfig = strategyCall[2]
+      const request = {
+        path: '/protected',
+        headers: {},
+        state: {}
+      }
+      const session = { id: 'test-session-id' }
+
+      const sessionWithValidToken = {
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          roles: ['admin']
+        },
+        token: 'valid-access-token',
+        refreshToken: 'valid-refresh-token',
+        tokenExpires: Date.now() + 30 * 60 * 1000, // 30 minutes - not near expiry
+        expires: Date.now() + 3600000
+      }
+
+      mockSessionCache.get.mockResolvedValue(sessionWithValidToken)
+
+      // Act
+      const result = await strategyConfig.validate(request, session)
+
+      // Assert
+      expect(mockOidcClient.refresh).not.toHaveBeenCalled()
+      expect(result.isValid).toBe(true)
+      expect(result.credentials.token).toBe('valid-access-token')
+    })
+  })
+
+  describe('processTokenExchange function', () => {
+    test('should work with options object parameter pattern', async () => {
+      // Arrange
+      await plugin.register(mockServer)
+
+      const mockTokenSet = {
+        access_token: 'test-access-token',
+        refresh_token: 'test-refresh-token',
+        expires_in: 3600,
+        claims: jest.fn().mockReturnValue({
+          sub: 'user-123',
+          email: 'test@example.com',
+          name: 'Test User',
+          roles: ['admin']
+        })
+      }
+
+      mockOidcClient.callback.mockResolvedValue(mockTokenSet)
+      mockSessionCache.set.mockResolvedValue(true)
+
+      // Note: Testing processTokenExchange indirectly through the callback route handler
+      // since it's an internal function. The options object pattern is tested implicitly.
+
+      // Since processTokenExchange is an internal function, we need to test it
+      // through the callback route handler. Let's create a mock request.
+      const mockRequest = {
+        state: { 'assurance-session': { id: 'test-session-id' } },
+        raw: { req: {} },
+        path: '/auth'
+      }
+
+      // Mock validateAuthState by adding auth state to session cache
+      const authStateData = {
+        authState: {
+          state: 'test-state',
+          codeVerifier: 'test-verifier',
+          redirectTo: '/',
+          expires: Date.now() + 600000
+        }
+      }
+      mockSessionCache.get.mockResolvedValue(authStateData)
+
+      mockOidcClient.callbackParams.mockReturnValue({
+        code: 'auth-code',
+        state: 'test-state'
+      })
+
+      // Get the callback route handler
+      const callbackRoute = mockServer.route.mock.calls.find(
+        (call) => call[0].path === '/auth'
+      )[0]
+
+      // Act
+      const result = await callbackRoute.handler(mockRequest, mockH)
+
+      // Assert
+      expect(result).toBeDefined() // Should return a response object
+      expect(mockOidcClient.callback).toHaveBeenCalledWith(
+        'https://example.com/auth',
+        { code: 'auth-code', state: 'test-state' },
+        { state: 'test-state', code_verifier: 'test-verifier' }
+      )
+
+      expect(mockSessionCache.set).toHaveBeenCalledWith(
+        'test-session-id',
+        expect.objectContaining({
+          user: expect.objectContaining({
+            id: 'user-123',
+            email: 'test@example.com',
+            name: 'Test User',
+            roles: ['admin']
+          }),
+          token: 'test-access-token',
+          refreshToken: 'test-refresh-token'
+        })
+      )
+
       expect(mockH.redirect).toHaveBeenCalledWith('/')
     })
   })

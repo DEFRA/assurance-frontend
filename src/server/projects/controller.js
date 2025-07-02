@@ -25,6 +25,7 @@ import {
   LOG_MESSAGES,
   DDTS_ASSURANCE_SUFFIX
 } from '~/src/server/constants/notifications.js'
+import { trackProjectView } from '~/src/server/common/helpers/analytics.js'
 
 export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND,
@@ -246,6 +247,13 @@ export const projectsController = {
       }
 
       request.logger.info({ id }, 'Project retrieved')
+
+      // Track project access
+      await trackProjectView(request, id, {
+        projectName: project.name,
+        projectPhase: project.phase,
+        projectStatus: project.status
+      })
 
       // Get service standards and professions for reference data
       let standards = []

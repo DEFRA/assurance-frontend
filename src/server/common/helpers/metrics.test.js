@@ -5,11 +5,13 @@ const mockLoggerError = jest.fn()
 
 const mockPutMetric = jest.fn()
 const mockSetProperty = jest.fn()
+const mockPutDimension = jest.fn()
 const mockFlush = jest.fn()
 
 const mockMetricsLogger = {
   putMetric: mockPutMetric,
   setProperty: mockSetProperty,
+  putDimension: mockPutDimension,
   flush: mockFlush
 }
 
@@ -29,6 +31,10 @@ describe('#metrics', () => {
   const mockMetricsName = 'test-metric'
   const mockValue = 5
   const mockProperties = { test: 'property' }
+  const mockDimensions = {
+    TestDimension: 'test-value',
+    AnotherDimension: 'another-value'
+  }
 
   afterEach(() => {
     jest.clearAllMocks()
@@ -54,7 +60,32 @@ describe('#metrics', () => {
       config.set('isMetricsEnabled', true)
     })
 
-    test('Should send metric with properties', async () => {
+    test('Should send metric with properties and dimensions', async () => {
+      await logMetric(
+        mockMetricsName,
+        mockValue,
+        mockProperties,
+        mockDimensions
+      )
+
+      expect(mockPutDimension).toHaveBeenCalledWith(
+        'TestDimension',
+        'test-value'
+      )
+      expect(mockPutDimension).toHaveBeenCalledWith(
+        'AnotherDimension',
+        'another-value'
+      )
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        mockMetricsName,
+        mockValue,
+        'Count'
+      )
+      expect(mockSetProperty).toHaveBeenCalledWith('properties', mockProperties)
+      expect(mockFlush).toHaveBeenCalled()
+    })
+
+    test('Should send metric with properties only', async () => {
       await logMetric(mockMetricsName, mockValue, mockProperties)
 
       expect(mockPutMetric).toHaveBeenCalledWith(
@@ -66,9 +97,29 @@ describe('#metrics', () => {
       expect(mockFlush).toHaveBeenCalled()
     })
 
-    test('Should send metric without properties', async () => {
+    test('Should send metric without properties or dimensions', async () => {
       await logMetric(mockMetricsName, mockValue)
 
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        mockMetricsName,
+        mockValue,
+        'Count'
+      )
+      expect(mockSetProperty).not.toHaveBeenCalled()
+      expect(mockFlush).toHaveBeenCalled()
+    })
+
+    test('Should send metric with dimensions only', async () => {
+      await logMetric(mockMetricsName, mockValue, null, mockDimensions)
+
+      expect(mockPutDimension).toHaveBeenCalledWith(
+        'TestDimension',
+        'test-value'
+      )
+      expect(mockPutDimension).toHaveBeenCalledWith(
+        'AnotherDimension',
+        'another-value'
+      )
       expect(mockPutMetric).toHaveBeenCalledWith(
         mockMetricsName,
         mockValue,

@@ -59,13 +59,21 @@ describe('Analytics Service', () => {
 
       await analytics.trackUniqueVisitor(mockRequest, visitor)
 
-      expect(logMetric).toHaveBeenCalledWith('UniqueVisitors', 1, {
-        path: '/test-path',
-        userAgent: 'Test Browser 1.0',
-        referer: 'https://example.com/previous',
-        country: 'GB',
-        timestamp: expect.any(String)
-      })
+      expect(logMetric).toHaveBeenCalledWith(
+        'UniqueVisitors',
+        1,
+        {
+          path: '/test-path',
+          userAgent: 'Test Browser 1.0',
+          referer: 'https://example.com/previous',
+          country: 'GB',
+          timestamp: expect.any(String)
+        },
+        {
+          Country: 'GB',
+          Source: 'Referral'
+        }
+      )
     })
 
     test('should handle direct traffic (no referer)', async () => {
@@ -79,7 +87,11 @@ describe('Analytics Service', () => {
         1,
         expect.objectContaining({
           referer: 'direct'
-        })
+        }),
+        {
+          Country: 'US',
+          Source: 'Direct'
+        }
       )
     })
 
@@ -107,14 +119,22 @@ describe('Analytics Service', () => {
 
       await analytics.trackPageView(mockRequest, visitor, true)
 
-      expect(logMetric).toHaveBeenCalledWith('PageViews', 1, {
-        path: '/test-path',
-        visitorId: 'visitor-123',
-        isNewVisitor: true,
-        sessionPageViews: 3,
-        referer: 'https://example.com/previous',
-        timestamp: expect.any(String)
-      })
+      expect(logMetric).toHaveBeenCalledWith(
+        'PageViews',
+        1,
+        {
+          path: '/test-path',
+          visitorId: 'visitor-123',
+          isNewVisitor: true,
+          sessionPageViews: 3,
+          referer: 'https://example.com/previous',
+          timestamp: expect.any(String)
+        },
+        {
+          Path: '/test-path',
+          VisitorType: 'New'
+        }
+      )
     })
 
     test('should track returning visitor page view', async () => {
@@ -131,7 +151,11 @@ describe('Analytics Service', () => {
         expect.objectContaining({
           isNewVisitor: false,
           sessionPageViews: 10
-        })
+        }),
+        {
+          Path: '/test-path',
+          VisitorType: 'Returning'
+        }
       )
     })
 
@@ -156,17 +180,27 @@ describe('Analytics Service', () => {
         projectName: 'Test Project'
       })
 
-      expect(logMetric).toHaveBeenCalledWith('ProjectAccess', 1, {
-        projectId: 'project-123',
-        action: 'view',
-        path: '/test-path',
-        visitorId: 'test-visitor-123',
-        userId: 'user-456',
-        isAuthenticated: true,
-        userAgent: 'Test Browser 1.0',
-        timestamp: expect.any(String),
-        projectName: 'Test Project'
-      })
+      expect(logMetric).toHaveBeenCalledWith(
+        'ProjectAccess',
+        1,
+        {
+          projectId: 'project-123',
+          action: 'view',
+          path: '/test-path',
+          visitorId: 'test-visitor-123',
+          userId: 'user-456',
+          isAuthenticated: true,
+          userAgent: 'Test Browser 1.0',
+          timestamp: expect.any(String),
+          projectName: 'Test Project'
+        },
+        {
+          ProjectId: 'project-123',
+          Action: 'view',
+          UserType: 'Authenticated',
+          ProjectName: 'Test Project'
+        }
+      )
     })
 
     test('should track project access for anonymous user', async () => {
@@ -191,7 +225,12 @@ describe('Analytics Service', () => {
           userId: undefined,
           isAuthenticated: false,
           fileName: 'report.pdf'
-        })
+        }),
+        {
+          ProjectId: 'project-123',
+          Action: 'download',
+          UserType: 'Anonymous'
+        }
       )
     })
 
@@ -205,7 +244,12 @@ describe('Analytics Service', () => {
         1,
         expect.objectContaining({
           visitorId: undefined
-        })
+        }),
+        {
+          ProjectId: 'project-123',
+          Action: 'view',
+          UserType: 'Authenticated'
+        }
       )
     })
 
@@ -217,7 +261,12 @@ describe('Analytics Service', () => {
         1,
         expect.objectContaining({
           action: 'view'
-        })
+        }),
+        {
+          ProjectId: 'project-123',
+          Action: 'view',
+          UserType: 'Authenticated'
+        }
       )
     })
 
@@ -238,17 +287,26 @@ describe('Analytics Service', () => {
     test('should track search query with results', async () => {
       await analytics.trackSearch(mockRequest, 'test query', 5, 'projects')
 
-      expect(logMetric).toHaveBeenCalledWith('SearchQuery', 1, {
-        searchTerm: 'test query',
-        searchLength: 10,
-        resultCount: 5,
-        searchContext: 'projects',
-        visitorId: 'test-visitor-123',
-        userId: 'user-456',
-        isAuthenticated: true,
-        hasResults: true,
-        timestamp: expect.any(String)
-      })
+      expect(logMetric).toHaveBeenCalledWith(
+        'SearchQuery',
+        1,
+        {
+          searchTerm: 'test query',
+          searchLength: 10,
+          resultCount: 5,
+          searchContext: 'projects',
+          visitorId: 'test-visitor-123',
+          userId: 'user-456',
+          isAuthenticated: true,
+          hasResults: true,
+          timestamp: expect.any(String)
+        },
+        {
+          SearchContext: 'projects',
+          HasResults: 'Yes',
+          UserType: 'Authenticated'
+        }
+      )
     })
 
     test('should track search with no results', async () => {
@@ -262,7 +320,12 @@ describe('Analytics Service', () => {
           resultCount: 0,
           hasResults: false,
           searchContext: 'general'
-        })
+        }),
+        {
+          SearchContext: 'general',
+          HasResults: 'No',
+          UserType: 'Authenticated'
+        }
       )
     })
 
@@ -274,7 +337,12 @@ describe('Analytics Service', () => {
         1,
         expect.objectContaining({
           searchTerm: 'test query'
-        })
+        }),
+        {
+          SearchContext: 'general',
+          HasResults: 'Yes',
+          UserType: 'Authenticated'
+        }
       )
     })
 

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const fourHoursMs = 14400000
+const eightHoursMs = 28800000
 const oneWeekMs = 604800000
 
 const isProduction = process.env.NODE_ENV === 'production'
@@ -131,7 +131,7 @@ export const config = convict({
       ttl: {
         doc: 'Session cache TTL and duration (how long a user stays logged in)',
         format: Number,
-        default: 8 * 60 * 60 * 1000, // 8 hours (reduced from 4 hours)
+        default: eightHoursMs,
         env: 'SESSION_CACHE_TTL'
       }
     },
@@ -145,7 +145,7 @@ export const config = convict({
       ttl: {
         doc: 'Session cookie ttl',
         format: Number,
-        default: fourHoursMs,
+        default: eightHoursMs,
         env: 'SESSION_COOKIE_TTL'
       },
       password: {

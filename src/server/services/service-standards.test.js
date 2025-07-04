@@ -26,12 +26,12 @@ jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js', () => ({
   authedFetchJsonDecorator: jest.fn()
 }))
 
-// Mock config to return empty API version for backward compatibility in tests
+// Mock config to return API version for versioned endpoints
 jest.mock('~/src/config/config.js', () => ({
   config: {
     get: jest.fn((key) => {
       if (key === 'api.version') {
-        return '' // Return empty string to use legacy endpoints
+        return 'v1.0' // Return actual version to use versioned endpoints
       }
       return undefined
     })
@@ -88,10 +88,10 @@ describe('Service Standards Service', () => {
 
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/serviceStandards')
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/servicestandards')
       expect(result).toEqual(mockApiResponse)
       expect(logger.info).toHaveBeenCalledWith(
-        { endpoint: '/serviceStandards' },
+        { endpoint: '/api/v1.0/servicestandards' },
         'Fetching service standards from API'
       )
       expect(logger.info).toHaveBeenCalledWith(
@@ -118,7 +118,7 @@ describe('Service Standards Service', () => {
       const result = await getServiceStandards()
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/serviceStandards')
+      expect(fetcher).toHaveBeenCalledWith('/api/v1.0/servicestandards')
       expect(result).toEqual(mockApiResponse)
       expect(logger.warn).toHaveBeenCalledWith(
         '[API_AUTH] No request context provided, using unauthenticated fetcher'
@@ -319,7 +319,7 @@ describe('Service Standards Service', () => {
         '[API_AUTH] Using authenticated fetcher for standards API'
       )
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/serviceStandards')
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/servicestandards')
     })
   })
 
@@ -349,11 +349,11 @@ describe('Service Standards Service', () => {
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
       expect(mockAuthedFetch).toHaveBeenCalledWith(
-        '/serviceStandards?includeInactive=true'
+        '/api/v1.0/servicestandards?includeInactive=true'
       )
       expect(result).toEqual(mockApiResponse)
       expect(logger.info).toHaveBeenCalledWith(
-        { endpoint: '/serviceStandards?includeInactive=true' },
+        { endpoint: '/api/v1.0/servicestandards?includeInactive=true' },
         'Fetching all service standards (including inactive) from API'
       )
     })
@@ -371,7 +371,7 @@ describe('Service Standards Service', () => {
 
       // Assert
       expect(fetcher).toHaveBeenCalledWith(
-        '/serviceStandards?includeInactive=true'
+        '/api/v1.0/servicestandards?includeInactive=true'
       )
       expect(result).toEqual(mockApiResponse)
       expect(logger.warn).toHaveBeenCalledWith(
@@ -416,12 +416,15 @@ describe('Service Standards Service', () => {
 
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/serviceStandards/std-1', {
-        method: 'DELETE'
-      })
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/api/v1.0/servicestandards/std-1',
+        {
+          method: 'DELETE'
+        }
+      )
       expect(result).toBe(true)
       expect(logger.info).toHaveBeenCalledWith(
-        { endpoint: '/serviceStandards/std-1', id: 'std-1' },
+        { endpoint: '/api/v1.0/servicestandards/std-1', id: 'std-1' },
         'Soft deleting service standard'
       )
       expect(logger.info).toHaveBeenCalledWith(
@@ -438,7 +441,7 @@ describe('Service Standards Service', () => {
       const result = await deleteServiceStandard('std-1')
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/serviceStandards/std-1', {
+      expect(fetcher).toHaveBeenCalledWith('/api/v1.0/servicestandards/std-1', {
         method: 'DELETE'
       })
       expect(result).toBe(true)
@@ -477,14 +480,14 @@ describe('Service Standards Service', () => {
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
       expect(mockAuthedFetch).toHaveBeenCalledWith(
-        '/serviceStandards/std-1/restore',
+        '/api/v1.0/servicestandards/std-1/restore',
         {
           method: 'POST'
         }
       )
       expect(result).toBe(true)
       expect(logger.info).toHaveBeenCalledWith(
-        { endpoint: '/serviceStandards/std-1/restore', id: 'std-1' },
+        { endpoint: '/api/v1.0/servicestandards/std-1/restore', id: 'std-1' },
         'Restoring service standard'
       )
       expect(logger.info).toHaveBeenCalledWith(
@@ -501,9 +504,12 @@ describe('Service Standards Service', () => {
       const result = await restoreServiceStandard('std-1')
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/serviceStandards/std-1/restore', {
-        method: 'POST'
-      })
+      expect(fetcher).toHaveBeenCalledWith(
+        '/api/v1.0/servicestandards/std-1/restore',
+        {
+          method: 'POST'
+        }
+      )
       expect(result).toBe(true)
     })
 

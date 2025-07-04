@@ -26,12 +26,12 @@ jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   }
 }))
 
-// Mock config to return old endpoint format for backward compatibility in tests
+// Mock config to return API version for versioned endpoints
 jest.mock('~/src/config/config.js', () => ({
   config: {
     get: jest.fn((key) => {
       if (key === 'api.version') {
-        return '' // Return empty string to use legacy endpoints
+        return 'v1.0' // Return actual version to use versioned endpoints
       }
       return undefined
     })
@@ -73,7 +73,7 @@ describe('Professions service', () => {
 
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions')
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/professions')
       expect(result).toEqual(mockProfessions)
     })
 
@@ -89,7 +89,7 @@ describe('Professions service', () => {
       const result = await getProfessions()
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/professions')
+      expect(fetcher).toHaveBeenCalledWith('/api/v1.0/professions')
       expect(result).toEqual(mockProfessions)
     })
 
@@ -136,7 +136,7 @@ describe('Professions service', () => {
 
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/1')
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/professions/1')
       expect(result).toEqual(mockProfession)
     })
 
@@ -149,7 +149,7 @@ describe('Professions service', () => {
       const result = await getProfessionById('1')
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/professions/1')
+      expect(fetcher).toHaveBeenCalledWith('/api/v1.0/professions/1')
       expect(result).toEqual(mockProfession)
     })
 
@@ -186,7 +186,7 @@ describe('Professions service', () => {
 
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/1', {
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/professions/1', {
         method: 'DELETE'
       })
       expect(result).toBe(true)
@@ -200,7 +200,7 @@ describe('Professions service', () => {
       const result = await deleteProfession('1')
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/professions/1', {
+      expect(fetcher).toHaveBeenCalledWith('/api/v1.0/professions/1', {
         method: 'DELETE'
       })
       expect(result).toBe(true)
@@ -233,7 +233,7 @@ describe('Professions service', () => {
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
       expect(mockAuthedFetch).toHaveBeenCalledWith(
-        '/professions?includeInactive=true'
+        '/api/v1.0/professions?includeInactive=true'
       )
       expect(result).toEqual(mockProfessions)
     })
@@ -250,7 +250,9 @@ describe('Professions service', () => {
       const result = await getAllProfessions()
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/professions?includeInactive=true')
+      expect(fetcher).toHaveBeenCalledWith(
+        '/api/v1.0/professions?includeInactive=true'
+      )
       expect(result).toEqual(mockProfessions)
     })
 
@@ -297,9 +299,12 @@ describe('Professions service', () => {
 
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/1/restore', {
-        method: 'POST'
-      })
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/api/v1.0/professions/1/restore',
+        {
+          method: 'POST'
+        }
+      )
       expect(result).toBe(true)
     })
 
@@ -311,7 +316,7 @@ describe('Professions service', () => {
       const result = await restoreProfession('1')
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/professions/1/restore', {
+      expect(fetcher).toHaveBeenCalledWith('/api/v1.0/professions/1/restore', {
         method: 'POST'
       })
       expect(result).toBe(true)

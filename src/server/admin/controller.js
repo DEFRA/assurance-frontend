@@ -84,18 +84,10 @@ export const adminController = {
       const authedFetch = authedFetchJsonDecorator(request)
       const apiVersion = config.get('api.version')
 
-      if (apiVersion) {
-        // Use the new versioned controller endpoint for deleting all standards
-        await authedFetch(`/api/${apiVersion}/servicestandards/deleteAll`, {
-          method: 'POST'
-        })
-      } else {
-        // Use legacy endpoint (seed with empty array)
-        await authedFetch('/serviceStandards/seed', {
-          method: 'POST',
-          body: JSON.stringify([])
-        })
-      }
+      // Use the versioned controller endpoint for deleting all standards
+      await authedFetch(`/api/${apiVersion}/servicestandards/deleteAll`, {
+        method: 'POST'
+      })
 
       request.logger.info('Standards deleted successfully')
       return h.redirect(
@@ -241,30 +233,18 @@ export const adminController = {
       const authedFetch = authedFetchJsonDecorator(request)
       const apiVersion = config.get('api.version')
 
-      if (apiVersion) {
-        // Use the new versioned controller endpoint for deleting all professions
-        const result = await authedFetch(
-          `/api/${apiVersion}/professions/deleteAll`,
-          {
-            method: 'POST'
-          }
-        )
-
-        request.logger.info(
-          { result: result || 'no response data' },
-          'Delete professions result via new controller'
-        )
-      } else {
-        // Use legacy endpoint
-        const result = await authedFetch('/professions/deleteAll', {
+      // Use the versioned controller endpoint for deleting all professions
+      const result = await authedFetch(
+        `/api/${apiVersion}/professions/deleteAll`,
+        {
           method: 'POST'
-        })
+        }
+      )
 
-        request.logger.info(
-          { result: result || 'no response data' },
-          'Delete professions result via legacy endpoint'
-        )
-      }
+      request.logger.info(
+        { result: result || 'no response data' },
+        'Delete professions result via versioned controller'
+      )
 
       return h.redirect(
         `/admin?notification=${ADMIN_NOTIFICATIONS.PROFESSIONS_DELETED_SUCCESSFULLY}`
@@ -283,19 +263,11 @@ export const adminController = {
       const authedFetch = authedFetchJsonDecorator(request)
       const apiVersion = config.get('api.version')
 
-      if (apiVersion) {
-        // Use the new versioned controller endpoint for seeding standards
-        await authedFetch(`/api/${apiVersion}/servicestandards/seed`, {
-          method: 'POST',
-          body: JSON.stringify(defaultServiceStandards)
-        })
-      } else {
-        // Use legacy endpoint
-        await authedFetch('/serviceStandards/seed', {
-          method: 'POST',
-          body: JSON.stringify(defaultServiceStandards)
-        })
-      }
+      // Use the versioned controller endpoint for seeding standards
+      await authedFetch(`/api/${apiVersion}/servicestandards/seed`, {
+        method: 'POST',
+        body: JSON.stringify(defaultServiceStandards)
+      })
 
       request.logger.info('Service standards seeded successfully')
       return h.redirect(
@@ -314,19 +286,11 @@ export const adminController = {
       const authedFetch = authedFetchJsonDecorator(request)
       const apiVersion = config.get('api.version')
 
-      if (apiVersion) {
-        // Use the new versioned controller endpoint for seeding professions
-        await authedFetch(`/api/${apiVersion}/professions/seed`, {
-          method: 'POST',
-          body: JSON.stringify(defaultProfessions)
-        })
-      } else {
-        // Use legacy endpoint
-        await authedFetch('/professions/seed', {
-          method: 'POST',
-          body: JSON.stringify(defaultProfessions)
-        })
-      }
+      // Use the versioned controller endpoint for seeding professions
+      await authedFetch(`/api/${apiVersion}/professions/seed`, {
+        method: 'POST',
+        body: JSON.stringify(defaultProfessions)
+      })
 
       request.logger.info('Professions seeded successfully')
       return h.redirect(

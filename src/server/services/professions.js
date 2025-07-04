@@ -11,10 +11,7 @@ import { config } from '~/src/config/config.js'
 export async function getProfessions(request) {
   try {
     const apiVersion = config.get('api.version')
-    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
-    const endpoint = apiVersion
-      ? `/api/${apiVersion}/professions`
-      : '/professions'
+    const endpoint = `/api/${apiVersion}/professions`
     logger.info({ endpoint }, 'Fetching professions from API')
 
     let data
@@ -58,10 +55,7 @@ export async function getProfessions(request) {
 export async function getProfessionById(id, request) {
   try {
     const apiVersion = config.get('api.version')
-    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
-    const endpoint = apiVersion
-      ? `/api/${apiVersion}/professions/${id}`
-      : `/professions/${id}`
+    const endpoint = `/api/${apiVersion}/professions/${id}`
     logger.info({ endpoint, id }, 'Fetching profession by ID from API')
 
     let data
@@ -103,10 +97,7 @@ export async function getProfessionById(id, request) {
 export async function deleteProfession(id, request) {
   try {
     const apiVersion = config.get('api.version')
-    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
-    const endpoint = apiVersion
-      ? `/api/${apiVersion}/professions/${id}`
-      : `/professions/${id}`
+    const endpoint = `/api/${apiVersion}/professions/${id}`
     logger.info({ endpoint, id }, 'Soft deleting profession')
 
     if (request) {
@@ -140,10 +131,7 @@ export async function deleteProfession(id, request) {
 export async function getAllProfessions(request) {
   try {
     const apiVersion = config.get('api.version')
-    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
-    const endpoint = apiVersion
-      ? `/api/${apiVersion}/professions?includeInactive=true`
-      : '/professions?includeInactive=true'
+    const endpoint = `/api/${apiVersion}/professions?includeInactive=true`
     logger.info(
       { endpoint },
       'Fetching all professions (including inactive) from API'
@@ -195,10 +183,7 @@ export async function getAllProfessions(request) {
 export async function restoreProfession(id, request) {
   try {
     const apiVersion = config.get('api.version')
-    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
-    const endpoint = apiVersion
-      ? `/api/${apiVersion}/professions/${id}/restore`
-      : `/professions/${id}/restore`
+    const endpoint = `/api/${apiVersion}/professions/${id}/restore`
     logger.info({ endpoint, id }, 'Restoring profession')
 
     if (request) {

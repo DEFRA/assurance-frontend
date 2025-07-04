@@ -6,10 +6,7 @@ import { config } from '~/src/config/config.js'
 export async function getServiceStandards(request) {
   try {
     const apiVersion = config.get('api.version')
-    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
-    const endpoint = apiVersion
-      ? `/api/${apiVersion}/servicestandards`
-      : '/serviceStandards'
+    const endpoint = `/api/${apiVersion}/servicestandards`
     logger.info({ endpoint }, 'Fetching service standards from API')
 
     let data
@@ -55,10 +52,7 @@ export async function getServiceStandards(request) {
 export async function getAllServiceStandards(request) {
   try {
     const apiVersion = config.get('api.version')
-    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
-    const endpoint = apiVersion
-      ? `/api/${apiVersion}/servicestandards?includeInactive=true`
-      : '/serviceStandards?includeInactive=true'
+    const endpoint = `/api/${apiVersion}/servicestandards?includeInactive=true`
     logger.info(
       { endpoint },
       'Fetching all service standards (including inactive) from API'
@@ -110,10 +104,7 @@ export async function getAllServiceStandards(request) {
 export async function deleteServiceStandard(id, request) {
   try {
     const apiVersion = config.get('api.version')
-    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
-    const endpoint = apiVersion
-      ? `/api/${apiVersion}/servicestandards/${id}`
-      : `/serviceStandards/${id}`
+    const endpoint = `/api/${apiVersion}/servicestandards/${id}`
     logger.info({ endpoint, id }, 'Soft deleting service standard')
 
     if (request) {
@@ -148,10 +139,7 @@ export async function deleteServiceStandard(id, request) {
 export async function restoreServiceStandard(id, request) {
   try {
     const apiVersion = config.get('api.version')
-    // Use versioned endpoint if version is configured, otherwise use legacy endpoint
-    const endpoint = apiVersion
-      ? `/api/${apiVersion}/servicestandards/${id}/restore`
-      : `/serviceStandards/${id}/restore`
+    const endpoint = `/api/${apiVersion}/servicestandards/${id}/restore`
     logger.info({ endpoint, id }, 'Restoring service standard')
 
     if (request) {

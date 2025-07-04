@@ -24,8 +24,19 @@ jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
 jest.mock('~/src/server/services/service-standards.js')
 jest.mock('~/src/server/services/projects.js')
 jest.mock('~/src/server/services/professions.js')
-jest.mock('~/src/config/config.js')
 jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
+
+// Mock config to return API version for versioned endpoints
+jest.mock('~/src/config/config.js', () => ({
+  config: {
+    get: jest.fn((key) => {
+      if (key === 'api.version') {
+        return 'v1.0' // Return actual version to use versioned endpoints
+      }
+      return undefined
+    })
+  }
+}))
 
 describe('Admin controller', () => {
   let mockRequest
@@ -72,7 +83,7 @@ describe('Admin controller', () => {
     // Mock config
     config.get = jest.fn().mockImplementation((key) => {
       if (key === 'api.version') {
-        return '' // Return empty string to use legacy endpoints for tests
+        return 'v1.0' // Return actual version to use versioned endpoints
       }
       return 'test'
     })
@@ -135,9 +146,12 @@ describe('Admin controller', () => {
       await adminController.deleteProfessions(mockRequest, mockH)
 
       // Assert
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/deleteAll', {
-        method: 'POST'
-      })
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/api/v1.0/professions/deleteAll',
+        {
+          method: 'POST'
+        }
+      )
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Professions deleted successfully'
       )
@@ -166,10 +180,12 @@ describe('Admin controller', () => {
       await adminController.deleteStandards(mockRequest, mockH)
 
       // Assert
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/serviceStandards/seed', {
-        method: 'POST',
-        body: JSON.stringify([])
-      })
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/api/v1.0/servicestandards/deleteAll',
+        {
+          method: 'POST'
+        }
+      )
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Standards deleted successfully'
       )
@@ -349,10 +365,13 @@ describe('Admin controller', () => {
       await adminController.seedProfessions(mockRequest, mockH)
 
       // Assert
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/seed', {
-        method: 'POST',
-        body: JSON.stringify(defaultProfessions)
-      })
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/api/v1.0/professions/seed',
+        {
+          method: 'POST',
+          body: JSON.stringify(defaultProfessions)
+        }
+      )
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Professions seeded successfully'
       )
@@ -476,10 +495,12 @@ describe('Admin controller', () => {
       await adminController.confirmDeleteAllStandards(mockRequest, mockH)
 
       // Assert
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/serviceStandards/seed', {
-        method: 'POST',
-        body: JSON.stringify([])
-      })
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/api/v1.0/servicestandards/deleteAll',
+        {
+          method: 'POST'
+        }
+      )
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Standards deleted successfully'
       )
@@ -523,9 +544,12 @@ describe('Admin controller', () => {
       await adminController.confirmDeleteAllProfessions(mockRequest, mockH)
 
       // Assert
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/deleteAll', {
-        method: 'POST'
-      })
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/api/v1.0/professions/deleteAll',
+        {
+          method: 'POST'
+        }
+      )
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Professions deleted successfully'
       )

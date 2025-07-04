@@ -1,6 +1,16 @@
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
+import { config } from '~/src/config/config.js'
+
+// API endpoint constants
+const API_BASE_PATH = 'professions'
+const INCLUDE_INACTIVE_QUERY = '?includeInactive=true'
+const RESTORE_PATH = '/restore'
+
+// API configuration constants
+const API_VERSION_KEY = 'api.version'
+const API_BASE_PREFIX = '/api'
 
 /**
  * Get all professions
@@ -9,7 +19,8 @@ import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/auth
  */
 export async function getProfessions(request) {
   try {
-    const endpoint = '/professions'
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
     logger.info({ endpoint }, 'Fetching professions from API')
 
     let data
@@ -48,29 +59,29 @@ export async function getProfessions(request) {
  * Get profession by ID
  * @param {string} id - The profession ID
  * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
- * @returns {Promise<object>} - The profession
+ * @returns {Promise<Object|null>} - The profession or null if not found
  */
 export async function getProfessionById(id, request) {
   try {
-    const endpoint = `/professions/${id}`
-    logger.info({ endpoint, id }, 'Fetching profession from API')
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
+    logger.info({ endpoint, id }, 'Fetching profession by ID from API')
 
     let data
     if (request) {
-      // Use authenticated fetcher if request is provided
+      logger.info(
+        '[API_AUTH] Using authenticated fetcher for profession by ID API'
+      )
       const authedFetch = authedFetchJsonDecorator(request)
       data = await authedFetch(endpoint)
     } else {
-      // Fall back to unauthenticated fetcher
+      logger.warn(
+        '[API_AUTH] No request context provided, using unauthenticated fetcher'
+      )
       data = await fetcher(endpoint)
     }
 
-    if (!data) {
-      logger.warn('Profession not found', { id })
-      return null
-    }
-
-    logger.info({ profession: data }, 'Profession retrieved successfully')
+    logger.info({ id }, 'Profession retrieved successfully by ID')
     return data
   } catch (error) {
     logger.error(
@@ -80,35 +91,33 @@ export async function getProfessionById(id, request) {
         code: error.code,
         id
       },
-      'Failed to fetch profession'
+      'Failed to fetch profession by ID'
     )
     throw error
   }
 }
 
 /**
- * Delete profession
+ * Soft delete a profession
  * @param {string} id - The profession ID
  * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
- * @returns {Promise<object>} - Result of deletion
+ * @returns {Promise<boolean>} - Success status
  */
 export async function deleteProfession(id, request) {
   try {
-    const endpoint = `/professions/${id}`
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
     logger.info({ endpoint, id }, 'Soft deleting profession')
 
-    let data
     if (request) {
-      // Use authenticated fetcher if request is provided
       const authedFetch = authedFetchJsonDecorator(request)
-      data = await authedFetch(endpoint, { method: 'DELETE' })
+      await authedFetch(endpoint, { method: 'DELETE' })
     } else {
-      // Fall back to unauthenticated fetcher
-      data = await fetcher(endpoint, { method: 'DELETE' })
+      await fetcher(endpoint, { method: 'DELETE' })
     }
 
-    logger.info({ profession: data }, 'Profession soft deleted successfully')
-    return data
+    logger.info({ id }, 'Profession soft deleted successfully')
+    return true
   } catch (error) {
     logger.error(
       {
@@ -130,7 +139,8 @@ export async function deleteProfession(id, request) {
  */
 export async function getAllProfessions(request) {
   try {
-    const endpoint = '/professions?includeInactive=true'
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}${INCLUDE_INACTIVE_QUERY}`
     logger.info(
       { endpoint },
       'Fetching all professions (including inactive) from API'
@@ -181,7 +191,8 @@ export async function getAllProfessions(request) {
  */
 export async function restoreProfession(id, request) {
   try {
-    const endpoint = `/professions/${id}/restore`
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}${RESTORE_PATH}`
     logger.info({ endpoint, id }, 'Restoring profession')
 
     if (request) {

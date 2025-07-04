@@ -101,8 +101,8 @@ export const ADMIN_NOTIFICATIONS = {
   SERVICE_STANDARDS_SEEDED_SUCCESSFULLY:
     'Service standards seeded successfully',
   FAILED_TO_SEED_SERVICE_STANDARDS: 'Failed to seed service standards',
-  PROFESSIONS_SEEDED_SUCCESSFULLY: 'Professions seeded (dev only)',
-  FAILED_TO_SEED_PROFESSIONS: 'Failed to seed professions (dev only)',
+  PROFESSIONS_SEEDED_SUCCESSFULLY: 'Professions seeded successfully',
+  FAILED_TO_SEED_PROFESSIONS: 'Failed to seed professions',
   PROJECTS_SEEDED_SUCCESSFULLY:
     'Projects and assessments seeded successfully with new system',
   FAILED_TO_SEED_PROJECTS: 'Failed to seed projects and assessments'

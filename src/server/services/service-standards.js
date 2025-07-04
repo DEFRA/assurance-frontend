@@ -1,10 +1,21 @@
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
+import { config } from '~/src/config/config.js'
+
+// API endpoint constants
+const API_BASE_PATH = 'servicestandards'
+const INCLUDE_INACTIVE_QUERY = '?includeInactive=true'
+const RESTORE_PATH = '/restore'
+
+// API configuration constants
+const API_VERSION_KEY = 'api.version'
+const API_BASE_PREFIX = '/api'
 
 export async function getServiceStandards(request) {
   try {
-    const endpoint = '/serviceStandards'
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
     logger.info({ endpoint }, 'Fetching service standards from API')
 
     let data
@@ -49,7 +60,8 @@ export async function getServiceStandards(request) {
  */
 export async function getAllServiceStandards(request) {
   try {
-    const endpoint = '/serviceStandards?includeInactive=true'
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}${INCLUDE_INACTIVE_QUERY}`
     logger.info(
       { endpoint },
       'Fetching all service standards (including inactive) from API'
@@ -100,7 +112,8 @@ export async function getAllServiceStandards(request) {
  */
 export async function deleteServiceStandard(id, request) {
   try {
-    const endpoint = `/serviceStandards/${id}`
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
     logger.info({ endpoint, id }, 'Soft deleting service standard')
 
     if (request) {
@@ -134,7 +147,8 @@ export async function deleteServiceStandard(id, request) {
  */
 export async function restoreServiceStandard(id, request) {
   try {
-    const endpoint = `/serviceStandards/${id}/restore`
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}${RESTORE_PATH}`
     logger.info({ endpoint, id }, 'Restoring service standard')
 
     if (request) {

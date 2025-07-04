@@ -26,6 +26,18 @@ jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   }
 }))
 
+// Mock config to return API version for versioned endpoints
+jest.mock('~/src/config/config.js', () => ({
+  config: {
+    get: jest.fn((key) => {
+      if (key === 'api.version') {
+        return 'v1.0' // Return actual version to use versioned endpoints
+      }
+      return undefined
+    })
+  }
+}))
+
 describe('Professions service', () => {
   const mockRequest = {
     auth: {
@@ -61,7 +73,7 @@ describe('Professions service', () => {
 
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions')
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/professions')
       expect(result).toEqual(mockProfessions)
     })
 
@@ -77,7 +89,7 @@ describe('Professions service', () => {
       const result = await getProfessions()
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/professions')
+      expect(fetcher).toHaveBeenCalledWith('/api/v1.0/professions')
       expect(result).toEqual(mockProfessions)
     })
 
@@ -124,7 +136,7 @@ describe('Professions service', () => {
 
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/1')
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/professions/1')
       expect(result).toEqual(mockProfession)
     })
 
@@ -137,7 +149,7 @@ describe('Professions service', () => {
       const result = await getProfessionById('1')
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/professions/1')
+      expect(fetcher).toHaveBeenCalledWith('/api/v1.0/professions/1')
       expect(result).toEqual(mockProfession)
     })
 
@@ -167,33 +179,31 @@ describe('Professions service', () => {
   describe('deleteProfession', () => {
     test('should delete profession with authenticated request', async () => {
       // Arrange
-      const mockResult = { success: true }
-      mockAuthedFetch.mockResolvedValue(mockResult)
+      mockAuthedFetch.mockResolvedValue(null) // API returns no content for delete
 
       // Act
       const result = await deleteProfession('1', mockRequest)
 
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/1', {
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/professions/1', {
         method: 'DELETE'
       })
-      expect(result).toEqual(mockResult)
+      expect(result).toBe(true)
     })
 
     test('should delete profession without authenticated request', async () => {
       // Arrange
-      const mockResult = { success: true }
-      fetcher.mockResolvedValue(mockResult)
+      fetcher.mockResolvedValue(null) // API returns no content for delete
 
       // Act
       const result = await deleteProfession('1')
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/professions/1', {
+      expect(fetcher).toHaveBeenCalledWith('/api/v1.0/professions/1', {
         method: 'DELETE'
       })
-      expect(result).toEqual(mockResult)
+      expect(result).toBe(true)
     })
 
     test('should throw error when API call fails', async () => {
@@ -223,7 +233,7 @@ describe('Professions service', () => {
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
       expect(mockAuthedFetch).toHaveBeenCalledWith(
-        '/professions?includeInactive=true'
+        '/api/v1.0/professions?includeInactive=true'
       )
       expect(result).toEqual(mockProfessions)
     })
@@ -240,7 +250,9 @@ describe('Professions service', () => {
       const result = await getAllProfessions()
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/professions?includeInactive=true')
+      expect(fetcher).toHaveBeenCalledWith(
+        '/api/v1.0/professions?includeInactive=true'
+      )
       expect(result).toEqual(mockProfessions)
     })
 
@@ -287,9 +299,12 @@ describe('Professions service', () => {
 
       // Assert
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/professions/1/restore', {
-        method: 'POST'
-      })
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/api/v1.0/professions/1/restore',
+        {
+          method: 'POST'
+        }
+      )
       expect(result).toBe(true)
     })
 
@@ -301,7 +316,7 @@ describe('Professions service', () => {
       const result = await restoreProfession('1')
 
       // Assert
-      expect(fetcher).toHaveBeenCalledWith('/professions/1/restore', {
+      expect(fetcher).toHaveBeenCalledWith('/api/v1.0/professions/1/restore', {
         method: 'POST'
       })
       expect(result).toBe(true)

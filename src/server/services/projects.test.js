@@ -38,6 +38,18 @@ jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
   }
 }))
 
+// Mock config module
+jest.mock('~/src/config/config.js', () => ({
+  config: {
+    get: jest.fn((key) => {
+      if (key === 'api.version') {
+        return 'v1.0' // Return actual version to use versioned endpoints
+      }
+      return undefined
+    })
+  }
+}))
+
 // Then initialize the mock logger
 const mockLogger = jest.requireMock(
   '~/src/server/common/helpers/logging/logger.js'
@@ -52,10 +64,18 @@ const { getServiceStandards: mockGetServiceStandards } = jest.requireMock(
 )
 const { authedFetchJsonDecorator: mockAuthedFetchJsonDecorator } =
   jest.requireMock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
+const { config: mockConfig } = jest.requireMock('~/src/config/config.js')
 
 describe('Projects service', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Mock config to return v1.0 for api.version to use versioned endpoints in tests
+    mockConfig.get.mockImplementation((key) => {
+      if (key === 'api.version') {
+        return 'v1.0'
+      }
+      return undefined
+    })
   })
 
   afterAll(() => {
@@ -76,7 +96,7 @@ describe('Projects service', () => {
 
       // Assert
       expect(result).toEqual(mockProjects)
-      expect(mockFetch).toHaveBeenCalledWith('/projects')
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1.0/projects')
     })
 
     test('should use authenticated fetcher when request is provided', async () => {
@@ -95,7 +115,7 @@ describe('Projects service', () => {
       // Assert
       expect(result).toEqual(mockProjects)
       expect(mockAuthedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-      expect(mockAuthedFetch).toHaveBeenCalledWith('/projects')
+      expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/projects')
     })
 
     test('should handle API errors', async () => {
@@ -233,7 +253,7 @@ describe('Projects service', () => {
 
       // Assert
       expect(result).toEqual(mockProject)
-      expect(mockFetch).toHaveBeenCalledWith('/projects/1')
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1.0/projects/1')
     })
 
     test('should handle project not found', async () => {
@@ -277,7 +297,7 @@ describe('Projects service', () => {
       expect(result).toEqual(mockResponse)
       // Verify the call was made with correct URL and method
       expect(mockFetch).toHaveBeenCalledWith(
-        '/projects/1',
+        '/api/v1.0/projects/1',
         expect.objectContaining({
           method: 'PUT'
         })
@@ -464,7 +484,9 @@ describe('Projects service', () => {
 
       // Assert
       expect(result).toEqual(mockHistory)
-      expect(mockFetch).toHaveBeenCalledWith('/projects/1/standards/2/history')
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/v1.0/projects/1/standards/2/history'
+      )
     })
 
     test('should handle empty history', async () => {
@@ -562,7 +584,7 @@ describe('Projects service', () => {
 
       // Assert
       expect(result).toEqual(mockHistory)
-      expect(mockFetch).toHaveBeenCalledWith('/projects/1/history')
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1.0/projects/1/history')
     })
 
     test('should handle empty history', async () => {
@@ -623,7 +645,7 @@ describe('createProject', () => {
     // Assert
     expect(result).toEqual(expectedProject)
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects',
+      '/api/v1.0/projects',
       expect.objectContaining({
         method: 'POST'
       })
@@ -663,7 +685,7 @@ describe('createProject', () => {
     expect(result).toEqual({ id: 'auth-project-id' })
     expect(mockAuthedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
     expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects',
+      '/api/v1.0/projects',
       expect.any(Object)
     )
   })
@@ -689,7 +711,7 @@ describe('createProject', () => {
     // Assert
     expect(result).toEqual({ id: 'project-no-standards' })
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects',
+      '/api/v1.0/projects',
       expect.objectContaining({
         method: 'POST'
       })
@@ -721,7 +743,7 @@ describe('createProject', () => {
     // Assert
     expect(result).toEqual({ id: 'empty-standards-project' })
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects',
+      '/api/v1.0/projects',
       expect.objectContaining({
         method: 'POST'
       })
@@ -875,7 +897,7 @@ describe('deleteProject', () => {
     // Assert
     expect(result).toBe(true)
     expect(mockAuthedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
-    expect(mockAuthedFetch).toHaveBeenCalledWith('/projects/1', {
+    expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/projects/1', {
       method: 'DELETE'
     })
   })
@@ -889,7 +911,7 @@ describe('deleteProject', () => {
 
     // Assert
     expect(result).toBe(true)
-    expect(mockFetch).toHaveBeenCalledWith('/projects/1', {
+    expect(mockFetch).toHaveBeenCalledWith('/api/v1.0/projects/1', {
       method: 'DELETE'
     })
   })
@@ -973,7 +995,7 @@ describe('getProfessionHistory', () => {
       ])
     )
     expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects/1/professions/2/history'
+      '/api/v1.0/projects/1/professions/2/history'
     )
   })
 
@@ -1004,7 +1026,9 @@ describe('getProfessionHistory', () => {
         })
       ])
     )
-    expect(mockFetch).toHaveBeenCalledWith('/projects/1/professions/2/history')
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1.0/projects/1/professions/2/history'
+    )
   })
 
   test('should normalize history entries', async () => {
@@ -1106,7 +1130,7 @@ describe('getProfessionHistory', () => {
 
     // Assert
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects/1/professions/2/history?_cache=2024-05-15'
+      '/api/v1.0/projects/1/professions/2/history?_cache=2024-05-15'
     )
 
     // Cleanup
@@ -1136,7 +1160,7 @@ describe('archiveProjectHistoryEntry', () => {
 
     // Assert
     expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects/1/history/hist-1/archive',
+      '/api/v1.0/projects/1/history/hist-1/archive',
       {
         method: 'PUT'
       }
@@ -1153,7 +1177,7 @@ describe('archiveProjectHistoryEntry', () => {
 
     // Assert
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects/1/history/hist-1/archive',
+      '/api/v1.0/projects/1/history/hist-1/archive',
       {
         method: 'PUT'
       }
@@ -1199,7 +1223,7 @@ describe('archiveProfessionHistoryEntry', () => {
 
     // Assert
     expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects/1/professions/2/history/hist-1/archive',
+      '/api/v1.0/projects/1/professions/2/history/hist-1/archive',
       {
         method: 'PUT'
       }
@@ -1216,7 +1240,7 @@ describe('archiveProfessionHistoryEntry', () => {
 
     // Assert
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects/1/professions/2/history/hist-1/archive',
+      '/api/v1.0/projects/1/professions/2/history/hist-1/archive',
       {
         method: 'PUT'
       }
@@ -1264,7 +1288,7 @@ describe('getAssessment', () => {
 
     // Assert
     expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects/1/standards/2/professions/3/assessment'
+      '/api/v1.0/projects/1/standards/2/professions/3/assessment'
     )
     expect(result).toEqual(mockAssessment)
   })
@@ -1285,7 +1309,7 @@ describe('getAssessment', () => {
 
     // Assert
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects/1/standards/2/professions/3/assessment'
+      '/api/v1.0/projects/1/standards/2/professions/3/assessment'
     )
     expect(result).toEqual(mockAssessment)
   })
@@ -1345,7 +1369,7 @@ describe('updateAssessment', () => {
 
     // Assert
     expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects/1/standards/2/professions/3/assessment',
+      '/api/v1.0/projects/1/standards/2/professions/3/assessment',
       {
         method: 'POST',
         body: JSON.stringify(assessmentData),
@@ -1369,7 +1393,7 @@ describe('updateAssessment', () => {
 
     // Assert
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects/1/standards/2/professions/3/assessment',
+      '/api/v1.0/projects/1/standards/2/professions/3/assessment',
       {
         method: 'POST',
         body: JSON.stringify(assessmentData),
@@ -1423,7 +1447,7 @@ describe('getAssessmentHistory', () => {
 
     // Assert
     expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects/1/standards/2/professions/3/history'
+      '/api/v1.0/projects/1/standards/2/professions/3/history'
     )
     expect(result).toEqual(mockHistory)
   })
@@ -1444,7 +1468,7 @@ describe('getAssessmentHistory', () => {
 
     // Assert
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects/1/standards/2/professions/3/history'
+      '/api/v1.0/projects/1/standards/2/professions/3/history'
     )
     expect(result).toEqual(mockHistory)
   })
@@ -1481,7 +1505,7 @@ describe('getAssessmentHistory', () => {
 
     // Assert
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects/1/standards/2/professions/3/history'
+      '/api/v1.0/projects/1/standards/2/professions/3/history'
     )
   })
 })
@@ -1513,7 +1537,7 @@ describe('archiveAssessmentHistoryEntry', () => {
 
     // Assert
     expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects/1/standards/2/professions/3/history/hist-1/archive',
+      '/api/v1.0/projects/1/standards/2/professions/3/history/hist-1/archive',
       {
         method: 'POST'
       }
@@ -1530,7 +1554,7 @@ describe('archiveAssessmentHistoryEntry', () => {
 
     // Assert
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects/1/standards/2/professions/3/history/hist-1/archive',
+      '/api/v1.0/projects/1/standards/2/professions/3/history/hist-1/archive',
       {
         method: 'POST'
       }
@@ -1786,7 +1810,7 @@ describe('getAssessment 404 handling', () => {
     expect(mockLogger.info).toHaveBeenCalledWith(
       {
         endpoint:
-          '/projects/project-1/standards/std-1/professions/prof-1/assessment'
+          '/api/v1.0/projects/project-1/standards/std-1/professions/prof-1/assessment'
       },
       'Assessment not found - will create new one'
     )
@@ -1936,7 +1960,7 @@ describe('updateProject with suppressHistory parameter', () => {
 
     // Assert
     expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects/1?suppressHistory=true',
+      '/api/v1.0/projects/1?suppressHistory=true',
       expect.any(Object)
     )
   })
@@ -1987,7 +2011,7 @@ describe('edge case scenarios', () => {
     // Assert
     expect(result.id).toBe('created-project-id')
     expect(mockFetch).toHaveBeenCalledWith(
-      '/projects',
+      '/api/v1.0/projects',
       expect.objectContaining({
         method: 'POST',
         body: expect.stringContaining('"name":""')
@@ -2023,7 +2047,7 @@ describe('edge case scenarios', () => {
     // Assert
     expect(result).toEqual(mockHistory)
     expect(mockAuthedFetch).toHaveBeenCalledWith(
-      '/projects/project-1/standards/std-1/history'
+      '/api/v1.0/projects/project-1/standards/std-1/history'
     )
   })
 })

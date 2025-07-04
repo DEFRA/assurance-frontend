@@ -4,10 +4,19 @@ import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/auth
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { config } from '~/src/config/config.js'
 
+// API endpoint constants
+const API_BASE_PATH = 'projects'
+const HISTORY_PATH = '/history'
+const ARCHIVE_PATH = '/archive'
+const PROFESSIONS_PATH = '/professions'
+const STANDARDS_PATH = '/standards'
+const ASSESSMENT_PATH = '/assessment'
+const SUPPRESS_HISTORY_QUERY = '?suppressHistory=true'
+
 export async function getProjects(request) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/projects`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}`
     logger.info({ endpoint }, 'Fetching projects from API')
 
     let data
@@ -64,7 +73,7 @@ export async function getProjects(request) {
 export async function createProject(projectData, request) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/projects`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}`
     logger.info({ projectData }, 'Creating new project')
 
     // Get service standards if available, but don't require them
@@ -182,9 +191,9 @@ export async function updateProject(
   try {
     // Build endpoint - add suppressHistory parameter if true
     const apiVersion = config.get('api.version')
-    let endpoint = `/api/${apiVersion}/projects/${id}`
+    let endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${id}`
     if (suppressHistory) {
-      endpoint += `?suppressHistory=true`
+      endpoint += SUPPRESS_HISTORY_QUERY
     }
 
     logger.info({ id, projectData, suppressHistory }, 'Updating project')
@@ -303,7 +312,7 @@ export async function updateProject(
 export async function getProjectById(id, request) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/projects/${id}`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${id}`
     logger.info({ endpoint, id }, 'Fetching project from API')
 
     let data
@@ -340,7 +349,7 @@ export async function getProjectById(id, request) {
 export async function getStandardHistory(projectId, standardId, request) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/projects/${projectId}/standards/${standardId}/history`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${projectId}${STANDARDS_PATH}/${standardId}${HISTORY_PATH}`
     logger.info({ projectId, standardId }, 'Fetching standard history from API')
 
     let data
@@ -429,7 +438,7 @@ export async function getProjectHistory(projectId, request) {
   try {
     // Build endpoint - omit cache parameter for tests
     const apiVersion = config.get('api.version')
-    let endpoint = `/api/${apiVersion}/projects/${projectId}/history`
+    let endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${projectId}${HISTORY_PATH}`
 
     // Only add cache parameter in non-test environments
     if (process.env.NODE_ENV !== 'test') {
@@ -524,7 +533,7 @@ export async function archiveProjectHistoryEntry(
 ) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/projects/${projectId}/history/${historyId}/archive`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${projectId}${HISTORY_PATH}/${historyId}${ARCHIVE_PATH}`
     logger.info({ projectId, historyId }, 'Archiving project history entry')
 
     if (request) {
@@ -569,7 +578,7 @@ export async function archiveProjectHistoryEntry(
 export async function deleteProject(id, request) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/projects/${id}`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${id}`
     logger.info({ id }, 'Deleting project')
 
     if (request) {
@@ -614,7 +623,7 @@ export async function getProfessionHistory(projectId, professionId, request) {
   try {
     // Build endpoint - omit cache parameter for tests
     const apiVersion = config.get('api.version')
-    let endpoint = `/api/${apiVersion}/projects/${projectId}/professions/${professionId}/history`
+    let endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${projectId}${PROFESSIONS_PATH}/${professionId}${HISTORY_PATH}`
 
     // Only add cache parameter in non-test environments
     if (process.env.NODE_ENV !== 'test') {
@@ -684,7 +693,7 @@ export async function archiveProfessionHistoryEntry(
 ) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/projects/${projectId}/professions/${professionId}/history/${historyId}/archive`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${projectId}${PROFESSIONS_PATH}/${professionId}${HISTORY_PATH}/${historyId}${ARCHIVE_PATH}`
     logger.info(
       { projectId, professionId, historyId },
       'Archiving profession history entry'
@@ -732,7 +741,7 @@ export async function getAssessment(
   request
 ) {
   const apiVersion = config.get('api.version')
-  const endpoint = `/api/${apiVersion}/projects/${projectId}/standards/${standardId}/professions/${professionId}/assessment`
+  const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${projectId}${STANDARDS_PATH}/${standardId}${PROFESSIONS_PATH}/${professionId}${ASSESSMENT_PATH}`
   logger.info({ endpoint }, 'Fetching assessment from API')
 
   try {
@@ -782,7 +791,7 @@ export async function updateAssessment(
   request
 ) {
   const apiVersion = config.get('api.version')
-  const endpoint = `/api/${apiVersion}/projects/${projectId}/standards/${standardId}/professions/${professionId}/assessment`
+  const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${projectId}${STANDARDS_PATH}/${standardId}${PROFESSIONS_PATH}/${professionId}${ASSESSMENT_PATH}`
   logger.info({ endpoint, assessmentData }, 'Updating assessment via API')
 
   try {
@@ -830,7 +839,7 @@ export async function getAssessmentHistory(
 ) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/projects/${projectId}/standards/${standardId}/professions/${professionId}/history`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${projectId}${STANDARDS_PATH}/${standardId}${PROFESSIONS_PATH}/${professionId}${HISTORY_PATH}`
     logger.info(
       { projectId, standardId, professionId },
       'Fetching assessment history from API'
@@ -895,7 +904,7 @@ export async function archiveAssessmentHistoryEntry(
 ) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/projects/${projectId}/standards/${standardId}/professions/${professionId}/history/${historyId}/archive`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${projectId}${STANDARDS_PATH}/${standardId}${PROFESSIONS_PATH}/${professionId}${HISTORY_PATH}/${historyId}${ARCHIVE_PATH}`
     logger.info(
       { projectId, standardId, professionId, historyId },
       'Archiving assessment history entry via API'

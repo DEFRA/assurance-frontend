@@ -3,10 +3,15 @@ import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { config } from '~/src/config/config.js'
 
+// API endpoint constants
+const API_BASE_PATH = 'servicestandards'
+const INCLUDE_INACTIVE_QUERY = '?includeInactive=true'
+const RESTORE_PATH = '/restore'
+
 export async function getServiceStandards(request) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/servicestandards`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}`
     logger.info({ endpoint }, 'Fetching service standards from API')
 
     let data
@@ -52,7 +57,7 @@ export async function getServiceStandards(request) {
 export async function getAllServiceStandards(request) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/servicestandards?includeInactive=true`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}${INCLUDE_INACTIVE_QUERY}`
     logger.info(
       { endpoint },
       'Fetching all service standards (including inactive) from API'
@@ -104,7 +109,7 @@ export async function getAllServiceStandards(request) {
 export async function deleteServiceStandard(id, request) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/servicestandards/${id}`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${id}`
     logger.info({ endpoint, id }, 'Soft deleting service standard')
 
     if (request) {
@@ -139,7 +144,7 @@ export async function deleteServiceStandard(id, request) {
 export async function restoreServiceStandard(id, request) {
   try {
     const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/servicestandards/${id}/restore`
+    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${id}${RESTORE_PATH}`
     logger.info({ endpoint, id }, 'Restoring service standard')
 
     if (request) {

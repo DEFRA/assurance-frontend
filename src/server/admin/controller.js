@@ -19,6 +19,12 @@ import {
   LOG_MESSAGES
 } from '~/src/server/constants/notifications.js'
 
+// API endpoint constants for admin operations
+const SERVICESTANDARDS_DELETE_ALL = 'servicestandards/deleteAll'
+const SERVICESTANDARDS_SEED = 'servicestandards/seed'
+const PROFESSIONS_DELETE_ALL = 'professions/deleteAll'
+const PROFESSIONS_SEED = 'professions/seed'
+
 export const adminController = {
   get: async (request, h) => {
     try {
@@ -85,7 +91,7 @@ export const adminController = {
       const apiVersion = config.get('api.version')
 
       // Use the versioned controller endpoint for deleting all standards
-      await authedFetch(`/api/${apiVersion}/servicestandards/deleteAll`, {
+      await authedFetch(`/api/${apiVersion}/${SERVICESTANDARDS_DELETE_ALL}`, {
         method: 'POST'
       })
 
@@ -235,7 +241,7 @@ export const adminController = {
 
       // Use the versioned controller endpoint for deleting all professions
       const result = await authedFetch(
-        `/api/${apiVersion}/professions/deleteAll`,
+        `/api/${apiVersion}/${PROFESSIONS_DELETE_ALL}`,
         {
           method: 'POST'
         }
@@ -264,7 +270,7 @@ export const adminController = {
       const apiVersion = config.get('api.version')
 
       // Use the versioned controller endpoint for seeding standards
-      await authedFetch(`/api/${apiVersion}/servicestandards/seed`, {
+      await authedFetch(`/api/${apiVersion}/${SERVICESTANDARDS_SEED}`, {
         method: 'POST',
         body: JSON.stringify(defaultServiceStandards)
       })
@@ -287,7 +293,7 @@ export const adminController = {
       const apiVersion = config.get('api.version')
 
       // Use the versioned controller endpoint for seeding professions
-      await authedFetch(`/api/${apiVersion}/professions/seed`, {
+      await authedFetch(`/api/${apiVersion}/${PROFESSIONS_SEED}`, {
         method: 'POST',
         body: JSON.stringify(defaultProfessions)
       })

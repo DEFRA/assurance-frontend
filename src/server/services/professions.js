@@ -8,6 +8,10 @@ const API_BASE_PATH = 'professions'
 const INCLUDE_INACTIVE_QUERY = '?includeInactive=true'
 const RESTORE_PATH = '/restore'
 
+// API configuration constants
+const API_VERSION_KEY = 'api.version'
+const API_BASE_PREFIX = '/api'
+
 /**
  * Get all professions
  * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
@@ -15,8 +19,8 @@ const RESTORE_PATH = '/restore'
  */
 export async function getProfessions(request) {
   try {
-    const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}`
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
     logger.info({ endpoint }, 'Fetching professions from API')
 
     let data
@@ -59,8 +63,8 @@ export async function getProfessions(request) {
  */
 export async function getProfessionById(id, request) {
   try {
-    const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${id}`
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
     logger.info({ endpoint, id }, 'Fetching profession by ID from API')
 
     let data
@@ -101,8 +105,8 @@ export async function getProfessionById(id, request) {
  */
 export async function deleteProfession(id, request) {
   try {
-    const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${id}`
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
     logger.info({ endpoint, id }, 'Soft deleting profession')
 
     if (request) {
@@ -135,8 +139,8 @@ export async function deleteProfession(id, request) {
  */
 export async function getAllProfessions(request) {
   try {
-    const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}${INCLUDE_INACTIVE_QUERY}`
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}${INCLUDE_INACTIVE_QUERY}`
     logger.info(
       { endpoint },
       'Fetching all professions (including inactive) from API'
@@ -187,8 +191,8 @@ export async function getAllProfessions(request) {
  */
 export async function restoreProfession(id, request) {
   try {
-    const apiVersion = config.get('api.version')
-    const endpoint = `/api/${apiVersion}/${API_BASE_PATH}/${id}${RESTORE_PATH}`
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}${RESTORE_PATH}`
     logger.info({ endpoint, id }, 'Restoring profession')
 
     if (request) {

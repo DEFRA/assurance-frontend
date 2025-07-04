@@ -25,6 +25,13 @@ const SERVICESTANDARDS_SEED = 'servicestandards/seed'
 const PROFESSIONS_DELETE_ALL = 'professions/deleteAll'
 const PROFESSIONS_SEED = 'professions/seed'
 
+// URL constants
+const ADMIN_BASE_URL = '/admin'
+
+// API configuration constants
+const API_VERSION_KEY = 'api.version'
+const API_BASE_PREFIX = '/api'
+
 export const adminController = {
   get: async (request, h) => {
     try {
@@ -88,21 +95,24 @@ export const adminController = {
       request.logger.info(LOG_MESSAGES.STANDARDS_DELETED)
 
       const authedFetch = authedFetchJsonDecorator(request)
-      const apiVersion = config.get('api.version')
+      const apiVersion = config.get(API_VERSION_KEY)
 
       // Use the versioned controller endpoint for deleting all standards
-      await authedFetch(`/api/${apiVersion}/${SERVICESTANDARDS_DELETE_ALL}`, {
-        method: 'POST'
-      })
+      await authedFetch(
+        `${API_BASE_PREFIX}/${apiVersion}/${SERVICESTANDARDS_DELETE_ALL}`,
+        {
+          method: 'POST'
+        }
+      )
 
       request.logger.info('Standards deleted successfully')
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.STANDARDS_DELETED_SUCCESSFULLY}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.STANDARDS_DELETED_SUCCESSFULLY}`
       )
     } catch (error) {
       request.logger.error({ error }, 'Failed to delete standards')
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_DELETE_STANDARDS}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_DELETE_STANDARDS}`
       )
     }
   },
@@ -118,18 +128,18 @@ export const adminController = {
       if (!result) {
         request.logger.warn({ id }, LOG_MESSAGES.PROJECT_NOT_FOUND_FOR_DELETION)
         return h.redirect(
-          `/admin?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+          `${ADMIN_BASE_URL}?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
         )
       }
 
       request.logger.info({ id }, LOG_MESSAGES.PROJECT_DELETED)
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.PROJECT_DELETED_SUCCESSFULLY}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.PROJECT_DELETED_SUCCESSFULLY}`
       )
     } catch (error) {
       request.logger.error({ error }, LOG_MESSAGES.FAILED_TO_DELETE_PROJECT)
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_DELETE_PROJECT}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_DELETE_PROJECT}`
       )
     }
   },
@@ -163,9 +173,9 @@ export const adminController = {
         pageTitle: PAGE_TITLES.CONFIRM_PROJECT_DELETION,
         heading: HEADINGS.DELETE_PROJECT,
         message: `Are you sure you want to delete the project "${projectName}"?`,
-        confirmUrl: `/admin/projects/${id}/delete`,
-        cancelUrl: id ? `/projects/${id}` : '/admin',
-        backLink: id ? `/projects/${id}` : '/admin'
+        confirmUrl: `${ADMIN_BASE_URL}/projects/${id}/delete`,
+        cancelUrl: id ? `/projects/${id}` : ADMIN_BASE_URL,
+        backLink: id ? `/projects/${id}` : ADMIN_BASE_URL
       })
     } catch (error) {
       request.logger.error(
@@ -173,7 +183,7 @@ export const adminController = {
         LOG_MESSAGES.FAILED_TO_SHOW_DELETE_CONFIRMATION
       )
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SHOW_DELETE_CONFIRMATION}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SHOW_DELETE_CONFIRMATION}`
       )
     }
   },
@@ -191,9 +201,9 @@ export const adminController = {
         heading: HEADINGS.DELETE_ALL_STANDARDS,
         message:
           'Are you sure you want to delete ALL service standards? This will remove all standard definitions from the system.',
-        confirmUrl: '/admin/standards/delete',
-        cancelUrl: '/admin',
-        backLink: '/admin'
+        confirmUrl: `${ADMIN_BASE_URL}/standards/delete`,
+        cancelUrl: ADMIN_BASE_URL,
+        backLink: ADMIN_BASE_URL
       })
     } catch (error) {
       request.logger.error(
@@ -201,7 +211,7 @@ export const adminController = {
         LOG_MESSAGES.FAILED_TO_SHOW_DELETE_CONFIRMATION
       )
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SHOW_DELETE_CONFIRMATION}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SHOW_DELETE_CONFIRMATION}`
       )
     }
   },
@@ -219,9 +229,9 @@ export const adminController = {
         heading: HEADINGS.DELETE_ALL_PROFESSIONS,
         message:
           'Are you sure you want to delete ALL professions? This will remove all profession definitions from the system.',
-        confirmUrl: '/admin/professions/delete',
-        cancelUrl: '/admin',
-        backLink: '/admin'
+        confirmUrl: `${ADMIN_BASE_URL}/professions/delete`,
+        cancelUrl: ADMIN_BASE_URL,
+        backLink: ADMIN_BASE_URL
       })
     } catch (error) {
       request.logger.error(
@@ -229,7 +239,7 @@ export const adminController = {
         LOG_MESSAGES.FAILED_TO_SHOW_DELETE_CONFIRMATION
       )
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SHOW_DELETE_CONFIRMATION}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SHOW_DELETE_CONFIRMATION}`
       )
     }
   },
@@ -237,11 +247,11 @@ export const adminController = {
   deleteProfessions: async (request, h) => {
     try {
       const authedFetch = authedFetchJsonDecorator(request)
-      const apiVersion = config.get('api.version')
+      const apiVersion = config.get(API_VERSION_KEY)
 
       // Use the versioned controller endpoint for deleting all professions
       const result = await authedFetch(
-        `/api/${apiVersion}/${PROFESSIONS_DELETE_ALL}`,
+        `${API_BASE_PREFIX}/${apiVersion}/${PROFESSIONS_DELETE_ALL}`,
         {
           method: 'POST'
         }
@@ -253,13 +263,13 @@ export const adminController = {
       )
 
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.PROFESSIONS_DELETED_SUCCESSFULLY}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.PROFESSIONS_DELETED_SUCCESSFULLY}`
       )
     } catch (error) {
       request.logger.error({ error }, 'Error deleting professions')
       // Continue to admin page even if there's an error
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_DELETE_PROFESSIONS}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_DELETE_PROFESSIONS}`
       )
     }
   },
@@ -267,22 +277,25 @@ export const adminController = {
   seedStandards: async (request, h) => {
     try {
       const authedFetch = authedFetchJsonDecorator(request)
-      const apiVersion = config.get('api.version')
+      const apiVersion = config.get(API_VERSION_KEY)
 
       // Use the versioned controller endpoint for seeding standards
-      await authedFetch(`/api/${apiVersion}/${SERVICESTANDARDS_SEED}`, {
-        method: 'POST',
-        body: JSON.stringify(defaultServiceStandards)
-      })
+      await authedFetch(
+        `${API_BASE_PREFIX}/${apiVersion}/${SERVICESTANDARDS_SEED}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(defaultServiceStandards)
+        }
+      )
 
       request.logger.info('Service standards seeded successfully')
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.SERVICE_STANDARDS_SEEDED_SUCCESSFULLY}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.SERVICE_STANDARDS_SEEDED_SUCCESSFULLY}`
       )
     } catch (error) {
       request.logger.error(error, 'Failed to seed service standards')
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SEED_SERVICE_STANDARDS}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SEED_SERVICE_STANDARDS}`
       )
     }
   },
@@ -290,22 +303,25 @@ export const adminController = {
   seedProfessions: async (request, h) => {
     try {
       const authedFetch = authedFetchJsonDecorator(request)
-      const apiVersion = config.get('api.version')
+      const apiVersion = config.get(API_VERSION_KEY)
 
       // Use the versioned controller endpoint for seeding professions
-      await authedFetch(`/api/${apiVersion}/${PROFESSIONS_SEED}`, {
-        method: 'POST',
-        body: JSON.stringify(defaultProfessions)
-      })
+      await authedFetch(
+        `${API_BASE_PREFIX}/${apiVersion}/${PROFESSIONS_SEED}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(defaultProfessions)
+        }
+      )
 
       request.logger.info('Professions seeded successfully')
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.PROFESSIONS_SEEDED_SUCCESSFULLY}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.PROFESSIONS_SEEDED_SUCCESSFULLY}`
       )
     } catch (error) {
       request.logger.error(error, 'Failed to seed professions')
       return h.redirect(
-        `/admin?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SEED_PROFESSIONS}`
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SEED_PROFESSIONS}`
       )
     }
   }

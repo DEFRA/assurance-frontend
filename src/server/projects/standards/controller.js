@@ -3,12 +3,15 @@
  * @satisfies {Partial<ServerRoute>}
  */
 import Boom from '@hapi/boom'
+import { config } from '~/src/config/config.js'
 import {
   getProjectById,
   getStandardHistory,
   updateAssessment,
+  getAssessment,
   getAssessmentHistory,
-  archiveAssessmentHistoryEntry
+  archiveAssessmentHistoryEntry,
+  replaceAssessment
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
@@ -313,6 +316,7 @@ export const standardsController = {
         standardSummary,
         assessments: assessmentsWithDetails,
         isAuthenticated: request.auth.isAuthenticated,
+        canEditAssessments: config.get('featureFlags.editAssessments'),
         notification
       })
     } catch (error) {
@@ -357,8 +361,26 @@ export const standardsController = {
 
   getAssessmentScreen: async (request, h) => {
     const { id } = request.params
+    const { edit, standardId, professionId } = request.query || {}
+
+    // Check if this is edit mode
+    const isEditMode = edit === 'true' && standardId && professionId
 
     try {
+      // If edit mode, check feature flag first
+      if (isEditMode) {
+        const canEditAssessments = config.get('featureFlags.editAssessments')
+        if (!canEditAssessments) {
+          return h
+            .view('error/index', {
+              pageTitle: 'Page not found',
+              statusCode: 404,
+              message: 'Page not found'
+            })
+            .code(404)
+        }
+      }
+
       // Fetch project, professions and service standards
       const [project, professions, serviceStandards] = await Promise.all([
         getProjectById(id, request),
@@ -374,17 +396,75 @@ export const standardsController = {
           .code(404)
       }
 
-      // Transform data for dropdowns
-      const professionItems = createProfessionItems(professions)
-      const standardItems = createStandardItems(serviceStandards)
+      let existingAssessment = null
+      let selectedValues = {}
+
+      // If edit mode, fetch existing assessment
+      if (isEditMode) {
+        try {
+          existingAssessment = await getAssessment(
+            id,
+            standardId,
+            professionId,
+            request
+          )
+          if (!existingAssessment) {
+            // Assessment not found, redirect back to standard detail
+            return h
+              .redirect(`/projects/${id}/standards/${standardId}`)
+              .takeover()
+              .message('Assessment not found')
+          }
+
+          // Pre-populate form with existing data
+          selectedValues = {
+            professionId,
+            standardId,
+            status: existingAssessment.status,
+            commentary: existingAssessment.commentary || ''
+          }
+        } catch (error) {
+          request.logger.error(
+            { error },
+            'Error fetching existing assessment for edit'
+          )
+          return h
+            .redirect(`/projects/${id}/standards/${standardId}`)
+            .takeover()
+            .message('Could not load assessment for editing')
+        }
+      }
+
+      // Transform data for dropdowns - pre-select values if editing
+      const professionItems = createProfessionItems(
+        professions,
+        selectedValues.professionId
+      )
+
+      // Filter standards based on selected profession and project phase if editing
+      let filteredStandards = serviceStandards || []
+      if (isEditMode && selectedValues.professionId && project.phase) {
+        filteredStandards = filterStandardsByProfessionAndPhase(
+          serviceStandards,
+          project.phase,
+          selectedValues.professionId
+        )
+      }
+
+      const standardItems = createStandardItems(
+        filteredStandards,
+        selectedValues.standardId
+      )
 
       const viewData = createAssessmentViewData(
         project,
         professionItems,
         standardItems,
-        {}
+        selectedValues
       )
       viewData.allStandards = JSON.stringify(serviceStandards || [])
+      viewData.isEditMode = isEditMode
+      viewData.existingAssessment = existingAssessment
 
       return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT, viewData)
     } catch (error) {
@@ -396,10 +476,28 @@ export const standardsController = {
   postAssessmentScreen: async (request, h) => {
     const { id } = request.params
     const { professionId, standardId, status, commentary } = request.payload
+    const { edit } = request.query || {}
+
+    // Check if this is edit mode
+    const isEditMode = edit === 'true'
 
     let project
 
     try {
+      // If edit mode, check feature flag first
+      if (isEditMode) {
+        const canEditAssessments = config.get('featureFlags.editAssessments')
+        if (!canEditAssessments) {
+          return h
+            .view('error/index', {
+              pageTitle: 'Page not found',
+              statusCode: 404,
+              message: 'Page not found'
+            })
+            .code(404)
+        }
+      }
+
       // Get project to validate phase and profession combination
       project = await getProjectById(id, request)
       if (!project) {
@@ -439,29 +537,53 @@ export const standardsController = {
         return validationError
       }
 
-      // Save the assessment
-      await updateAssessment(
-        id,
-        standardId,
-        professionId,
-        {
-          status,
-          commentary: commentary || ''
-        },
-        request
-      )
+      const assessmentData = {
+        status,
+        commentary: commentary || ''
+      }
 
-      request.logger.info(
-        { projectId: id, standardId, professionId },
-        NOTIFICATIONS.ASSESSMENT_SAVED_SUCCESSFULLY
-      )
+      // Save the assessment - use replace logic if editing
+      if (isEditMode) {
+        await replaceAssessment(
+          id,
+          standardId,
+          professionId,
+          assessmentData,
+          request
+        )
+        request.logger.info(
+          { projectId: id, standardId, professionId },
+          'Assessment replaced successfully'
+        )
+      } else {
+        await updateAssessment(
+          id,
+          standardId,
+          professionId,
+          assessmentData,
+          request
+        )
+        request.logger.info(
+          { projectId: id, standardId, professionId },
+          NOTIFICATIONS.ASSESSMENT_SAVED_SUCCESSFULLY
+        )
+      }
 
-      // Redirect back to project page with success message
-      return h.redirect(
-        `/projects/${id}?notification=${NOTIFICATIONS.ASSESSMENT_SAVED_SUCCESSFULLY}`
-      )
+      // Redirect back to appropriate page with success message
+      const successMessage = isEditMode
+        ? 'Assessment updated successfully'
+        : NOTIFICATIONS.ASSESSMENT_SAVED_SUCCESSFULLY
+
+      const redirectUrl = isEditMode
+        ? `/projects/${id}/standards/${standardId}?notification=${successMessage}`
+        : `/projects/${id}?notification=${successMessage}`
+
+      return h.redirect(redirectUrl)
     } catch (error) {
-      request.logger.error({ error }, 'Error saving assessment')
+      request.logger.error(
+        { error },
+        `Error ${isEditMode ? 'updating' : 'saving'} assessment`
+      )
 
       // If project was not loaded due to the error, try to get it for error handling
       if (!project) {

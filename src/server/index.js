@@ -115,7 +115,7 @@ export async function createServer() {
       response.source.context = {
         ...baseContext,
         ...response.source.context,
-        user: user,
+        user,
         isAuthenticated,
         isAdmin,
         currentPath,

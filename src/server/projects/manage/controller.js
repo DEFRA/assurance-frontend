@@ -5,7 +5,9 @@
 import Boom from '@hapi/boom'
 import {
   getProjectById,
-  updateProject
+  updateProject,
+  getProjectHistory,
+  replaceProjectStatus
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
@@ -321,6 +323,10 @@ export const manageController = {
 
   getManageProjectStatus: async (request, h) => {
     const { id } = request.params
+    const { edit, historyId } = request.query || {}
+
+    // Check if this is edit mode
+    const isEditMode = edit === 'true' && !!historyId
 
     try {
       // Fetch project, standards, professions and assessments for context
@@ -338,9 +344,68 @@ export const manageController = {
           .code(404)
       }
 
+      let selectedValues = {}
+      let existingHistoryEntry = null
+
+      // Handle edit mode logic
+      if (isEditMode) {
+        try {
+          const projectHistory = await getProjectHistory(id, request)
+          existingHistoryEntry = projectHistory.find(
+            (entry) => entry.id === historyId
+          )
+
+          if (!existingHistoryEntry) {
+            return h.redirect(
+              `/projects/${id}/manage/status?notification=${NOTIFICATIONS.HISTORY_ENTRY_NOT_FOUND}`
+            )
+          }
+
+          // Validate that only the most recent entry can be edited
+          const projectStatusEntries = projectHistory.filter(
+            (entry) =>
+              entry.type === 'project' &&
+              (entry.changes?.status || entry.changes?.commentary)
+          )
+          const mostRecentEntry =
+            projectStatusEntries.length > 0 ? projectStatusEntries[0] : null
+
+          if (
+            mostRecentEntry &&
+            existingHistoryEntry.id !== mostRecentEntry.id
+          ) {
+            return h.redirect(
+              `/projects/${id}/manage/status?notification=Only the most recent project status update can be edited`
+            )
+          }
+
+          // Pre-populate form with existing values
+          selectedValues = {
+            status: existingHistoryEntry.changes?.status?.to || project.status,
+            commentary:
+              existingHistoryEntry.changes?.commentary?.to || project.commentary
+          }
+
+          request.logger.info(
+            { projectId: id, historyId },
+            'Loading project status for edit mode'
+          )
+        } catch (error) {
+          request.logger.error(
+            { error },
+            'Error fetching project history for edit'
+          )
+          return h.redirect(
+            `/projects/${id}/manage/status?notification=${NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT}`
+          )
+        }
+      }
+
       // Create profession ID to name mapping
       const professionMap = createProfessionMap(professions)
-      const statusOptions = createStatusOptions(project.status)
+      const statusOptions = createStatusOptions(
+        selectedValues.status || project.status
+      )
       const standardsAtRisk = createStandardsAtRisk(
         project,
         serviceStandards,
@@ -348,13 +413,15 @@ export const manageController = {
       )
 
       return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS, {
-        pageTitle: `Update Status and Commentary | ${project.name}`,
+        pageTitle: `${isEditMode ? 'Edit' : 'Update'} Status and Commentary | ${project.name}`,
         project,
         statusOptions,
         standardsAtRisk,
         professionMap,
-        values: {},
-        errors: {}
+        values: selectedValues,
+        errors: {},
+        isEditMode,
+        existingHistoryEntry
       })
     } catch (error) {
       request.logger.error(
@@ -368,6 +435,10 @@ export const manageController = {
   postManageProjectStatus: async (request, h) => {
     const { id } = request.params
     const { status, commentary } = request.payload
+    const { edit, historyId } = request.query || {}
+
+    // Check if this is edit mode
+    const isEditMode = edit === 'true' && !!historyId
 
     try {
       const project = await getProjectById(id, request)
@@ -396,7 +467,7 @@ export const manageController = {
         )
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS, {
-          pageTitle: `Update Status and Commentary | ${project.name}`,
+          pageTitle: `${isEditMode ? 'Edit' : 'Update'} Status and Commentary | ${project.name}`,
           project,
           statusOptions,
           standardsAtRisk,
@@ -406,23 +477,37 @@ export const manageController = {
             status: !status,
             commentary: !commentary
           },
-          errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT
+          errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT,
+          isEditMode
         })
       }
 
       try {
-        // Update the project
-        await updateProject(id, { status, commentary }, request)
-        request.logger.info(
-          'Project status and commentary updated successfully'
-        )
-        return h.redirect(
-          `/projects/${id}?notification=${MANAGE_NOTIFICATIONS.PROJECT_STATUS_UPDATED_SUCCESSFULLY}`
-        )
+        // Process the status update
+        const projectData = { status, commentary }
+
+        if (isEditMode) {
+          await replaceProjectStatus(id, projectData, request)
+          request.logger.info(
+            { projectId: id, historyId },
+            'Project status replaced successfully'
+          )
+        } else {
+          await updateProject(id, projectData, request)
+          request.logger.info(
+            'Project status and commentary updated successfully'
+          )
+        }
+
+        const successMessage = isEditMode
+          ? 'Project status updated successfully'
+          : MANAGE_NOTIFICATIONS.PROJECT_STATUS_UPDATED_SUCCESSFULLY
+
+        return h.redirect(`/projects/${id}?notification=${successMessage}`)
       } catch (error) {
         request.logger.error(
           { error },
-          LOG_MESSAGES.FAILED_TO_UPDATE_PROJECT_STATUS
+          `Error ${isEditMode ? 'replacing' : 'updating'} project status`
         )
 
         // Re-fetch data for display on error
@@ -440,14 +525,15 @@ export const manageController = {
         )
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS, {
-          pageTitle: `Update Status and Commentary | ${project.name}`,
+          pageTitle: `${isEditMode ? 'Edit' : 'Update'} Status and Commentary | ${project.name}`,
           project,
           statusOptions,
           standardsAtRisk,
           professionMap,
           values: request.payload,
           errors: {},
-          errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT
+          errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT,
+          isEditMode
         })
       }
     } catch (error) {

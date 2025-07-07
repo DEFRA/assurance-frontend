@@ -150,31 +150,33 @@
                     </p>
                   {% endif %}
                   
-                  {% if entry.changes.commentary %}
-                    {% set displayCommentary = entry.changes.commentary.to | trim %}
+                  {% if entry.changes.commentary and entry.changes.commentary.to %}
+                    {% set displayCommentary = entry.changes.commentary.to %}
                     {% if "Path to green:" in displayCommentary %}
                       {% set parts = displayCommentary.split("Path to green:") %}
                       {% set issue = parts[0] | trim if parts[0] else "" %}
                       {% set path = parts[1] | trim if parts[1] else "" %}
                       
                       {% if issue and path %}
-                        {% set displayCommentary = (issue + "\r\n\r\n" + path) %}
+                        {% set displayCommentary = (issue + "\r\n\r\n" + path) | trim %}
                       {% elif issue %}
-                        {% set displayCommentary = issue %}
+                        {% set displayCommentary = issue | trim %}
                       {% elif path %}
-                        {% set displayCommentary = path %}
+                        {% set displayCommentary = path | trim %}
                       {% endif %}
+                    {% else %}
+                      {% set displayCommentary = displayCommentary | trim %}
                     {% endif %}
-                    
-                    {# Comprehensive trimming to remove all leading/trailing whitespace #}
-                    {% set displayCommentary = displayCommentary | trim %}
-                    
-                    <div class="govuk-body govuk-!-margin-bottom-2" style="white-space: pre-wrap;">{{ displayCommentary }}</div>
+                    <div style="white-space: pre-wrap;">{{ displayCommentary }}</div>
                   {% endif %}
                   
-                  {% if isAdmin and (entry.changes.status or entry.changes.commentary) %}
-                    <p class="govuk-body-s govuk-!-margin-top-3 govuk-!-margin-bottom-0">
-                      <a href="/projects/{{ project.id }}/history/{{ entry.id }}/archive?returnTo=detail" class="govuk-link">Archive this update</a>
+                  {% if isAdmin and entry.type === 'project' and (entry.changes.status or entry.changes.commentary) %}
+                    <p class="govuk-body-s govuk-!-margin-top-2">
+                      {% if loop.first %}
+                        <a href="/projects/{{ project.id }}/manage/status?edit=true&historyId={{ entry.id }}" class="govuk-link govuk-link--no-visited-state">Edit this update</a>
+                        | 
+                      {% endif %}
+                      <a href="/projects/{{ project.id }}/history/{{ entry.id }}/archive?returnTo=detail" class="govuk-link govuk-link--no-visited-state">Archive this update</a>
                     </p>
                   {% endif %}
                 </div>

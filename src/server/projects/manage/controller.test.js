@@ -1,7 +1,9 @@
 import { manageController } from './controller.js'
 import {
   getProjectById,
-  updateProject
+  updateProject,
+  getProjectHistory,
+  replaceProjectStatus
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
@@ -23,9 +25,19 @@ describe('Manage Controller', () => {
   let mockServiceStandards
 
   beforeEach(() => {
+    jest.clearAllMocks()
+
+    getProjectById.mockClear()
+    updateProject.mockClear()
+    getProjectHistory.mockClear()
+    replaceProjectStatus.mockClear()
+    getServiceStandards.mockClear()
+    getProfessions.mockClear()
+
     mockRequest = {
       params: { id: 'project-123' },
       payload: {},
+      query: {},
       logger: {
         info: jest.fn(),
         error: jest.fn()
@@ -85,8 +97,6 @@ describe('Manage Controller', () => {
         description: 'Description 2'
       }
     ]
-
-    jest.clearAllMocks()
   })
 
   describe('getManageProject', () => {
@@ -304,19 +314,301 @@ describe('Manage Controller', () => {
       )
 
       // Assert
+      expect(result).toBe('view-with-code-response')
       expect(mockH.view).toHaveBeenCalledWith(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
         pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
       })
       expect(result).toBe('view-with-code-response')
+    })
+
+    test('should handle edit mode with valid history entry', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        historyId: 'hist-123'
+      }
+
+      const mockProjectHistory = [
+        {
+          id: 'hist-123',
+          changes: {
+            status: { to: 'AMBER' },
+            commentary: { to: 'Previous status update' }
+          }
+        }
+      ]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getProjectHistory.mockResolvedValue(mockProjectHistory)
+
+      // Act
+      const result = await manageController.getManageProjectStatus(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(result).toHaveProperty('code')
+      expect(getProjectHistory).toHaveBeenCalledWith('project-123', mockRequest)
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS,
+        expect.objectContaining({
+          pageTitle: 'Edit Status and Commentary | Test Project',
+          isEditMode: true,
+          existingHistoryEntry: mockProjectHistory[0],
+          values: {
+            status: 'AMBER',
+            commentary: 'Previous status update'
+          }
+        })
+      )
+    })
+
+    test('should redirect when history entry not found in edit mode', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        historyId: 'non-existent-id'
+      }
+
+      const mockProjectHistory = [
+        {
+          id: 'hist-456',
+          changes: {
+            status: { to: 'GREEN' }
+          }
+        }
+      ]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getProjectHistory.mockResolvedValue(mockProjectHistory)
+
+      // Act
+      const result = await manageController.getManageProjectStatus(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(result).toBe('redirect-response')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/project-123/manage/status?notification=History entry not found'
+      )
+    })
+
+    test('should handle error fetching project history in edit mode', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        historyId: 'hist-123'
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+      getProjectHistory.mockRejectedValue(new Error('History fetch failed'))
+
+      // Act
+      const result = await manageController.getManageProjectStatus(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(result).toBe('redirect-response')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/project-123/manage/status?notification=Failed to update project. Please try again.'
+      )
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Error fetching project history for edit'
+      )
+    })
+
+    test('should handle missing edit parameters gracefully', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true'
+        // Missing historyId
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      // Act
+      const result = await manageController.getManageProjectStatus(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(result).toHaveProperty('code')
+      expect(getProjectHistory).not.toHaveBeenCalled()
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS,
+        expect.objectContaining({
+          pageTitle: 'Update Status and Commentary | Test Project',
+          isEditMode: false,
+          values: {}
+        })
+      )
+    })
+
+    test('should prevent editing of non-latest project history entry', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        historyId: 'hist-456' // Not the most recent entry
+      }
+
+      const mockProjectHistory = [
+        {
+          id: 'hist-789',
+          type: 'project',
+          changes: {
+            status: { to: 'GREEN' },
+            commentary: { to: 'Latest update' }
+          },
+          timestamp: '2024-02-16T10:00:00Z'
+        },
+        {
+          id: 'hist-456',
+          type: 'project',
+          changes: {
+            status: { to: 'AMBER' },
+            commentary: { to: 'Older update' }
+          },
+          timestamp: '2024-02-15T10:00:00Z'
+        }
+      ]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getProjectHistory.mockResolvedValue(mockProjectHistory)
+
+      // Act
+      const result = await manageController.getManageProjectStatus(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(result).toBe('redirect-response')
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/project-123/manage/status?notification=Only the most recent project status update can be edited'
+      )
+      expect(getProjectHistory).toHaveBeenCalledWith('project-123', mockRequest)
+    })
+
+    test('should allow editing of the most recent project history entry', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        historyId: 'hist-789' // The most recent entry
+      }
+
+      const mockProjectHistory = [
+        {
+          id: 'hist-789',
+          type: 'project',
+          changes: {
+            status: { to: 'GREEN' },
+            commentary: { to: 'Latest update' }
+          },
+          timestamp: '2024-02-16T10:00:00Z'
+        },
+        {
+          id: 'hist-456',
+          type: 'project',
+          changes: {
+            status: { to: 'AMBER' },
+            commentary: { to: 'Older update' }
+          },
+          timestamp: '2024-02-15T10:00:00Z'
+        }
+      ]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getProjectHistory.mockResolvedValue(mockProjectHistory)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      // Act
+      const result = await manageController.getManageProjectStatus(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(result).toHaveProperty('code')
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS,
+        expect.objectContaining({
+          pageTitle: 'Edit Status and Commentary | Test Project',
+          isEditMode: true,
+          existingHistoryEntry: mockProjectHistory[0],
+          values: {
+            status: 'GREEN',
+            commentary: 'Latest update'
+          }
+        })
+      )
+    })
+
+    test('should prevent editing non-latest entry after archiving', async () => {
+      // Arrange - Simulate situation where entry was archived and now trying to edit an older entry
+      mockRequest.query = {
+        edit: 'true',
+        historyId: 'hist-2' // Trying to edit second most recent entry
+      }
+
+      // Mock project history with the most recent entry being hist-1 (after hist-2 was archived)
+      const mockHistoryAfterArchive = [
+        {
+          id: 'hist-1',
+          type: 'project',
+          changes: {
+            status: { from: 'GREEN', to: 'AMBER' },
+            commentary: { from: '', to: 'Latest update' }
+          }
+        },
+        {
+          id: 'hist-2',
+          type: 'project',
+          changes: {
+            status: { from: 'AMBER', to: 'GREEN' },
+            commentary: { from: '', to: 'Older update' }
+          }
+        }
+      ]
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getProjectHistory.mockResolvedValue(mockHistoryAfterArchive)
+
+      // Act
+      const result = await manageController.getManageProjectStatus(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/project-123/manage/status?notification=Only the most recent project status update can be edited'
+      )
+      expect(result).toBe('redirect-response')
     })
   })
 
   describe('postManageProjectStatus', () => {
     test('should update project status and commentary successfully', async () => {
       // Arrange
-      mockRequest.payload = { status: 'AMBER', commentary: 'Updated status' }
-      getProjectById.mockResolvedValue(mockProject)
-      updateProject.mockResolvedValue(mockProject)
+      mockRequest.payload = {
+        status: 'GREEN',
+        commentary: 'Project is on track'
+      }
+      updateProject.mockResolvedValue({ success: true })
 
       // Act
       const result = await manageController.postManageProjectStatus(
@@ -325,20 +617,66 @@ describe('Manage Controller', () => {
       )
 
       // Assert
+      expect(result).toBe('redirect-response')
       expect(updateProject).toHaveBeenCalledWith(
         'project-123',
-        { status: 'AMBER', commentary: 'Updated status' },
+        {
+          status: 'GREEN',
+          commentary: 'Project is on track'
+        },
         mockRequest
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
-        `/projects/project-123?notification=${MANAGE_NOTIFICATIONS.PROJECT_STATUS_UPDATED_SUCCESSFULLY}`
+        '/projects/project-123?notification=Project status and commentary updated successfully'
       )
+    })
+
+    test('should handle edit mode and use replaceProjectStatus', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        historyId: 'hist-123'
+      }
+      mockRequest.payload = {
+        status: 'AMBER',
+        commentary: 'Updated status'
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+      replaceProjectStatus.mockResolvedValue({ success: true })
+
+      // Act
+      const result = await manageController.postManageProjectStatus(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
       expect(result).toBe('redirect-response')
+      expect(replaceProjectStatus).toHaveBeenCalledWith(
+        'project-123',
+        {
+          status: 'AMBER',
+          commentary: 'Updated status'
+        },
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/project-123?notification=Project status updated successfully'
+      )
+      expect(mockRequest.logger.info).toHaveBeenCalledWith(
+        { projectId: 'project-123', historyId: 'hist-123' },
+        'Project status replaced successfully'
+      )
     })
 
     test('should show validation errors for missing required fields', async () => {
       // Arrange
-      mockRequest.payload = { status: '', commentary: '' }
+      mockRequest.payload = {
+        status: '',
+        commentary: ''
+      }
+
       getProjectById.mockResolvedValue(mockProject)
       getServiceStandards.mockResolvedValue(mockServiceStandards)
       getProfessions.mockResolvedValue(mockProfessions)
@@ -350,24 +688,102 @@ describe('Manage Controller', () => {
       )
 
       // Assert
+      expect(result).toHaveProperty('code')
+      expect(updateProject).not.toHaveBeenCalled()
       expect(mockH.view).toHaveBeenCalledWith(
         VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS,
         expect.objectContaining({
-          values: mockRequest.payload,
           errors: {
             status: true,
             commentary: true
           },
-          errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT
+          errorMessage: 'Failed to update project. Please try again.'
         })
       )
+    })
+
+    test('should handle edit mode validation errors correctly', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        historyId: 'hist-123'
+      }
+      mockRequest.payload = {
+        status: 'GREEN',
+        commentary: '' // Missing commentary
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      // Act
+      const result = await manageController.postManageProjectStatus(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
       expect(result).toHaveProperty('code')
-      expect(typeof result.code).toBe('function')
+      expect(replaceProjectStatus).not.toHaveBeenCalled()
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS,
+        expect.objectContaining({
+          pageTitle: 'Edit Status and Commentary | Test Project',
+          isEditMode: true,
+          errors: {
+            status: false,
+            commentary: true
+          }
+        })
+      )
+    })
+
+    test('should handle errors during status replacement', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        historyId: 'hist-123'
+      }
+      mockRequest.payload = {
+        status: 'RED',
+        commentary: 'Critical issues found'
+      }
+
+      getProjectById.mockResolvedValue(mockProject)
+      replaceProjectStatus.mockRejectedValue(new Error('Replace failed'))
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      // Act
+      const result = await manageController.postManageProjectStatus(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(result).toHaveProperty('code')
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Error replacing project status'
+      )
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS,
+        expect.objectContaining({
+          pageTitle: 'Edit Status and Commentary | Test Project',
+          isEditMode: true,
+          errorMessage: 'Failed to update project. Please try again.'
+        })
+      )
     })
 
     test('should handle update project errors', async () => {
       // Arrange
-      mockRequest.payload = { status: 'AMBER', commentary: 'Updated status' }
+      mockRequest.payload = {
+        status: 'GREEN',
+        commentary: 'All good'
+      }
+
       getProjectById.mockResolvedValue(mockProject)
       updateProject.mockRejectedValue(new Error('Update failed'))
       getServiceStandards.mockResolvedValue(mockServiceStandards)
@@ -380,16 +796,19 @@ describe('Manage Controller', () => {
       )
 
       // Assert
+      expect(result).toHaveProperty('code')
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Error updating project status'
+      )
       expect(mockH.view).toHaveBeenCalledWith(
         VIEW_TEMPLATES.PROJECTS_MANAGE_STATUS,
         expect.objectContaining({
-          values: mockRequest.payload,
-          errors: {},
-          errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT
+          pageTitle: 'Update Status and Commentary | Test Project',
+          isEditMode: false,
+          errorMessage: 'Failed to update project. Please try again.'
         })
       )
-      expect(result).toHaveProperty('code')
-      expect(typeof result.code).toBe('function')
     })
   })
 

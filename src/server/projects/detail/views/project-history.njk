@@ -37,7 +37,7 @@
                 {{ change.changedBy | upper }}
               </strong>
               {% endif %}
-              {% if change.changes.commentary %}
+              {% if change.changes.commentary and change.changes.commentary.to %}
                 {% set displayCommentary = change.changes.commentary.to %}
                 {% if "Path to green:" in displayCommentary %}
                   {% set parts = displayCommentary.split("Path to green:") %}
@@ -56,9 +56,23 @@
                 {% endif %}
                 <div class="govuk-body" style="white-space: pre-wrap;">{{ displayCommentary }}</div>
               {% endif %}
-              <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-margin-top-2 govuk-!-font-size-16">
-                Last updated: {{ change.timestamp | formatDate }}
-              </p>
+              <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-margin-top-2 govuk-!-font-size-16">Last updated: {{ change.timestamp | formatDate }}</p>
+              
+              {% if isAdmin and change.type === 'project' and (change.changes.status or change.changes.commentary) %}
+                <div class="govuk-!-margin-top-2">
+                  {% if loop.first %}
+                    <a href="/projects/{{ project.id }}/manage/status?edit=true&historyId={{ change.id }}" 
+                       class="govuk-link govuk-link--no-visited-state">
+                      Edit this update
+                    </a>
+                    | 
+                  {% endif %}
+                  <a href="/projects/{{ project.id }}/history/{{ change.id }}/archive" 
+                     class="govuk-link govuk-link--destructive">
+                    Archive this update
+                  </a>
+                </div>
+              {% endif %}
             </div>
           {% endfor %}
         </div>

@@ -31,8 +31,20 @@
 {% endblock %}
 
 {% block content %}
-  <h1 class="govuk-heading-xl">Update Project Status and Commentary</h1>
+  <h1 class="govuk-heading-xl">
+    {% if isEditMode %}
+      Edit Project Status and Commentary
+    {% else %}
+      Update Project Status and Commentary
+    {% endif %}
+  </h1>
   <h2 class="govuk-heading-l govuk-!-margin-bottom-6">{{ project.name }}</h2>
+  
+  {% if isEditMode and existingHistoryEntry %}
+    <div class="govuk-inset-text">
+      <p class="govuk-body">You are editing the project status update from <strong>{{ existingHistoryEntry.timestamp | formatDate }}</strong>.</p>
+    </div>
+  {% endif %}
   
   {% if errorMessage %}
     {{ govukErrorSummary({
@@ -45,7 +57,7 @@
     }) }}
   {% endif %}
 
-  <form method="POST" novalidate>
+  <form method="POST"{% if isEditMode and existingHistoryEntry %} action="?edit=true&historyId={{ existingHistoryEntry.id }}"{% endif %} novalidate>
     {{ govukSelect({
       id: "status",
       name: "status",

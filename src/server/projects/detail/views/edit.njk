@@ -114,6 +114,9 @@
               {% endif %}
               <p class="govuk-body-s">
                 <a href="/projects/{{ project.id }}/history/{{ change.id }}/archive?returnTo=edit" class="govuk-link govuk-link--no-visited-state">Archive this update</a>
+                {% if isAdmin %}
+                  | <a href="/projects/{{ project.id }}/manage/status?edit=true&historyId={{ change.id }}" class="govuk-link govuk-link--no-visited-state">Edit this update</a>
+                {% endif %}
               </p>
             </div>
           </div>

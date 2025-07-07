@@ -42,20 +42,27 @@ export const addProjectController = {
   },
 
   post: async (request, h) => {
-    const { name, description, phase, defCode } = request.payload
+    const { name, description, phase, defCode, status, commentary } =
+      request.payload
 
     try {
       // Validate required fields
-      if (!name || !phase) {
+      if (!name || !phase || !status || !commentary) {
         return h.view(VIEW_TEMPLATES.PROJECTS_ADD_INDEX, {
           pageTitle: PAGE_TITLE,
           heading: PAGE_HEADING,
           values: request.payload,
           errors: {
             name: !name ? { text: 'Enter a project name' } : null,
-            phase: !phase ? { text: 'Select a project phase' } : null
+            phase: !phase ? { text: 'Select a project phase' } : null,
+            status: !status ? { text: 'Select a status' } : null,
+            commentary: !commentary
+              ? { text: 'Enter project commentary' }
+              : null
           },
-          errorMessage: 'Please check your input - some fields are required'
+          errorMessage: 'Please check your input - some fields are required',
+          statusOptions: PROJECT_STATUS_OPTIONS,
+          phaseOptions: PHASE_OPTIONS
         })
       }
 
@@ -66,8 +73,8 @@ export const addProjectController = {
           description,
           phase,
           defCode: defCode || '',
-          status: 'TBC',
-          commentary: ''
+          status,
+          commentary
         },
         request
       )
@@ -84,7 +91,9 @@ export const addProjectController = {
         heading: PAGE_HEADING,
         values: request.payload,
         errors: {},
-        errorMessage: NOTIFICATIONS.FAILED_TO_CREATE_PROJECT
+        errorMessage: NOTIFICATIONS.FAILED_TO_CREATE_PROJECT,
+        statusOptions: PROJECT_STATUS_OPTIONS,
+        phaseOptions: PHASE_OPTIONS
       })
     }
   }
@@ -92,20 +101,25 @@ export const addProjectController = {
 
 // Alternative constant-based post method
 export const postCreateProject = async (request, h) => {
-  const { name, description, phase, defCode } = request.payload
+  const { name, description, phase, defCode, status, commentary } =
+    request.payload
 
   try {
     // Validate required fields
-    if (!name || !phase) {
+    if (!name || !phase || !status || !commentary) {
       return h.view(VIEW_TEMPLATES.PROJECTS_ADD_INDEX, {
         pageTitle: PAGE_TITLE,
         heading: PAGE_HEADING,
         values: request.payload,
         errors: {
           name: !name ? { text: 'Enter a project name' } : null,
-          phase: !phase ? { text: 'Select a project phase' } : null
+          phase: !phase ? { text: 'Select a project phase' } : null,
+          status: !status ? { text: 'Select a status' } : null,
+          commentary: !commentary ? { text: 'Enter project commentary' } : null
         },
-        errorMessage: 'Please check your input - some fields are required'
+        errorMessage: 'Please check your input - some fields are required',
+        statusOptions: PROJECT_STATUS_OPTIONS,
+        phaseOptions: PHASE_OPTIONS
       })
     }
 
@@ -116,8 +130,8 @@ export const postCreateProject = async (request, h) => {
         description,
         phase,
         defCode: defCode || '',
-        status: 'TBC',
-        commentary: ''
+        status,
+        commentary
       },
       request
     )
@@ -134,7 +148,9 @@ export const postCreateProject = async (request, h) => {
       heading: PAGE_HEADING,
       values: request.payload,
       errors: {},
-      errorMessage: NOTIFICATIONS.FAILED_TO_CREATE_PROJECT
+      errorMessage: NOTIFICATIONS.FAILED_TO_CREATE_PROJECT,
+      statusOptions: PROJECT_STATUS_OPTIONS,
+      phaseOptions: PHASE_OPTIONS
     })
   }
 }

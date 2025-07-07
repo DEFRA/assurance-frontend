@@ -103,7 +103,7 @@
           {% endif %}
           
           <div class="govuk-!-margin-bottom-6">
-            {% if isAdmin and canEditAssessments and assessment.mostRecentHistoryId %}
+            {% if isAdmin and assessment.mostRecentHistoryId %}
               {% set actionItems = [
                 {
                   href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
@@ -121,7 +121,7 @@
                   visuallyHiddenText: "assessment for " + assessment.professionDisplayName
                 }
               ] %}
-            {% elif isAdmin and canEditAssessments %}
+            {% elif isAdmin %}
               {% set actionItems = [
                 {
                   href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",

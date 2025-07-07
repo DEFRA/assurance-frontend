@@ -18,7 +18,6 @@ import {
   NOTIFICATIONS,
   VIEW_TEMPLATES
 } from '~/src/server/constants/notifications.js'
-import { config } from '~/src/config/config.js'
 
 jest.mock('~/src/server/services/projects.js')
 jest.mock('~/src/server/services/service-standards.js')
@@ -29,7 +28,6 @@ jest.mock('~/src/config/config.js', () => ({
     get: jest.fn((key) => {
       if (key === 'api.version') return 'v1.0'
       if (key === 'log') return { enabled: true, redact: [] }
-      if (key === 'featureFlags.editAssessments') return true
       return undefined
     })
   }
@@ -575,14 +573,13 @@ describe('Standards Controller', () => {
       )
     })
 
-    test('should handle edit mode when feature flag is enabled', async () => {
+    test('should handle edit mode', async () => {
       // Arrange
       mockRequest.query = {
         edit: 'true',
         standardId: 'std-1',
         professionId: 'prof-1'
       }
-      config.get.mockReturnValue(true) // Feature flag enabled
       const mockExistingAssessment = {
         status: 'AMBER',
         commentary: 'Existing commentary'
@@ -596,7 +593,6 @@ describe('Standards Controller', () => {
       await standardsController.getAssessmentScreen(mockRequest, mockH)
 
       // Assert
-      expect(config.get).toHaveBeenCalledWith('featureFlags.editAssessments')
       expect(getAssessment).toHaveBeenCalledWith(
         'project-123',
         'std-1',
@@ -618,31 +614,6 @@ describe('Standards Controller', () => {
       )
     })
 
-    test('should return 404 when edit mode feature flag is disabled', async () => {
-      // Arrange
-      mockRequest.query = {
-        edit: 'true',
-        standardId: 'std-1',
-        professionId: 'prof-1'
-      }
-      config.get.mockReturnValue(false) // Feature flag disabled
-
-      // Act
-      const result = await standardsController.getAssessmentScreen(
-        mockRequest,
-        mockH
-      )
-
-      // Assert
-      expect(config.get).toHaveBeenCalledWith('featureFlags.editAssessments')
-      expect(mockH.view).toHaveBeenCalledWith('error/index', {
-        pageTitle: 'Page not found',
-        statusCode: 404,
-        message: 'Page not found'
-      })
-      expect(result).toBe('view-with-code-response')
-    })
-
     test('should redirect when assessment not found in edit mode', async () => {
       // Arrange
       mockRequest.query = {
@@ -650,7 +621,6 @@ describe('Standards Controller', () => {
         standardId: 'std-1',
         professionId: 'prof-1'
       }
-      config.get.mockReturnValue(true)
       getProjectById.mockResolvedValue(mockProject)
       getAssessment.mockResolvedValue(null) // Assessment not found
       mockH.redirect.mockImplementation(() => ({
@@ -673,7 +643,6 @@ describe('Standards Controller', () => {
         standardId: 'std-1',
         professionId: 'prof-1'
       }
-      config.get.mockReturnValue(true)
       getProjectById.mockResolvedValue(mockProject)
       getAssessment.mockRejectedValue(new Error('Fetch failed'))
       mockH.redirect.mockImplementation(() => ({
@@ -1088,7 +1057,6 @@ describe('Standards Controller', () => {
         status: 'GREEN',
         commentary: 'Updated commentary'
       }
-      config.get.mockReturnValue(true) // Feature flag enabled
       getProjectById.mockResolvedValue(mockProject)
       getServiceStandards.mockResolvedValue(mockServiceStandards)
       replaceAssessment.mockResolvedValue({ id: 'new-assessment' })
@@ -1100,7 +1068,6 @@ describe('Standards Controller', () => {
       )
 
       // Assert
-      expect(config.get).toHaveBeenCalledWith('featureFlags.editAssessments')
       expect(replaceAssessment).toHaveBeenCalledWith(
         'project-123',
         'std-1',
@@ -1114,33 +1081,6 @@ describe('Standards Controller', () => {
       expect(result).toBe('redirect-response')
     })
 
-    test('should return 404 in edit mode when feature flag is disabled', async () => {
-      // Arrange
-      mockRequest.query = { edit: 'true' }
-      mockRequest.payload = {
-        professionId: 'prof-1',
-        standardId: 'std-1',
-        status: 'GREEN',
-        commentary: 'Test'
-      }
-      config.get.mockReturnValue(false) // Feature flag disabled
-
-      // Act
-      const result = await standardsController.postAssessmentScreen(
-        mockRequest,
-        mockH
-      )
-
-      // Assert
-      expect(config.get).toHaveBeenCalledWith('featureFlags.editAssessments')
-      expect(mockH.view).toHaveBeenCalledWith('error/index', {
-        pageTitle: 'Page not found',
-        statusCode: 404,
-        message: 'Page not found'
-      })
-      expect(result).toBe('view-with-code-response')
-    })
-
     test('should handle error in edit mode when replaceAssessment fails', async () => {
       // Arrange
       mockRequest.query = { edit: 'true' }
@@ -1150,7 +1090,6 @@ describe('Standards Controller', () => {
         status: 'GREEN',
         commentary: 'Test'
       }
-      config.get.mockReturnValue(true)
       getProjectById.mockResolvedValue(mockProject)
       getServiceStandards.mockResolvedValue(mockServiceStandards)
       getProfessions.mockResolvedValue(mockProfessions)

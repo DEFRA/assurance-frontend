@@ -262,14 +262,6 @@ export const config = convict({
       default: 'http://localhost:3000/auth',
       env: 'AUTH_CALLBACK_URL'
     }
-  },
-  featureFlags: {
-    editAssessments: {
-      doc: 'Enable editing of service standard assessments',
-      format: Boolean,
-      default: isDevelopment,
-      env: 'FEATURE_EDIT_ASSESSMENTS'
-    }
   }
 })
 

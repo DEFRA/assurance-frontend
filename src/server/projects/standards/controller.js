@@ -3,7 +3,6 @@
  * @satisfies {Partial<ServerRoute>}
  */
 import Boom from '@hapi/boom'
-import { config } from '~/src/config/config.js'
 import {
   getProjectById,
   getStandardHistory,
@@ -33,11 +32,7 @@ export const NOTIFICATIONS_LEGACY = {
 const CHOOSE_PROFESSION_TEXT = 'Choose a profession'
 const CHOOSE_SERVICE_STANDARD_TEXT = 'Choose a service standard'
 
-// Feature flag and error constants
-const FEATURE_FLAGS = {
-  EDIT_ASSESSMENTS: 'featureFlags.editAssessments'
-}
-
+// Error constants
 const ERROR_MESSAGES = {
   PAGE_NOT_FOUND: 'Page not found',
   ASSESSMENT_NOT_FOUND: 'Assessment not found',
@@ -243,17 +238,6 @@ async function handleAssessmentError(
   )
 }
 
-// Helper function to create 404 error view
-function createNotFoundView(h, message = ERROR_MESSAGES.PAGE_NOT_FOUND) {
-  return h
-    .view('error/index', {
-      pageTitle: ERROR_MESSAGES.PAGE_NOT_FOUND,
-      statusCode: HTTP_STATUS.NOT_FOUND,
-      message
-    })
-    .code(HTTP_STATUS.NOT_FOUND)
-}
-
 // Helper function to create project not found view
 function createProjectNotFoundView(h) {
   return h
@@ -261,15 +245,6 @@ function createProjectNotFoundView(h) {
       pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
     })
     .code(HTTP_STATUS.NOT_FOUND)
-}
-
-// Helper function to check edit mode feature flag
-function checkEditModeAccess(isEditMode) {
-  if (isEditMode) {
-    const canEditAssessments = config.get(FEATURE_FLAGS.EDIT_ASSESSMENTS)
-    return canEditAssessments
-  }
-  return true // Non-edit mode always has access
 }
 
 // Helper function to handle edit mode redirect
@@ -621,7 +596,6 @@ function createStandardDetailView(
     standardSummary,
     assessments: assessmentsWithDetails,
     isAuthenticated: request.auth.isAuthenticated,
-    canEditAssessments: config.get(FEATURE_FLAGS.EDIT_ASSESSMENTS),
     notification
   })
 }
@@ -756,11 +730,6 @@ export const standardsController = {
     const isEditMode = edit === 'true' && !!standardId && !!professionId
 
     try {
-      // Check feature flag access for edit mode
-      if (!checkEditModeAccess(isEditMode)) {
-        return createNotFoundView(h)
-      }
-
       // Fetch required data
       const [project, professions, serviceStandards] = await Promise.all([
         getProjectById(id, request),
@@ -816,11 +785,6 @@ export const standardsController = {
     const isEditMode = edit === 'true'
 
     try {
-      // Check feature flag access for edit mode
-      if (!checkEditModeAccess(isEditMode)) {
-        return createNotFoundView(h)
-      }
-
       // Get and validate project
       const project = await getProjectById(id, request)
       if (!project) {

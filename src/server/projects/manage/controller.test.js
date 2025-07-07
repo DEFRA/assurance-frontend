@@ -295,8 +295,13 @@ describe('Manage Controller', () => {
             'prof-1': 'Software Engineer',
             'prof-2': 'Product Manager'
           }),
-          values: {},
-          errors: {}
+          values: {
+            status: mockProject.status,
+            commentary: mockProject.commentary
+          },
+          errors: {},
+          isEditMode: false,
+          existingHistoryEntry: null
         })
       )
       expect(result).toHaveProperty('code')
@@ -450,7 +455,10 @@ describe('Manage Controller', () => {
         expect.objectContaining({
           pageTitle: 'Update Status and Commentary | Test Project',
           isEditMode: false,
-          values: {}
+          values: {
+            status: mockProject.status,
+            commentary: mockProject.commentary
+          }
         })
       )
     })

@@ -549,7 +549,10 @@ export const manageController = {
           .code(404)
       }
 
-      let selectedValues = {}
+      let selectedValues = {
+        status: project.status,
+        commentary: project.commentary
+      }
       let existingHistoryEntry = null
 
       // Handle edit mode logic

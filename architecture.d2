@@ -1,0 +1,192 @@
+direction: down
+
+# Main Components
+internal_user: {
+  label: "Internal User"
+  shape: rectangle
+  style: {
+    fill: "#4fc3f7"
+    stroke: "#0277bd"
+    stroke-width: 2
+    font-color: white
+    border-radius: 8
+  }
+}
+
+frontend: {
+  label: "🖥️ Assurance Frontend\n(Node.js/Hapi.js)"
+  shape: rectangle
+  style.fill: "#e1f5fe"
+  link: "https://nodejs.org/"
+}
+
+redis: {
+  label: "🗄️ Redis\n(Sessions)"
+  shape: cylinder
+  style.fill: "#ffebee"
+  link: "https://redis.io/"
+}
+
+azure_ad: {
+  label: "☁️ Azure AD\n(Authentication)"
+  shape: cloud
+  style.fill: "#fff3e0"
+  link: "https://azure.microsoft.com/en-us/services/active-directory/"
+}
+
+backend: {
+  label: "🔧 Assurance API (.NET 8)"
+  shape: rectangle
+  style.fill: "#f3e5f5"
+  link: "https://dotnet.microsoft.com/"
+  
+  # API Endpoints
+  endpoints: {
+    label: "API Endpoints"
+    style.fill: "#e8eaf6"
+    
+    projects: {
+      label: "/projects"
+    }
+    projects_id: {
+      label: "/projects/{id}"
+    }
+    standards: {
+      label: "/serviceStandards"
+    }
+    standards_id: {
+      label: "/serviceStandards/{id}"
+    }
+    standards_seed: {
+      label: "/serviceStandards/seed"
+    }
+    standards_delete_all: {
+      label: "/serviceStandards/deleteAll"
+    }
+    professions: {
+      label: "/professions"
+    }
+    professions_id: {
+      label: "/professions/{id}"
+    }
+    assessments: {
+      label: "/projects/{id}/standards/{sid}/professions/{pid}/assessment"
+    }
+  }
+}
+
+mongodb: {
+  label: "🍃 MongoDB\n(Data Storage)"
+  shape: cylinder
+  style.fill: "#e8f5e8"
+  link: "https://www.mongodb.com/"
+}
+
+# All Collections
+collections: {
+  label: "MongoDB Collections"
+  style.fill: "#f1f8e9"
+  
+  # Row 1 - Core Data Collections
+  core: {
+    label: "Core Data"
+    style.fill: "#e8f5e8"
+    
+    projects: {
+      label: "📊 projects"
+    }
+    serviceStandards: {
+      label: "📋 serviceStandards"
+    }
+    professions: {
+      label: "👥 professions"
+    }
+    projectStandards: {
+      label: "📈 projectStandards"
+    }
+  }
+  
+  # Row 2 - History/Audit Collections
+  history: {
+    label: "History"
+    style.fill: "#fce4ec"
+    
+    projectHistory: {
+      label: "📜 projectHistory"
+    }
+    projectStandardsHistory: {
+      label: "📜 projectStandardsHistory"
+    }
+    professionHistory: {
+      label: "📜 professionHistory"
+    }
+    serviceStandardHistory: {
+      label: "📜 serviceStandardHistory"
+    }
+  }
+}
+
+# Main Flow with animated flowing lines
+internal_user -> frontend: {
+  label: "Uses Web Interface"
+  style: {
+    animated: true
+    stroke: "#1976d2"
+    stroke-width: 3
+    stroke-dash: 5
+  }
+}
+frontend -> backend: {
+  label: "API Calls"
+  style: {
+    animated: true
+    stroke: "#1976d2"
+    stroke-width: 3
+    stroke-dash: 5
+  }
+}
+frontend -> redis: {
+  label: "Session"
+  style: {
+    animated: true
+    stroke: "#1976d2"
+    stroke-width: 3
+    stroke-dash: 5
+  }
+}
+frontend -> azure_ad: {
+  label: "Login"
+  style: {
+    animated: true
+    stroke: "#1976d2"
+    stroke-width: 3
+    stroke-dash: 5
+  }
+}
+azure_ad <- backend: {
+  label: "Token Validation"
+  style: {
+    animated: true
+    stroke: "#1976d2"
+    stroke-width: 3
+    stroke-dash: 5
+  }
+}
+backend -> mongodb: {
+  label: "Data"
+  style: {
+    animated: true
+    stroke: "#1976d2"
+    stroke-width: 3
+    stroke-dash: 5
+  }
+}
+mongodb -> collections: {
+  label: "Contains"
+  style: {
+    animated: true
+    stroke: "#1976d2"
+    stroke-width: 3
+    stroke-dash: 5
+  }
+} 

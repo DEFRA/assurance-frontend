@@ -3,8 +3,10 @@ import {
   getProjectById,
   getStandardHistory,
   updateAssessment,
+  getAssessment,
   getAssessmentHistory,
-  archiveAssessmentHistoryEntry
+  archiveAssessmentHistoryEntry,
+  replaceAssessment
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
@@ -16,11 +18,22 @@ import {
   NOTIFICATIONS,
   VIEW_TEMPLATES
 } from '~/src/server/constants/notifications.js'
+import { config } from '~/src/config/config.js'
 
 jest.mock('~/src/server/services/projects.js')
 jest.mock('~/src/server/services/service-standards.js')
 jest.mock('~/src/server/services/professions.js')
 jest.mock('~/src/server/services/profession-standard-matrix.js')
+jest.mock('~/src/config/config.js', () => ({
+  config: {
+    get: jest.fn((key) => {
+      if (key === 'api.version') return 'v1.0'
+      if (key === 'log') return { enabled: true, redact: [] }
+      if (key === 'featureFlags.editAssessments') return true
+      return undefined
+    })
+  }
+}))
 
 describe('Standards Controller', () => {
   let mockRequest
@@ -561,6 +574,124 @@ describe('Standards Controller', () => {
         })
       )
     })
+
+    test('should handle edit mode when feature flag is enabled', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        standardId: 'std-1',
+        professionId: 'prof-1'
+      }
+      config.get.mockReturnValue(true) // Feature flag enabled
+      const mockExistingAssessment = {
+        status: 'AMBER',
+        commentary: 'Existing commentary'
+      }
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getAssessment.mockResolvedValue(mockExistingAssessment)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(config.get).toHaveBeenCalledWith('featureFlags.editAssessments')
+      expect(getAssessment).toHaveBeenCalledWith(
+        'project-123',
+        'std-1',
+        'prof-1',
+        mockRequest
+      )
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        expect.objectContaining({
+          isEditMode: true,
+          existingAssessment: mockExistingAssessment,
+          selectedValues: expect.objectContaining({
+            professionId: 'prof-1',
+            standardId: 'std-1',
+            status: 'AMBER',
+            commentary: 'Existing commentary'
+          })
+        })
+      )
+    })
+
+    test('should return 404 when edit mode feature flag is disabled', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        standardId: 'std-1',
+        professionId: 'prof-1'
+      }
+      config.get.mockReturnValue(false) // Feature flag disabled
+
+      // Act
+      const result = await standardsController.getAssessmentScreen(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(config.get).toHaveBeenCalledWith('featureFlags.editAssessments')
+      expect(mockH.view).toHaveBeenCalledWith('error/index', {
+        pageTitle: 'Page not found',
+        statusCode: 404,
+        message: 'Page not found'
+      })
+      expect(result).toBe('view-with-code-response')
+    })
+
+    test('should redirect when assessment not found in edit mode', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        standardId: 'std-1',
+        professionId: 'prof-1'
+      }
+      config.get.mockReturnValue(true)
+      getProjectById.mockResolvedValue(mockProject)
+      getAssessment.mockResolvedValue(null) // Assessment not found
+      mockH.redirect.mockImplementation(() => ({
+        takeover: jest.fn().mockReturnValue({ message: jest.fn() })
+      }))
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/project-123/standards/std-1'
+      )
+    })
+
+    test('should handle error fetching existing assessment in edit mode', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        standardId: 'std-1',
+        professionId: 'prof-1'
+      }
+      config.get.mockReturnValue(true)
+      getProjectById.mockResolvedValue(mockProject)
+      getAssessment.mockRejectedValue(new Error('Fetch failed'))
+      mockH.redirect.mockImplementation(() => ({
+        takeover: jest.fn().mockReturnValue({ message: jest.fn() })
+      }))
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Error fetching existing assessment for edit'
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/project-123/standards/std-1'
+      )
+    })
   })
 
   describe('postAssessmentScreen', () => {
@@ -944,6 +1075,99 @@ describe('Standards Controller', () => {
         expect.objectContaining({
           error:
             'Unable to update existing assessment - this is a known backend issue. New assessments work correctly.'
+        })
+      )
+    })
+
+    test('should handle edit mode successfully with replaceAssessment', async () => {
+      // Arrange
+      mockRequest.query = { edit: 'true' }
+      mockRequest.payload = {
+        professionId: 'prof-1',
+        standardId: 'std-1',
+        status: 'GREEN',
+        commentary: 'Updated commentary'
+      }
+      config.get.mockReturnValue(true) // Feature flag enabled
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      replaceAssessment.mockResolvedValue({ id: 'new-assessment' })
+
+      // Act
+      const result = await standardsController.postAssessmentScreen(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(config.get).toHaveBeenCalledWith('featureFlags.editAssessments')
+      expect(replaceAssessment).toHaveBeenCalledWith(
+        'project-123',
+        'std-1',
+        'prof-1',
+        { status: 'GREEN', commentary: 'Updated commentary' },
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/projects/project-123/standards/std-1?notification=Assessment updated successfully'
+      )
+      expect(result).toBe('redirect-response')
+    })
+
+    test('should return 404 in edit mode when feature flag is disabled', async () => {
+      // Arrange
+      mockRequest.query = { edit: 'true' }
+      mockRequest.payload = {
+        professionId: 'prof-1',
+        standardId: 'std-1',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+      config.get.mockReturnValue(false) // Feature flag disabled
+
+      // Act
+      const result = await standardsController.postAssessmentScreen(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(config.get).toHaveBeenCalledWith('featureFlags.editAssessments')
+      expect(mockH.view).toHaveBeenCalledWith('error/index', {
+        pageTitle: 'Page not found',
+        statusCode: 404,
+        message: 'Page not found'
+      })
+      expect(result).toBe('view-with-code-response')
+    })
+
+    test('should handle error in edit mode when replaceAssessment fails', async () => {
+      // Arrange
+      mockRequest.query = { edit: 'true' }
+      mockRequest.payload = {
+        professionId: 'prof-1',
+        standardId: 'std-1',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+      config.get.mockReturnValue(true)
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getProfessions.mockResolvedValue(mockProfessions)
+      replaceAssessment.mockRejectedValue(new Error('Replace failed'))
+
+      // Act
+      await standardsController.postAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Error updating assessment'
+      )
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        expect.objectContaining({
+          error: NOTIFICATIONS.FAILED_TO_SAVE_ASSESSMENT
         })
       )
     })

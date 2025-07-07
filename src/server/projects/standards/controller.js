@@ -522,6 +522,110 @@ async function handlePostAssessmentError(
   )
 }
 
+// Helper function to fetch required data for standard detail
+async function fetchStandardDetailData(id, request) {
+  return await Promise.all([
+    getProjectById(id, request),
+    getProfessions(request),
+    getServiceStandards(request)
+  ])
+}
+
+// Helper function to validate project and find standard
+function validateProjectAndStandard(
+  project,
+  serviceStandards,
+  standardId,
+  id,
+  h
+) {
+  if (!project) {
+    return h
+      .view('projects/not-found', {
+        pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
+      })
+      .code(HTTP_STATUS.NOT_FOUND)
+  }
+
+  // Find the specific standard
+  const standard = serviceStandards?.find((s) => s.id === standardId)
+  if (!standard) {
+    return h.redirect(
+      `${ROUTE_PATTERNS.PROJECT_REDIRECT(id)}?notification=${NOTIFICATIONS.STANDARD_NOT_FOUND}`
+    )
+  }
+
+  return { project, standard }
+}
+
+// Helper function to build assessments with profession details and history
+async function buildAssessmentsWithDetails(
+  professionAssessments,
+  professions,
+  id,
+  standardId,
+  request
+) {
+  return await Promise.all(
+    professionAssessments.map(async (assessment) => {
+      const professionInfo = professions?.find(
+        (p) => p.id === assessment.professionId
+      )
+
+      // Get the most recent history entry for this profession/standard combination
+      let mostRecentHistoryId = null
+      try {
+        const history = await getAssessmentHistory(
+          id,
+          standardId,
+          assessment.professionId,
+          request
+        )
+        if (history && history.length > 0) {
+          // Get the most recent non-archived entry
+          const recentEntry = history.find((entry) => !entry.archived)
+          mostRecentHistoryId = recentEntry?.id
+        }
+      } catch (error) {
+        request.logger.warn(
+          { error },
+          'Could not fetch assessment history for archive link'
+        )
+      }
+
+      return {
+        ...assessment,
+        professionName: professionInfo?.name || assessment.professionId,
+        professionDisplayName:
+          professionInfo?.name || `Profession ${assessment.professionId}`,
+        mostRecentHistoryId
+      }
+    })
+  )
+}
+
+// Helper function to create standard detail view data
+function createStandardDetailView(
+  h,
+  project,
+  standard,
+  standardSummary,
+  assessmentsWithDetails,
+  request,
+  notification
+) {
+  return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_DETAIL, {
+    pageTitle: `Standard ${standard.number} | ${project.name}`,
+    project,
+    standard,
+    standardSummary,
+    assessments: assessmentsWithDetails,
+    isAuthenticated: request.auth.isAuthenticated,
+    canEditAssessments: config.get(FEATURE_FLAGS.EDIT_ASSESSMENTS),
+    notification
+  })
+}
+
 export const standardsController = {
   getStandards: async (request, h) => {
     const { id } = request.params
@@ -553,85 +657,53 @@ export const standardsController = {
     const { notification } = request.query
 
     try {
-      // Fetch project, professions and service standards
-      const [project, professions, serviceStandards] = await Promise.all([
-        getProjectById(id, request),
-        getProfessions(request),
-        getServiceStandards(request)
-      ])
+      // Fetch required data
+      const [project, professions, serviceStandards] =
+        await fetchStandardDetailData(id, request)
 
-      if (!project) {
-        return h
-          .view('projects/not-found', {
-            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
-          })
-          .code(404)
-      }
-
-      // Find the specific standard
-      const standard = serviceStandards?.find((s) => s.id === standardId)
-      if (!standard) {
-        return h.redirect(
-          `${ROUTE_PATTERNS.PROJECT_REDIRECT(id)}?notification=${NOTIFICATIONS.STANDARD_NOT_FOUND}`
-        )
-      }
-
-      // Find the standard summary in the project
-      const standardSummary = project.standardsSummary?.find(
-        (s) => s.standardId === standardId
-      )
-
-      // Get all profession assessments for this standard
-      const professionAssessments = standardSummary?.professions || []
-
-      // Map profession assessments with profession details and get most recent history ID
-      const assessmentsWithDetails = await Promise.all(
-        professionAssessments.map(async (assessment) => {
-          const professionInfo = professions?.find(
-            (p) => p.id === assessment.professionId
-          )
-
-          // Get the most recent history entry for this profession/standard combination
-          let mostRecentHistoryId = null
-          try {
-            const history = await getAssessmentHistory(
-              id,
-              standardId,
-              assessment.professionId,
-              request
-            )
-            if (history && history.length > 0) {
-              // Get the most recent non-archived entry
-              const recentEntry = history.find((entry) => !entry.archived)
-              mostRecentHistoryId = recentEntry?.id
-            }
-          } catch (error) {
-            request.logger.warn(
-              { error },
-              'Could not fetch assessment history for archive link'
-            )
-          }
-
-          return {
-            ...assessment,
-            professionName: professionInfo?.name || assessment.professionId,
-            professionDisplayName:
-              professionInfo?.name || `Profession ${assessment.professionId}`,
-            mostRecentHistoryId
-          }
-        })
-      )
-
-      return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_DETAIL, {
-        pageTitle: `Standard ${standard.number} | ${project.name}`,
+      // Validate project and find standard
+      const validationResult = validateProjectAndStandard(
         project,
-        standard,
-        standardSummary,
-        assessments: assessmentsWithDetails,
-        isAuthenticated: request.auth.isAuthenticated,
-        canEditAssessments: config.get(FEATURE_FLAGS.EDIT_ASSESSMENTS),
-        notification
-      })
+        serviceStandards,
+        standardId,
+        id,
+        h
+      )
+      if (validationResult.project) {
+        // Validation passed, extract validated data
+        const { project: validProject, standard } = validationResult
+
+        // Find the standard summary in the project
+        const standardSummary = validProject.standardsSummary?.find(
+          (s) => s.standardId === standardId
+        )
+
+        // Get all profession assessments for this standard
+        const professionAssessments = standardSummary?.professions || []
+
+        // Build assessments with profession details and history
+        const assessmentsWithDetails = await buildAssessmentsWithDetails(
+          professionAssessments,
+          professions,
+          id,
+          standardId,
+          request
+        )
+
+        // Create and return the view
+        return createStandardDetailView(
+          h,
+          validProject,
+          standard,
+          standardSummary,
+          assessmentsWithDetails,
+          request,
+          notification
+        )
+      } else {
+        // Validation failed, return the error response
+        return validationResult
+      }
     } catch (error) {
       request.logger.error({ error }, 'Error loading standard detail')
       throw Boom.boomify(error, {
@@ -867,7 +939,7 @@ export const standardsController = {
           .view('projects/not-found', {
             pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
-          .code(404)
+          .code(HTTP_STATUS.NOT_FOUND)
       }
 
       // Find the specific standard and profession

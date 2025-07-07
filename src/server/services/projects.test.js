@@ -12,7 +12,8 @@ import {
   getAssessment,
   updateAssessment,
   getAssessmentHistory,
-  archiveAssessmentHistoryEntry
+  archiveAssessmentHistoryEntry,
+  replaceAssessment
 } from './projects.js'
 
 // First declare the mocks
@@ -2049,5 +2050,307 @@ describe('edge case scenarios', () => {
     expect(mockAuthedFetch).toHaveBeenCalledWith(
       '/api/v1.0/projects/project-1/standards/std-1/history'
     )
+  })
+})
+
+describe('replaceAssessment', () => {
+  const mockRequest = {
+    auth: { credentials: { token: 'test-token' } },
+    logger: { info: jest.fn(), error: jest.fn() }
+  }
+  const mockAuthedFetch = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+  })
+
+  test('should successfully replace an assessment', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const standardId = 'std-1'
+    const professionId = 'prof-1'
+    const newAssessmentData = { status: 'GREEN', commentary: 'Updated' }
+
+    const mockCurrentAssessment = {
+      id: 'assessment-1',
+      status: 'AMBER',
+      commentary: 'Old comment'
+    }
+    const mockNewAssessment = {
+      id: 'assessment-2',
+      status: 'GREEN',
+      commentary: 'Updated'
+    }
+    const mockHistory = [
+      { id: 'hist-2', archived: false }, // New assessment (most recent)
+      { id: 'hist-1', archived: false } // Old assessment to archive
+    ]
+
+    // Mock API calls in sequence
+    mockAuthedFetch
+      .mockResolvedValueOnce(mockCurrentAssessment) // getAssessment call
+      .mockResolvedValueOnce(mockNewAssessment) // updateAssessment call
+      .mockResolvedValueOnce(mockHistory) // getAssessmentHistory call
+      .mockResolvedValueOnce({}) // archiveAssessmentHistoryEntry call
+
+    // Act
+    const result = await replaceAssessment(
+      projectId,
+      standardId,
+      professionId,
+      newAssessmentData,
+      mockRequest
+    )
+
+    // Assert
+    expect(mockAuthedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+    expect(mockAuthedFetch).toHaveBeenCalledTimes(4)
+
+    // Verify getAssessment call
+    expect(mockAuthedFetch).toHaveBeenNthCalledWith(
+      1,
+      '/api/v1.0/projects/project-1/standards/std-1/professions/prof-1/assessment'
+    )
+
+    // Verify updateAssessment call
+    expect(mockAuthedFetch).toHaveBeenNthCalledWith(
+      2,
+      '/api/v1.0/projects/project-1/standards/std-1/professions/prof-1/assessment',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAssessmentData)
+      }
+    )
+
+    // Verify getAssessmentHistory call
+    expect(mockAuthedFetch).toHaveBeenNthCalledWith(
+      3,
+      '/api/v1.0/projects/project-1/standards/std-1/professions/prof-1/history'
+    )
+
+    // Verify archiveAssessmentHistoryEntry call
+    expect(mockAuthedFetch).toHaveBeenNthCalledWith(
+      4,
+      '/api/v1.0/projects/project-1/standards/std-1/professions/prof-1/history/hist-1/archive',
+      { method: 'POST' }
+    )
+
+    expect(result).toEqual(mockNewAssessment)
+  })
+
+  test('should throw error when no existing assessment found', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const standardId = 'std-1'
+    const professionId = 'prof-1'
+    const newAssessmentData = { status: 'GREEN', commentary: 'Updated' }
+
+    mockAuthedFetch.mockResolvedValueOnce(null) // getAssessment returns null
+
+    // Act & Assert
+    await expect(
+      replaceAssessment(
+        projectId,
+        standardId,
+        professionId,
+        newAssessmentData,
+        mockRequest
+      )
+    ).rejects.toThrow('No existing assessment found to replace')
+  })
+
+  test('should handle empty assessment history', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const standardId = 'std-1'
+    const professionId = 'prof-1'
+    const newAssessmentData = { status: 'GREEN', commentary: 'Updated' }
+
+    const mockCurrentAssessment = {
+      id: 'assessment-1',
+      status: 'AMBER',
+      commentary: 'Old comment'
+    }
+    const mockNewAssessment = {
+      id: 'assessment-2',
+      status: 'GREEN',
+      commentary: 'Updated'
+    }
+
+    mockAuthedFetch
+      .mockResolvedValueOnce(mockCurrentAssessment) // getAssessment call
+      .mockResolvedValueOnce(mockNewAssessment) // updateAssessment call
+      .mockResolvedValueOnce([]) // getAssessmentHistory call (empty)
+
+    // Act
+    const result = await replaceAssessment(
+      projectId,
+      standardId,
+      professionId,
+      newAssessmentData,
+      mockRequest
+    )
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledTimes(3) // No archive call when history is empty
+    expect(result).toEqual(mockNewAssessment)
+  })
+
+  test('should handle history with only one non-archived entry', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const standardId = 'std-1'
+    const professionId = 'prof-1'
+    const newAssessmentData = { status: 'GREEN', commentary: 'Updated' }
+
+    const mockCurrentAssessment = {
+      id: 'assessment-1',
+      status: 'AMBER',
+      commentary: 'Old comment'
+    }
+    const mockNewAssessment = {
+      id: 'assessment-2',
+      status: 'GREEN',
+      commentary: 'Updated'
+    }
+    const mockHistory = [
+      { id: 'hist-1', archived: false } // Only one entry
+    ]
+
+    mockAuthedFetch
+      .mockResolvedValueOnce(mockCurrentAssessment) // getAssessment call
+      .mockResolvedValueOnce(mockNewAssessment) // updateAssessment call
+      .mockResolvedValueOnce(mockHistory) // getAssessmentHistory call
+
+    // Act
+    const result = await replaceAssessment(
+      projectId,
+      standardId,
+      professionId,
+      newAssessmentData,
+      mockRequest
+    )
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledTimes(3) // No archive call when only one entry
+    expect(result).toEqual(mockNewAssessment)
+  })
+
+  test('should handle error during assessment replacement', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const standardId = 'std-1'
+    const professionId = 'prof-1'
+    const newAssessmentData = { status: 'GREEN', commentary: 'Updated' }
+
+    const mockCurrentAssessment = {
+      id: 'assessment-1',
+      status: 'AMBER',
+      commentary: 'Old comment'
+    }
+
+    mockAuthedFetch
+      .mockResolvedValueOnce(mockCurrentAssessment) // getAssessment call
+      .mockRejectedValueOnce(new Error('Update failed')) // updateAssessment fails
+
+    // Act & Assert
+    await expect(
+      replaceAssessment(
+        projectId,
+        standardId,
+        professionId,
+        newAssessmentData,
+        mockRequest
+      )
+    ).rejects.toThrow('Update failed')
+  })
+
+  test('should handle error during history archiving', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const standardId = 'std-1'
+    const professionId = 'prof-1'
+    const newAssessmentData = { status: 'GREEN', commentary: 'Updated' }
+
+    const mockCurrentAssessment = {
+      id: 'assessment-1',
+      status: 'AMBER',
+      commentary: 'Old comment'
+    }
+    const mockNewAssessment = {
+      id: 'assessment-2',
+      status: 'GREEN',
+      commentary: 'Updated'
+    }
+    const mockHistory = [
+      { id: 'hist-2', archived: false }, // New assessment
+      { id: 'hist-1', archived: false } // Old assessment to archive
+    ]
+
+    mockAuthedFetch
+      .mockResolvedValueOnce(mockCurrentAssessment) // getAssessment call
+      .mockResolvedValueOnce(mockNewAssessment) // updateAssessment call
+      .mockResolvedValueOnce(mockHistory) // getAssessmentHistory call
+      .mockRejectedValueOnce(new Error('Archive failed')) // archiveAssessmentHistoryEntry fails
+
+    // Act & Assert
+    await expect(
+      replaceAssessment(
+        projectId,
+        standardId,
+        professionId,
+        newAssessmentData,
+        mockRequest
+      )
+    ).rejects.toThrow('Archive failed')
+  })
+
+  test('should handle history with archived entries', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const standardId = 'std-1'
+    const professionId = 'prof-1'
+    const newAssessmentData = { status: 'GREEN', commentary: 'Updated' }
+
+    const mockCurrentAssessment = {
+      id: 'assessment-1',
+      status: 'AMBER',
+      commentary: 'Old comment'
+    }
+    const mockNewAssessment = {
+      id: 'assessment-2',
+      status: 'GREEN',
+      commentary: 'Updated'
+    }
+    const mockHistory = [
+      { id: 'hist-3', archived: false }, // New assessment (most recent)
+      { id: 'hist-2', archived: false }, // Old assessment to archive
+      { id: 'hist-1', archived: true } // Already archived
+    ]
+
+    mockAuthedFetch
+      .mockResolvedValueOnce(mockCurrentAssessment) // getAssessment call
+      .mockResolvedValueOnce(mockNewAssessment) // updateAssessment call
+      .mockResolvedValueOnce(mockHistory) // getAssessmentHistory call
+      .mockResolvedValueOnce({}) // archiveAssessmentHistoryEntry call
+
+    // Act
+    const result = await replaceAssessment(
+      projectId,
+      standardId,
+      professionId,
+      newAssessmentData,
+      mockRequest
+    )
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenNthCalledWith(
+      4,
+      '/api/v1.0/projects/project-1/standards/std-1/professions/prof-1/history/hist-2/archive',
+      { method: 'POST' }
+    )
+    expect(result).toEqual(mockNewAssessment)
   })
 })

@@ -13,6 +13,28 @@
     display: flex;
     flex-direction: column;
   }
+
+  // Fix spacing for summary card action links
+  &__action {
+    border-right: 1px solid #b1b4b6;
+    display: inline;
+    padding-right: 15px;
+
+    // Add padding to all except first
+    &:not(:first-child) {
+      padding-left: 15px;
+    }
+
+    // Remove border from last action item
+    &:last-child {
+      border-right: none;
+    }
+  }
+}
+
+// Ensure status tags don't wrap
+.govuk-tag {
+  white-space: nowrap;
 }
 
 // Timeline Component Styles

@@ -103,30 +103,67 @@
           {% endif %}
           
           <div class="govuk-!-margin-bottom-6">
+            {% if isAdmin and assessment.mostRecentHistoryId %}
+              {% set actionItems = [
+                {
+                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
+                  text: "History",
+                  visuallyHiddenText: "for " + assessment.professionDisplayName
+                },
+                                  {
+                    href: "/projects/" + project.id + "/assessment?edit=true&standardId=" + standard.id + "&professionId=" + assessment.professionId,
+                    text: "Edit",
+                    visuallyHiddenText: "assessment for " + assessment.professionDisplayName
+                  },
+                {
+                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history/" + assessment.mostRecentHistoryId + "/archive?returnTo=detail",
+                  text: "Archive",
+                  visuallyHiddenText: "assessment for " + assessment.professionDisplayName
+                }
+              ] %}
+            {% elif isAdmin %}
+              {% set actionItems = [
+                {
+                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
+                  text: "History",
+                  visuallyHiddenText: "for " + assessment.professionDisplayName
+                },
+                {
+                  href: "/projects/" + project.id + "/assessment?edit=true&standardId=" + standard.id + "&professionId=" + assessment.professionId,
+                  text: "Edit",
+                  visuallyHiddenText: "assessment for " + assessment.professionDisplayName
+                }
+              ] %}
+            {% elif isAdmin and assessment.mostRecentHistoryId %}
+              {% set actionItems = [
+                {
+                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
+                  text: "History",
+                  visuallyHiddenText: "for " + assessment.professionDisplayName
+                },
+                {
+                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history/" + assessment.mostRecentHistoryId + "/archive?returnTo=detail",
+                  text: "Archive",
+                  visuallyHiddenText: "assessment for " + assessment.professionDisplayName
+                }
+              ] %}
+            {% else %}
+              {% set actionItems = [
+                {
+                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
+                  text: "History",
+                  visuallyHiddenText: "for " + assessment.professionDisplayName
+                }
+              ] %}
+            {% endif %}
+            
             {{ govukSummaryList({
               card: {
                 title: {
                   text: assessment.professionDisplayName
                 },
                 actions: {
-                  items: [
-                    {
-                      href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
-                      text: "History",
-                      visuallyHiddenText: "for " + assessment.professionDisplayName
-                    },
-                    {
-                      href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history/" + assessment.mostRecentHistoryId + "/archive?returnTo=detail",
-                      text: "Archive",
-                      visuallyHiddenText: "assessment for " + assessment.professionDisplayName
-                    }
-                  ] if isAdmin and assessment.mostRecentHistoryId else [
-                    {
-                      href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
-                      text: "History",
-                      visuallyHiddenText: "for " + assessment.professionDisplayName
-                    }
-                  ]
+                  items: actionItems
                 }
               },
               rows: [
@@ -157,74 +194,4 @@
   </div>
 {% endblock %}
 
-{% block pageStyles %}
-<style>
-  /* Ensure compliance confidence displays on a single line */
-  .govuk-summary-list__row {
-    display: flex;
-    align-items: center;
-    flex-wrap: nowrap;
-  }
-  
-  .govuk-summary-list__key {
-    flex: 0 0 auto;
-    min-width: 160px;
-    max-width: 200px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .govuk-summary-list__value {
-    flex: 1;
-    margin-left: 20px;
-    min-width: 0;
-  }
-  
-  /* Ensure status tags don't wrap */
-  .govuk-tag {
-    white-space: nowrap;
-  }
-  
-  /* Override GOV.UK default summary list responsive behavior */
-  @media (min-width: 769px) {
-    .govuk-summary-list__key {
-      border-bottom: 0;
-      padding-bottom: 0;
-      width: auto;
-      flex: 0 0 160px;
-    }
-    
-    .govuk-summary-list__value {
-      border-bottom: 0;
-      padding-bottom: 0;
-    }
-  }
-  
-  /* Responsive adjustments for smaller screens */
-  @media (max-width: 768px) {
-    .govuk-grid-column-one-half {
-      width: 100%;
-    }
-    
-    .govuk-summary-list__row {
-      flex-wrap: wrap;
-    }
-    
-    .govuk-summary-list__key {
-      width: 100%;
-      margin-bottom: 5px;
-      min-width: auto;
-      max-width: none;
-      white-space: normal;
-      overflow: visible;
-      text-overflow: initial;
-    }
-    
-    .govuk-summary-list__value {
-      width: 100%;
-      margin-left: 0;
-    }
-  }
-</style>
-{% endblock %} 
+ 

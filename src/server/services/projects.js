@@ -955,3 +955,89 @@ export async function archiveAssessmentHistoryEntry(
     throw error
   }
 }
+
+// New: Replace an assessment (create new + archive old)
+export async function replaceAssessment(
+  projectId,
+  standardId,
+  professionId,
+  newAssessmentData,
+  request
+) {
+  try {
+    logger.info(
+      { projectId, standardId, professionId },
+      'Starting assessment replacement process'
+    )
+
+    // Phase 1: Sequential calls (until backend replace endpoint is ready)
+
+    // 1. Get current assessment to verify it exists
+    const currentAssessment = await getAssessment(
+      projectId,
+      standardId,
+      professionId,
+      request
+    )
+    if (!currentAssessment) {
+      throw new Error('No existing assessment found to replace')
+    }
+
+    // 2. Create new assessment
+    logger.info('Creating new assessment')
+    const newAssessment = await updateAssessment(
+      projectId,
+      standardId,
+      professionId,
+      newAssessmentData,
+      request
+    )
+
+    // 3. Get the assessment history to find the entry to archive
+    logger.info('Getting assessment history to find entry to archive')
+    const history = await getAssessmentHistory(
+      projectId,
+      standardId,
+      professionId,
+      request
+    )
+
+    if (history.length > 0) {
+      // Find the most recent non-archived entry (should be the one we just created)
+      // We want to archive the previous one, so get the second most recent
+      const nonArchivedEntries = history.filter((entry) => !entry.archived)
+
+      if (nonArchivedEntries.length > 1) {
+        // Archive the second most recent (the old one)
+        const oldestRecentHistoryId = nonArchivedEntries[1].id
+        logger.info(
+          { historyId: oldestRecentHistoryId },
+          'Archiving previous assessment history entry'
+        )
+
+        await archiveAssessmentHistoryEntry(
+          projectId,
+          standardId,
+          professionId,
+          oldestRecentHistoryId,
+          request
+        )
+      }
+    }
+
+    logger.info('Assessment replacement completed successfully')
+    return newAssessment
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        projectId,
+        standardId,
+        professionId
+      },
+      'Failed to replace assessment'
+    )
+    throw error
+  }
+}

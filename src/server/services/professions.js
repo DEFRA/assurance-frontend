@@ -59,7 +59,7 @@ export async function getProfessions(request) {
  * Get profession by ID
  * @param {string} id - The profession ID
  * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
- * @returns {Promise<Object|null>} - The profession or null if not found
+ * @returns {Promise<object|null>} - The profession or null if not found
  */
 export async function getProfessionById(id, request) {
   try {

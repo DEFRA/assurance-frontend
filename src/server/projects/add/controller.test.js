@@ -97,7 +97,9 @@ describe('Add Project controller', () => {
           errorMessage: 'Please check your input - some fields are required',
           errors: expect.objectContaining({
             name: { text: 'Enter a project name' },
-            phase: { text: 'Select a project phase' }
+            phase: { text: 'Select a project phase' },
+            status: { text: 'Select a status' },
+            commentary: { text: 'Enter project commentary' }
           }),
           values: { name: '', phase: '', status: '', commentary: '' }
         })
@@ -154,8 +156,8 @@ describe('Add Project controller', () => {
           name: 'New Project',
           phase: 'Discovery',
           defCode: 'TEST001',
-          status: 'TBC',
-          commentary: ''
+          status: 'GREEN',
+          commentary: 'Initial setup'
         }),
         mockRequest
       )
@@ -189,8 +191,8 @@ describe('Add Project controller', () => {
           description: undefined,
           phase: 'Discovery',
           defCode: 'TEST001',
-          status: 'TBC',
-          commentary: ''
+          status: 'GREEN',
+          commentary: 'Initial setup'
         }),
         requestWithoutDescription
       )
@@ -232,7 +234,9 @@ describe('Add Project controller', () => {
           name: '', // Empty string, not whitespace
           phase: '', // Empty string, not whitespace
           description: '',
-          defCode: ''
+          defCode: '',
+          status: '',
+          commentary: ''
         },
         logger: {
           error: jest.fn(),
@@ -253,7 +257,9 @@ describe('Add Project controller', () => {
           errorMessage: 'Please check your input - some fields are required',
           errors: expect.objectContaining({
             name: { text: 'Enter a project name' },
-            phase: { text: 'Select a project phase' }
+            phase: { text: 'Select a project phase' },
+            status: { text: 'Select a status' },
+            commentary: { text: 'Enter project commentary' }
           })
         })
       )
@@ -268,7 +274,9 @@ describe('Add Project controller', () => {
           name: '',
           phase: 'Discovery',
           description: 'Valid description',
-          defCode: 'DEF123'
+          defCode: 'DEF123',
+          status: 'GREEN',
+          commentary: 'Valid commentary'
         }
       }
 
@@ -281,7 +289,9 @@ describe('Add Project controller', () => {
         expect.objectContaining({
           errors: expect.objectContaining({
             name: { text: 'Enter a project name' },
-            phase: null
+            phase: null,
+            status: null,
+            commentary: null
           })
         })
       )
@@ -296,7 +306,9 @@ describe('Add Project controller', () => {
           name: 'Valid Project Name',
           phase: '',
           description: 'Valid description',
-          defCode: 'DEF123'
+          defCode: 'DEF123',
+          status: 'GREEN',
+          commentary: 'Valid commentary'
         }
       }
 
@@ -309,7 +321,9 @@ describe('Add Project controller', () => {
         expect.objectContaining({
           errors: expect.objectContaining({
             name: null,
-            phase: { text: 'Select a project phase' }
+            phase: { text: 'Select a project phase' },
+            status: null,
+            commentary: null
           })
         })
       )
@@ -413,8 +427,8 @@ describe('Add Project controller', () => {
           name: 'New Project',
           phase: 'Discovery',
           defCode: 'TEST001',
-          status: 'TBC',
-          commentary: ''
+          status: 'GREEN',
+          commentary: 'Initial setup'
         }),
         mockRequest
       )
@@ -431,7 +445,9 @@ describe('Add Project controller', () => {
           name: '',
           phase: '',
           description: 'Some description',
-          defCode: 'TEST001'
+          defCode: 'TEST001',
+          status: '',
+          commentary: ''
         },
         logger: {
           error: jest.fn(),
@@ -449,7 +465,9 @@ describe('Add Project controller', () => {
           errorMessage: 'Please check your input - some fields are required',
           errors: expect.objectContaining({
             name: { text: 'Enter a project name' },
-            phase: { text: 'Select a project phase' }
+            phase: { text: 'Select a project phase' },
+            status: { text: 'Select a status' },
+            commentary: { text: 'Enter project commentary' }
           })
         })
       )
@@ -505,8 +523,8 @@ describe('Add Project controller', () => {
           description: mockRequest.payload.description,
           phase: 'Discovery',
           defCode: 'TEST001',
-          status: 'TBC',
-          commentary: ''
+          status: 'GREEN',
+          commentary: 'Initial setup'
         }),
         requestWithExtraFields
       )
@@ -521,7 +539,9 @@ describe('Add Project controller', () => {
           name: '  Valid Project Name  ',
           phase: '  Discovery  ',
           description: '  Some description  ',
-          defCode: '  TEST001  '
+          defCode: '  TEST001  ',
+          status: 'GREEN',
+          commentary: 'Valid commentary'
         }
       }
       createProject.mockResolvedValue({ id: '999' })
@@ -560,7 +580,9 @@ describe('Add Project controller', () => {
           errorMessage: 'Please check your input - some fields are required',
           errors: expect.objectContaining({
             name: { text: 'Enter a project name' },
-            phase: { text: 'Select a project phase' }
+            phase: { text: 'Select a project phase' },
+            status: { text: 'Select a status' },
+            commentary: { text: 'Enter project commentary' }
           })
         })
       )

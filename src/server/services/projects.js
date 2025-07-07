@@ -1041,3 +1041,64 @@ export async function replaceAssessment(
     throw error
   }
 }
+
+// New: Replace a project status (create new + archive old)
+export async function replaceProjectStatus(projectId, newProjectData, request) {
+  try {
+    logger.info({ projectId }, 'Starting project status replacement process')
+
+    // Phase 1: Sequential calls (until backend replace endpoint is ready)
+
+    // 1. Get current project to verify it exists
+    const currentProject = await getProjectById(projectId, request)
+    if (!currentProject) {
+      throw new Error('No existing project found to replace')
+    }
+
+    // 2. Update project status/commentary
+    logger.info('Updating project status')
+    const updatedProject = await updateProject(
+      projectId,
+      newProjectData,
+      request
+    )
+
+    // 3. Get the project history to find the entry to archive
+    logger.info('Getting project history to find entry to archive')
+    const history = await getProjectHistory(projectId, request)
+
+    if (history.length > 0) {
+      // Find the most recent non-archived entry (should be the one we just created)
+      // We want to archive the previous one, so get the second most recent
+      const nonArchivedEntries = history.filter((entry) => !entry.archived)
+
+      if (nonArchivedEntries.length > 1) {
+        // Archive the second most recent (the old one)
+        const oldestRecentHistoryId = nonArchivedEntries[1].id
+        logger.info(
+          { historyId: oldestRecentHistoryId },
+          'Archiving previous project status history entry'
+        )
+
+        await archiveProjectHistoryEntry(
+          projectId,
+          oldestRecentHistoryId,
+          request
+        )
+      }
+    }
+
+    logger.info('Project status replacement completed successfully')
+    return updatedProject
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        projectId
+      },
+      'Failed to replace project status'
+    )
+    throw error
+  }
+}

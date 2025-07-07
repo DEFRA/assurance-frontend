@@ -13,7 +13,8 @@ import {
   updateAssessment,
   getAssessmentHistory,
   archiveAssessmentHistoryEntry,
-  replaceAssessment
+  replaceAssessment,
+  replaceProjectStatus
 } from './projects.js'
 
 // First declare the mocks
@@ -2352,5 +2353,158 @@ describe('replaceAssessment', () => {
       { method: 'POST' }
     )
     expect(result).toEqual(mockNewAssessment)
+  })
+})
+
+describe('replaceProjectStatus', () => {
+  const mockRequest = {
+    auth: { credentials: { token: 'test-token' } },
+    logger: { info: jest.fn(), error: jest.fn() }
+  }
+  const mockAuthedFetch = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+  })
+
+  test('should successfully replace a project status', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const newProjectData = { status: 'GREEN', commentary: 'Updated' }
+
+    const mockCurrentProject = {
+      id: 'project-1',
+      status: 'AMBER',
+      commentary: 'Old comment'
+    }
+    const mockUpdatedProject = {
+      id: 'project-1',
+      status: 'GREEN',
+      commentary: 'Updated'
+    }
+    const mockHistory = [
+      { id: 'hist-2', archived: false }, // New status (most recent)
+      { id: 'hist-1', archived: false } // Old status to archive
+    ]
+
+    // Mock API calls in sequence
+    mockAuthedFetch
+      .mockResolvedValueOnce(mockCurrentProject) // getProjectById call
+      .mockResolvedValueOnce(mockCurrentProject) // getProjectById call in updateProject
+      .mockResolvedValueOnce(mockUpdatedProject) // updateProject call
+      .mockResolvedValueOnce(mockHistory) // getProjectHistory call
+      .mockResolvedValueOnce({}) // archiveProjectHistoryEntry call
+
+    // Act
+    const result = await replaceProjectStatus(
+      projectId,
+      newProjectData,
+      mockRequest
+    )
+
+    // Assert
+    expect(mockAuthedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+    expect(mockAuthedFetch).toHaveBeenCalledTimes(5)
+
+    // Verify getProjectById call
+    expect(mockAuthedFetch).toHaveBeenNthCalledWith(
+      1,
+      '/api/v1.0/projects/project-1'
+    )
+
+    // Verify updateProject call (which includes its own getProjectById)
+    expect(mockAuthedFetch).toHaveBeenNthCalledWith(
+      3,
+      '/api/v1.0/projects/project-1',
+      {
+        method: 'PUT',
+        body: expect.stringContaining('"status":"GREEN"')
+      }
+    )
+
+    // Verify getProjectHistory call
+    expect(mockAuthedFetch).toHaveBeenNthCalledWith(
+      4,
+      '/api/v1.0/projects/project-1/history'
+    )
+
+    // Verify archiveProjectHistoryEntry call
+    expect(mockAuthedFetch).toHaveBeenNthCalledWith(
+      5,
+      '/api/v1.0/projects/project-1/history/hist-1/archive',
+      { method: 'PUT' }
+    )
+
+    expect(result).toEqual(mockUpdatedProject)
+  })
+
+  test('should throw error when no existing project found', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const newProjectData = { status: 'GREEN', commentary: 'Updated' }
+
+    mockAuthedFetch.mockResolvedValueOnce(null) // getProjectById returns null
+
+    // Act & Assert
+    await expect(
+      replaceProjectStatus(projectId, newProjectData, mockRequest)
+    ).rejects.toThrow('No existing project found to replace')
+  })
+
+  test('should handle empty project history', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const newProjectData = { status: 'GREEN', commentary: 'Updated' }
+
+    const mockCurrentProject = {
+      id: 'project-1',
+      status: 'AMBER',
+      commentary: 'Old comment'
+    }
+    const mockUpdatedProject = {
+      id: 'project-1',
+      status: 'GREEN',
+      commentary: 'Updated'
+    }
+
+    mockAuthedFetch
+      .mockResolvedValueOnce(mockCurrentProject) // getProjectById call
+      .mockResolvedValueOnce(mockCurrentProject) // getProjectById call in updateProject
+      .mockResolvedValueOnce(mockUpdatedProject) // updateProject call
+      .mockResolvedValueOnce([]) // getProjectHistory call (empty)
+
+    // Act
+    const result = await replaceProjectStatus(
+      projectId,
+      newProjectData,
+      mockRequest
+    )
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledTimes(4) // No archive call when history is empty
+    expect(result).toEqual(mockUpdatedProject)
+  })
+
+  test('should handle error during project status replacement', async () => {
+    // Arrange
+    const projectId = 'project-1'
+    const newProjectData = { status: 'GREEN', commentary: 'Updated' }
+
+    const mockCurrentProject = {
+      id: 'project-1',
+      status: 'AMBER',
+      commentary: 'Old comment'
+    }
+
+    mockAuthedFetch
+      .mockResolvedValueOnce(mockCurrentProject) // getProjectById call
+      .mockResolvedValueOnce(mockCurrentProject) // getProjectById call in updateProject
+      .mockRejectedValueOnce(new Error('Update failed')) // updateProject fails
+
+    // Act & Assert
+    await expect(
+      replaceProjectStatus(projectId, newProjectData, mockRequest)
+    ).rejects.toThrow('Update failed')
   })
 })

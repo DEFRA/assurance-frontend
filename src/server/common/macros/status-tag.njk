@@ -1,6 +1,6 @@
-{# Shared macro for rendering RAG status tags, including dual tags for AMBER_RED and GREEN_AMBER #}
-{% macro renderStatusTag(status, statusClassMap = {}, statusLabelMap = {}) %}
-  {# Internal default mappings if not provided #}
+{# Shared macro for rendering RAG status tags using GOV.UK Design System patterns #}
+{% macro renderStatusTag(status, statusClassMap = {}, statusLabelMap = {}) -%}
+  {# Internal default mappings using GOV.UK Design System tag modifiers #}
   {% set defaultClassMap = {
     'GREEN': 'govuk-tag--green',
     'GREEN_AMBER': 'govuk-tag--green govuk-tag--yellow',
@@ -17,6 +17,7 @@
     'RED': 'RED',
     'TBC': 'TBC'
   } %}
+  
   {% if statusClassMap|length > 0 %}
     {% set classMap = statusClassMap %}
   {% else %}
@@ -28,32 +29,15 @@
     {% set labelMap = defaultLabelMap %}
   {% endif %}
 
-  {% if status == 'AMBER_RED' %}
-    <span class="app-tag-list">
-     <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
-      <strong class="govuk-tag govuk-tag--red govuk-tag--uppercase">RED</strong>
-    </span>
-  {% elif status == 'GREEN_AMBER' %}
-    <span class="app-tag-list">
-    <strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong>
-      <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
-    </span>
-  {% elif status == 'TBC' %}
-    <strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">TBC</strong>
-  {% elif classMap[status] and labelMap[status] %}
-    <strong class="govuk-tag {{ classMap[status] }} govuk-tag--uppercase">{{ labelMap[status] }}</strong>
-  {% else %}
-    <strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">TBC</strong>
-  {% endif %}
-{% endmacro %}
-
-<style>
-  .govuk-tag--uppercase {
-    text-transform: uppercase;
-  }
-  .app-tag-list {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-</style>
+  {%- if status == 'AMBER_RED' -%}
+<span class="app-tag-list"><strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong><strong class="govuk-tag govuk-tag--red govuk-tag--uppercase">RED</strong></span>
+  {%- elif status == 'GREEN_AMBER' -%}
+<span class="app-tag-list"><strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong><strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong></span>
+  {%- elif status == 'TBC' -%}
+<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">TBC</strong>
+  {%- elif classMap[status] and labelMap[status] -%}
+<strong class="govuk-tag {{ classMap[status] }} govuk-tag--uppercase">{{ labelMap[status] }}</strong>
+  {%- else -%}
+<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">TBC</strong>
+  {%- endif -%}
+{%- endmacro %}

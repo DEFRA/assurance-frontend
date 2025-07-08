@@ -42,10 +42,12 @@
       </div>
       
       <!-- Current delivery status heading -->
-      <h2 class="govuk-heading-m govuk-!-margin-top-4 govuk-!-margin-bottom-3 inline-heading">
-        Current delivery status:
-        {{ renderStatusTag(project.status) }}
-      </h2>
+      <div class="govuk-!-margin-top-4 govuk-!-margin-bottom-3">
+        <h2 class="govuk-heading-m inline-heading">
+          <span>Current delivery status:</span>
+          <span>{{ renderStatusTag(project.status) }}</span>
+        </h2>
+      </div>
       
       <!-- Full width inset -->
       {% set commentaryContent %}
@@ -234,10 +236,16 @@
   }
 
   .inline-heading {
-    display: flex;
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin: 0 !important;
+  }
+  
+  .inline-heading span {
+    display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
   }
 
   /* Timeline styles for engagement tab */

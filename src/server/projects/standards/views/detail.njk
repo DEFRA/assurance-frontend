@@ -103,50 +103,39 @@
           {% endif %}
           
           <div class="govuk-!-margin-bottom-6">
-            {% if isAdmin and assessment.mostRecentHistoryId %}
-              {% set actionItems = [
-                {
-                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
-                  text: "History",
-                  visuallyHiddenText: "for " + assessment.professionDisplayName
-                },
-                                  {
+            {% if isAdmin %}
+              {% if assessment.mostRecentHistoryId %}
+                {% set actionItems = [
+                  {
+                    href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
+                    text: "History",
+                    visuallyHiddenText: "for " + assessment.professionDisplayName
+                  },
+                  {
                     href: "/projects/" + project.id + "/assessment?edit=true&standardId=" + standard.id + "&professionId=" + assessment.professionId,
                     text: "Edit",
                     visuallyHiddenText: "assessment for " + assessment.professionDisplayName
                   },
-                {
-                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history/" + assessment.mostRecentHistoryId + "/archive?returnTo=detail",
-                  text: "Archive",
-                  visuallyHiddenText: "assessment for " + assessment.professionDisplayName
-                }
-              ] %}
-            {% elif isAdmin %}
-              {% set actionItems = [
-                {
-                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
-                  text: "History",
-                  visuallyHiddenText: "for " + assessment.professionDisplayName
-                },
-                {
-                  href: "/projects/" + project.id + "/assessment?edit=true&standardId=" + standard.id + "&professionId=" + assessment.professionId,
-                  text: "Edit",
-                  visuallyHiddenText: "assessment for " + assessment.professionDisplayName
-                }
-              ] %}
-            {% elif isAdmin and assessment.mostRecentHistoryId %}
-              {% set actionItems = [
-                {
-                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
-                  text: "History",
-                  visuallyHiddenText: "for " + assessment.professionDisplayName
-                },
-                {
-                  href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history/" + assessment.mostRecentHistoryId + "/archive?returnTo=detail",
-                  text: "Archive",
-                  visuallyHiddenText: "assessment for " + assessment.professionDisplayName
-                }
-              ] %}
+                  {
+                    href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history/" + assessment.mostRecentHistoryId + "/archive?returnTo=detail",
+                    text: "Archive",
+                    visuallyHiddenText: "assessment for " + assessment.professionDisplayName
+                  }
+                ] %}
+              {% else %}
+                {% set actionItems = [
+                  {
+                    href: "/projects/" + project.id + "/standards/" + standard.id + "/professions/" + assessment.professionId + "/history",
+                    text: "History",
+                    visuallyHiddenText: "for " + assessment.professionDisplayName
+                  },
+                  {
+                    href: "/projects/" + project.id + "/assessment?edit=true&standardId=" + standard.id + "&professionId=" + assessment.professionId,
+                    text: "Edit",
+                    visuallyHiddenText: "assessment for " + assessment.professionDisplayName
+                  }
+                ] %}
+              {% endif %}
             {% else %}
               {% set actionItems = [
                 {

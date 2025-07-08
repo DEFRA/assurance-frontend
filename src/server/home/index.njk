@@ -22,9 +22,10 @@
             </div>
           </div>
           <div class="govuk-grid-column-one-third">
-            <div class="govuk-form-group" style="margin-top: 30px;">
+            <div class="govuk-form-group govuk-!-margin-top-6">
               {{ govukButton({
-                text: "Search"
+                text: "Search",
+                type: "submit"
               }) }}
               
               {% if searchTerm %}
@@ -41,131 +42,29 @@
         </p>
       {% endif %}
 
-      {% if projects and projects.length > 0 %}
-        {% set tableRows = [] %}
-        {% for project in projects %}
-          {% set row = [
-            {
-              html: "<a href='/projects/" + project.id + "' class='govuk-link'>" + project.name + "</a>"
-            },
-            {
-              html: renderStatusTag(project.status)
-            }
-          ] %}
-          {% set tableRows = (tableRows.push(row), tableRows) %}
-        {% endfor %}
+      {% if searchTerm %}
+        <h2 class="govuk-heading-m">Search results for: "{{ searchTerm }}"</h2>
+        {% if projects.length == 0 %}
+          <p class="govuk-body">No projects found matching your search.</p>
+          <p class="govuk-body"><a href="/" class="govuk-link">View all projects</a></p>
+        {% endif %}
+      {% endif %}
 
+      {% if projects.length > 0 %}
         {{ govukTable({
-          caption: "List of projects and their current status",
+          caption: "List of projects" if not searchTerm else "Search results",
           captionClasses: "govuk-visually-hidden",
           head: [
-            {
-              text: "Project name"
-            },
-            {
-              text: "RAG status"
-            }
+            { text: "Project name" },
+            { text: "RAG status" }
           ],
-          rows: tableRows
+          rows: projects | projectTableRows
         }) }}
-      {% else %}
-        <p class="govuk-body">No projects found.</p>
+      {% elif not searchTerm %}
+        <p class="govuk-body">No projects available.</p>
       {% endif %}
     </div>
   </div>
-{% endblock %}
-
-{% block pageStyles %}
-<style>
-  /* Add GDS Transport font for autocomplete */
-  @font-face {
-    font-family: "GDS Transport";
-    src: url("/fonts/light-94a07e06a1-v2.woff2") format("woff2");
-    font-weight: normal;
-    font-style: normal;
-    font-display: fallback;
-  }
-  
-  @font-face {
-    font-family: "GDS Transport";
-    src: url("/fonts/bold-b542beb274-v2.woff2") format("woff2");
-    font-weight: bold;
-    font-style: normal;
-    font-display: fallback;
-  }
-  
-  /* Override autocomplete with GDS styling - using more specific selectors */
-  .govuk-template .autocomplete__wrapper * {
-    font-family: "GDS Transport", arial, sans-serif !important;
-  }
-  
-  .govuk-template .autocomplete__wrapper {
-    font-family: "GDS Transport", arial, sans-serif !important;
-  }
-  
-  .govuk-template .autocomplete__input {
-    font-family: "GDS Transport", arial, sans-serif !important;
-    font-size: 19px !important;
-    line-height: 1.25 !important;
-    padding: 5px !important;
-    height: 40px !important;
-    border: 2px solid #0b0c0c !important;
-  }
-  
-  /* Target the menu and options specifically */
-  .govuk-template .autocomplete__menu {
-    font-family: "GDS Transport", arial, sans-serif !important;
-    background-color: #fff !important;
-    border: 2px solid #0b0c0c !important;
-    border-top: 0 !important;
-    width: 100% !important;
-    max-height: 342px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  
-  /* Target all options in the dropdown */
-  .govuk-template .autocomplete__menu .autocomplete__option {
-    font-family: "GDS Transport", arial, sans-serif !important;
-    font-size: 16px !important;
-    line-height: 1.5 !important;
-    padding: 8px !important;
-    border-bottom: 1px solid #b1b4b6 !important;
-    color: #0b0c0c !important;
-    background-color: #fff !important;
-  }
-  
-  /* Target odd options specifically */
-  .govuk-template .autocomplete__menu .autocomplete__option--odd {
-    background-color: #f3f2f1 !important;
-  }
-  
-  /* Override hover and focus states */
-  .govuk-template .autocomplete__menu .autocomplete__option:hover,
-  .govuk-template .autocomplete__menu .autocomplete__option--focused {
-    background-color: #1d70b8 !important;
-    border-color: #1d70b8 !important;
-    color: white !important;
-    outline: none !important;
-  }
-  
-  /* Selected option */
-  .govuk-template .autocomplete__menu .autocomplete__option--selected {
-    background-color: #1d70b8 !important;
-    color: white !important;
-  }
-  
-  /* Override media query styles */
-  @media (min-width: 641px) {
-    .govuk-template .autocomplete__hint,
-    .govuk-template .autocomplete__input,
-    .govuk-template .autocomplete__option {
-      font-family: "GDS Transport", arial, sans-serif !important;
-      font-size: 19px !important;
-      line-height: 1.31579 !important;
-    }
-  }
-</style>
 {% endblock %}
 
 {% block pageScripts %}
@@ -205,15 +104,25 @@
         minLength: 2,
         displayMenu: 'overlay',
         onConfirm: function(selectedProjectName) {
-          if (selectedProjectName) {
-            // Only navigate directly if the name exactly matches a project
+          // Always submit the form when a value is confirmed (either by selection or Enter)
+          const form = document.querySelector('form[method="GET"]');
+          
+          if (selectedProjectName && selectedProjectName.trim()) {
+            // Check if this is an exact project match for direct navigation
             const project = projectsByName[selectedProjectName];
             if (project && project.id && selectedProjectName === project.name) {
+              // Direct navigation for exact matches
               window.location.href = `/projects/${project.id}`;
-            } else {
-              // Otherwise submit the form to perform a search
-              form.submit();
+              return;
             }
+          }
+          
+          // For all other cases (partial matches, no matches, or any text), submit the form
+          if (form) {
+            // Use a small timeout to ensure the input value is properly set
+            setTimeout(() => {
+              form.submit();
+            }, 50);
           }
         },
         tNoResults: function() { 
@@ -224,126 +133,69 @@
         }
       });
       
-      // Handle form submission
-      const form = document.querySelector('form');
-      const autocompleteInput = document.querySelector('.autocomplete__input');
+      const form = document.querySelector('form[method="GET"]');
       
-      // Add keydown event listener for enter key
-      if (autocompleteInput) {
-        autocompleteInput.addEventListener('keydown', function(event) {
-          if (event.key === 'Enter') {
+      // Handle form submission for search functionality
+      if (form) {
+        formSubmitHandler = function(event) {
+          const searchInput = document.querySelector('#search');
+          
+          // If search input is empty, redirect to home page
+          if (searchInput && !searchInput.value.trim()) {
             event.preventDefault();
-            form.submit();
+            window.location.href = '/';
+            return;
           }
-        });
+          
+          // If search input has value, allow normal form submission
+          // No need to prevent default - let the form submit normally with GET parameters
+        };
+        
+        form.addEventListener('submit', formSubmitHandler);
       }
       
-      formSubmitHandler = function(event) {
-        // Get the visible input from the autocomplete
-        const autocompleteInput = document.querySelector('.autocomplete__input');
-        
-        // Get the hidden input created by the autocomplete component
-        const hiddenInput = form.querySelector('input[name="search"]');
-        
-        if (autocompleteInput && hiddenInput) {
-          // Ensure the hidden input has the value from the visible input
-          hiddenInput.value = autocompleteInput.value;
-        }
-        
-        // Always allow form submission
-        return true;
-      };
-      
-      form.addEventListener('submit', formSubmitHandler);
-      
-      // Inject GDS Transport font styling directly after component initialization
-      // This ensures our styles will be applied last and override the component's default styles
-      setTimeout(function() {
-        const styleEl = document.createElement('style');
-        styleEl.textContent = `
-          /* Force GDS Transport font on all autocomplete elements */
-          .autocomplete__wrapper * {
-            font-family: "GDS Transport", arial, sans-serif !important;
-          }
-          
-          .autocomplete__input {
-            font-family: "GDS Transport", arial, sans-serif !important;
-            font-size: 19px !important;
-            line-height: 1.25 !important;
-            padding: 5px !important;
-            height: 40px !important;
-            border: 2px solid #0b0c0c !important;
-          }
-          
-          .autocomplete__menu {
-            font-family: "GDS Transport", arial, sans-serif !important;
-            background-color: #fff !important;
-            border: 2px solid #0b0c0c !important;
-            border-top: 0 !important;
-            width: 100% !important;
-            max-height: 342px !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          
-          .autocomplete__menu .autocomplete__option {
-            font-family: "GDS Transport", arial, sans-serif !important;
-            font-size: 16px !important;
-            line-height: 1.5 !important;
-            padding: 8px !important;
-            border-bottom: 1px solid #b1b4b6 !important;
-            color: #0b0c0c !important;
-            background-color: #fff !important;
-          }
-          
-          .autocomplete__menu .autocomplete__option--odd {
-            background-color: #f3f2f1 !important;
-          }
-          
-          .autocomplete__menu .autocomplete__option:hover,
-          .autocomplete__menu .autocomplete__option--focused {
-            background-color: #1d70b8 !important;
-            border-color: #1d70b8 !important;
-            color: white !important;
-            outline: none !important;
-          }
-          
-          .autocomplete__menu .autocomplete__option--selected {
-            background-color: #1d70b8 !important;
-            color: white !important;
-          }
-          
-          /* Override media query styles */
-          @media (min-width: 641px) {
-            .autocomplete__hint,
-            .autocomplete__input,
-            .autocomplete__option {
-              font-family: "GDS Transport", arial, sans-serif !important;
-              font-size: 19px !important;
-              line-height: 1.31579 !important;
+      // Add fallback Enter key handler after autocomplete is initialized
+      setTimeout(() => {
+        const searchInputElement = document.querySelector('#search');
+        if (searchInputElement) {
+          searchInputElement.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+              event.preventDefault(); // Prevent default to avoid double submission
+              // Submit the form after a small delay
+              setTimeout(() => {
+                if (this.value && this.value.trim()) {
+                  const form = document.querySelector('form[method="GET"]');
+                  if (form) {
+                    form.submit();
+                  }
+                }
+              }, 50);
             }
-          }
-        `;
-        document.head.appendChild(styleEl);
-      }, 100); // Small delay to ensure autocomplete is fully initialized
+          });
+        }
+      }, 200); // Wait for autocomplete to be fully initialized
     };
 
-    // Add the DOMContentLoaded listener
-    document.addEventListener('DOMContentLoaded', domContentLoadedHandler);
+    // Event listener setup
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', domContentLoadedHandler);
+    } else {
+      domContentLoadedHandler();
+    }
 
-    // Cleanup function to remove event listeners
-    function cleanup() {
-      const form = document.querySelector('form');
-      if (form && formSubmitHandler) {
-        form.removeEventListener('submit', formSubmitHandler);
+    // Cleanup function
+    window.addEventListener('beforeunload', function() {
+      if (formSubmitHandler) {
+        const form = document.querySelector('form[method="GET"]');
+        if (form) {
+          form.removeEventListener('submit', formSubmitHandler);
+        }
       }
+      
       if (domContentLoadedHandler) {
         document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
       }
-    }
-
-    // Clean up event listeners when the page is unloaded
-    window.addEventListener('unload', cleanup);
+    });
   })();
 </script>
 {% endblock %}

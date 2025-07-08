@@ -1,37 +1,79 @@
 {% extends "govuk/template.njk" %}
 
 {# Import GOVUK components globally #}
+{% from "govuk/components/header/macro.njk" import govukHeader %}
+{% from "govuk/components/footer/macro.njk" import govukFooter %}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 {% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/skip-link/macro.njk" import govukSkipLink %}
 
 {# Import custom components globally #}
 {% from "heading/macro.njk" import appHeading %}
 
 {% set mainClasses = "app-main-wrapper" %}
 
+{# Enable rebrand by adding the rebrand class to html element #}
+{% set htmlClasses = "govuk-template--rebranded" %}
+
 {% block head %}
   <link href="{{ getAssetPath('stylesheets/application.scss') }}" rel="stylesheet">
   <link rel="stylesheet" href="{{ getAssetPath('accessible-autocomplete.min.css') }}">
 {% endblock %}
 
+{% block skipLink %}
+  {{ govukSkipLink({
+    href: "#main-content",
+    text: "Skip to main content"
+  }) }}
+{% endblock %}
+
 {% block header %}
+  {# New GOV.UK header with brand refresh #}
   {{ govukHeader({
     homepageUrl: "https://www.gov.uk/",
-    classes: "app-header",
     containerClasses: "govuk-width-container",
-    serviceName: serviceName,
-    serviceUrl: serviceUrl,
-    useTudorCrown: true
+    serviceName: (serviceName or "DDTS Assurance"),
+    serviceUrl: (serviceUrl or "/"),
+    useTudorCrown: true,
+    rebrand: true
   }) }}
-  {% include "partials/navigation/navigation.njk" %}
+  
+  {# Service navigation as separate component following new guidance #}
+  <div class="govuk-service-navigation" data-module="govuk-service-navigation">
+    <div class="govuk-width-container">
+      <div class="govuk-service-navigation__container">
+        <nav aria-label="Service navigation" class="govuk-service-navigation__wrapper">
+          <ul class="govuk-service-navigation__list">
+            <li class="govuk-service-navigation__item{% if currentPath == '/' or (currentPath and currentPath.startsWith('/projects')) %} govuk-service-navigation__item--active{% endif %}">
+              <a class="govuk-service-navigation__link" href="/">Projects</a>
+            </li>
+            {% if isAdmin %}
+            <li class="govuk-service-navigation__item{% if currentPath and currentPath.startsWith('/admin') %} govuk-service-navigation__item--active{% endif %}">
+              <a class="govuk-service-navigation__link" href="/admin">Admin</a>
+            </li>
+            <li class="govuk-service-navigation__item{% if currentPath and currentPath.startsWith('/professions') %} govuk-service-navigation__item--active{% endif %}">
+              <a class="govuk-service-navigation__link" href="/professions">Professions</a>
+            </li>
+            {% endif %}
+            <li class="govuk-service-navigation__item govuk-service-navigation__item--end">
+              <a class="govuk-service-navigation__link" href="{{ '/auth/logout' if isAuthenticated else '/auth/login' }}">
+                {{ 'Sign out' if isAuthenticated else 'Sign in' }}
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+  
   <div class="govuk-width-container">
     <div role="complementary" aria-label="Service information">
-    {{ govukPhaseBanner({
-      tag: {
-        text: "Beta"
-      },
-      html: 'This is a new service – <a class="govuk-link" href="mailto:CCTSAssurance@defra.gov.uk?subject=Assurance%20Service%20feedback">give your feedback by email</a>.'
-    }) }}
+      {{ govukPhaseBanner({
+        tag: {
+          text: "Beta"
+        },
+        html: 'This is a new service – <a class="govuk-link" href="mailto:CCTSAssurance@defra.gov.uk?subject=Assurance%20Service%20feedback">give your feedback by email</a>.'
+      }) }}
     </div>
   </div>
 {% endblock %}
@@ -41,12 +83,10 @@
 {% endblock %}
 
 {% block beforeContent %}
-  {% if breadcrumbs.length > 1 %}
-    <nav aria-label="Breadcrumb">
+  {% if breadcrumbs and breadcrumbs.length > 1 %}
     {{ govukBreadcrumbs({
       items: breadcrumbs
     }) }}
-    </nav>
   {% endif %}
 {% endblock %}
 
@@ -61,12 +101,16 @@
           text: "Privacy"
         },
         {
-          href: "https://www.gov.uk/help/cookies",
+          href: "https://www.gov.uk/help/cookies", 
           text: "Cookies"
         },
         {
           href: "https://www.gov.uk/help/accessibility-statement",
           text: "Accessibility statement"
+        },
+        {
+          href: "https://www.gov.uk/help/contact-government",
+          text: "Contact"
         }
       ]
     }

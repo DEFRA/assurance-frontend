@@ -1,7 +1,8 @@
 @use 'variables/colours' as *;
 
-// Example namespaced custom element style CSS classes
+// Custom header styles following new GOV.UK Design System guidance
 
-.app-header {
-  border-bottom-color: $app-light-grey;
+// Service navigation custom spacing if needed
+.govuk-service-navigation {
+  // Any custom service navigation styles can go here if needed
 }

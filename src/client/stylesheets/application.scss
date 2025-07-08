@@ -1,34 +1,17 @@
-@use 'govuk-frontend';
+@use 'govuk-frontend' as *;
 
 @use 'variables';
 @use 'helpers';
 @use 'core';
 @use 'components';
-@use 'partials';
 
+// GOV.UK Design System overrides and extensions
 .govuk-summary-card {
   height: 100%;
 
   &__content {
     display: flex;
     flex-direction: column;
-  }
-
-  // Fix spacing for summary card action links
-  &__action {
-    border-right: 1px solid #b1b4b6;
-    display: inline;
-    padding-right: 15px;
-
-    // Add padding to all except first
-    &:not(:first-child) {
-      padding-left: 15px;
-    }
-
-    // Remove border from last action item
-    &:last-child {
-      border-right: none;
-    }
   }
 }
 
@@ -37,77 +20,189 @@
   white-space: nowrap;
 }
 
-// Timeline Component Styles
-.timeline {
-  margin-bottom: 1.5em;
+// Custom app components using GOV.UK patterns
+.app-tag-list {
+  display: inline-flex;
+  gap: govuk-spacing(2);
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+// Inline heading component for status display
+// Use class combination for higher specificity without !important
+.govuk-heading-m.inline-heading,
+.govuk-heading-s.inline-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: govuk-spacing(2);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+.govuk-tag--uppercase {
+  text-transform: uppercase;
+}
+
+// Standards at risk table styling
+.app-standards-table {
+  td {
+    vertical-align: top;
+  }
+
+  // Make the table more compact
+  td,
+  th {
+    padding: govuk-spacing(2) govuk-spacing(4) govuk-spacing(2) 0;
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-right: 0;
+  }
+
+  // Preserve line breaks in commentary column
+  td:nth-child(4) {
+    white-space: pre-wrap;
+  }
+}
+
+// Accessible autocomplete GOV.UK styling
+.autocomplete__wrapper {
   position: relative;
 }
 
-.timeline::before {
-  background-color: #000000;
-  content: '';
-  height: 100%;
-  left: 0;
+.autocomplete__input {
+  @include govuk-font($size: 19);
+  @include govuk-text-colour;
+  background-color: govuk-colour('white');
+  border: 2px solid govuk-colour('black');
+  box-sizing: border-box;
+  border-radius: 0;
+  padding: govuk-spacing(2);
+  width: 100%;
+
+  &:focus {
+    border-color: govuk-colour('yellow');
+    box-shadow: 0 0 0 3px govuk-colour('yellow');
+    outline: none;
+  }
+}
+
+.autocomplete__menu {
+  @include govuk-font($size: 19);
+  background-color: govuk-colour('white');
+  border: 2px solid govuk-colour('black');
+  border-top: none;
+  border-radius: 0;
+  box-sizing: border-box;
+  max-height: 342px;
+  overflow-y: auto;
   position: absolute;
-  top: 0;
-  width: 5px;
+  top: 100%;
+  width: 100%;
+  z-index: 1000;
+}
+
+.autocomplete__option {
+  @include govuk-font($size: 19);
+  @include govuk-text-colour;
+  border-bottom: 1px solid govuk-colour('mid-grey');
+  cursor: pointer;
+  display: block;
+  padding: govuk-spacing(2);
+  font-family: 'GDS Transport', arial, sans-serif;
+  line-height: 1.25;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover,
+  &:focus {
+    background-color: govuk-colour('light-blue');
+    color: govuk-colour('black');
+    @include govuk-font($size: 19);
+  }
+
+  &[aria-selected='true'] {
+    background-color: govuk-colour('blue');
+    color: govuk-colour('white');
+    @include govuk-font($size: 19);
+  }
+}
+
+// Ensure all autocomplete text elements use GOV.UK fonts
+// Use more specific selectors to avoid !important
+.autocomplete__wrapper .autocomplete__input,
+.autocomplete__wrapper .autocomplete__menu,
+.autocomplete__wrapper .autocomplete__option,
+.autocomplete__wrapper .autocomplete__hint {
+  font-family: 'GDS Transport', arial, sans-serif;
+}
+
+.autocomplete__hint {
+  @include govuk-font($size: 19);
+  @include govuk-text-colour;
+  position: absolute;
+  left: govuk-spacing(2);
+  top: govuk-spacing(2);
+  pointer-events: none;
+  color: govuk-colour('dark-grey');
+}
+
+// Timeline component using GOV.UK spacing and typography
+.timeline {
+  margin-bottom: govuk-spacing(6);
+  position: relative;
+
+  &::before {
+    background-color: govuk-colour('black');
+    content: '';
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 5px;
+  }
 }
 
 .timeline__event {
-  margin-bottom: 20px;
-  padding-left: 20px;
+  margin-bottom: govuk-spacing(4);
+  padding-left: govuk-spacing(4);
   position: relative;
-}
 
-.timeline__event::before {
-  background-color: #000000;
-  content: '';
-  height: 5px;
-  left: 0;
-  position: absolute;
-  top: 10px;
-  width: 15px;
+  &::before {
+    background-color: govuk-colour('black');
+    content: '';
+    height: 5px;
+    left: 0;
+    position: absolute;
+    top: govuk-spacing(2);
+    width: 15px;
+  }
 }
 
 .timeline__event-title {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 8px;
+  @include govuk-font($size: 24, $weight: bold);
+  margin-bottom: govuk-spacing(2);
   margin-top: 0;
 }
 
 .timeline__event-meta {
-  color: #505a5f;
+  @include govuk-font($size: 16);
+  color: govuk-colour('dark-grey');
   display: block;
-  font-size: 16px;
-  margin-bottom: 10px;
+  margin-bottom: govuk-spacing(2);
 }
 
 .timeline__event-content {
+  @include govuk-font($size: 19);
   margin: 0;
-}
-
-// Status colors
-.tag-red {
-  background-color: #d4351c;
-  color: #ffffff;
-}
-
-.tag-yellow {
-  background-color: #ffdd00;
-  color: #0b0c0c;
-}
-
-.tag-green {
-  background-color: #00703c;
-  color: #ffffff;
-}
-
-.timeline-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  font-weight: 700;
-  font-size: 14px;
-  border-radius: 3px;
-  margin-left: 8px;
 }

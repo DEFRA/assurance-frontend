@@ -23,6 +23,7 @@ import {
   VIEW_TEMPLATES
 } from '~/src/server/constants/notifications.js'
 import { SERVICE_STANDARD_STATUS_OPTIONS } from '~/src/server/constants/status.js'
+import { serviceStandardChecklists } from '~/src/server/data/service-standard-checklists.js'
 
 export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND
@@ -47,6 +48,7 @@ const ERROR_MESSAGES = {
 }
 
 const HTTP_STATUS = {
+  OK: 200,
   NOT_FOUND: 404,
   INTERNAL_SERVER_ERROR: 500
 }
@@ -114,6 +116,7 @@ function createAssessmentViewData(
     error,
     statusOptions: SERVICE_STANDARD_STATUS_OPTIONS,
     professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX),
+    serviceStandardChecklists: JSON.stringify(serviceStandardChecklists),
     values: {},
     errors: {}
   }
@@ -977,6 +980,32 @@ export const standardsController = {
           `/projects/${id}/standards/${standardId}/professions/${professionId}/history?notification=${NOTIFICATIONS.FAILED_TO_ARCHIVE_ASSESSMENT}`
         )
       }
+    }
+  },
+
+  // Handler to get assessment data as JSON for AJAX requests
+  getAssessmentData: async (request, h) => {
+    const { id: projectId, standardId, professionId } = request.params
+
+    try {
+      const assessment = await getAssessment(
+        projectId,
+        standardId,
+        professionId,
+        request
+      )
+
+      if (!assessment) {
+        return h.response().code(HTTP_STATUS.NOT_FOUND)
+      }
+
+      return h.response(assessment).code(HTTP_STATUS.OK)
+    } catch (error) {
+      request.logger.error(
+        { error, projectId, standardId, professionId },
+        'Error fetching assessment data'
+      )
+      return h.response().code(HTTP_STATUS.INTERNAL_SERVER_ERROR)
     }
   }
 }

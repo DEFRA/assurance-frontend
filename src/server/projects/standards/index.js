@@ -34,6 +34,11 @@ export const standardsRoutes = {
           handler: standardsController.getAssessmentScreen
         },
         {
+          method: 'GET',
+          path: '/projects/{id}/standards/{standardId}/professions/{professionId}/assessment',
+          handler: standardsController.getAssessmentData
+        },
+        {
           method: 'POST',
           path: '/projects/{id}/assessment',
           handler: standardsController.postAssessmentScreen,

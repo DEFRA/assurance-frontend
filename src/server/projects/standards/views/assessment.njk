@@ -5,6 +5,8 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-message/macro.njk" import govukErrorMessage %}
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 
 {% block content %}
   <div class="govuk-grid-row">
@@ -106,6 +108,13 @@
             }
           }) }}
         {% endif %}
+
+        <!-- Help section for the selected service standard -->
+        <div id="standard-help" class="govuk-!-margin-top-4 govuk-!-margin-bottom-4" style="display: none;">
+          <div id="standard-help-content">
+            <!-- Content will be populated by JavaScript -->
+          </div>
+        </div>
 
         {{ govukSelect({
           id: "status",
@@ -232,6 +241,7 @@
     const projectPhase = "{{ projectPhase }}";
     const professionStandardMatrix = {%- if professionStandardMatrix -%}{{ professionStandardMatrix | safe }}{%- else -%}{}{%- endif -%};
     const isEditMode = {{ 'true' if isEditMode else 'false' }};
+    const serviceStandardChecklists = {%- if serviceStandardChecklists -%}{{ serviceStandardChecklists | safe }}{%- else -%}{}{%- endif -%};
 
     // Get DOM elements
     const professionSelect = document.getElementById('professionId');
@@ -241,6 +251,149 @@
     const nonGreenCommentary = document.getElementById('non-green-commentary');
     const form = document.querySelector('form');
 
+    // Function to get standard number from standard ID
+    function getStandardNumber(standardId) {
+      if (!standardId || !allStandards) return null;
+      
+      const standard = allStandards.find(s => s.id === standardId);
+      return standard ? standard.number : null;
+    }
+
+    // Function to update help section based on selected standard
+    function updateStandardHelp(standardId) {
+      const helpSection = document.getElementById('standard-help');
+      const helpContent = document.getElementById('standard-help-content');
+      
+      if (!standardId) {
+        helpSection.style.display = 'none';
+        return;
+      }
+      
+      const standardNumber = getStandardNumber(standardId);
+      const checklist = serviceStandardChecklists[standardNumber];
+      
+      if (!checklist) {
+        helpSection.style.display = 'none';
+        return;
+      }
+      
+      // Create the details component HTML
+      const checklistItems = checklist.checklist.map(item => 
+        `<li class="govuk-list__item">${item}</li>`
+      ).join('');
+      
+      const detailsHtml = `
+        <details class="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">
+              Help with this Service Standard
+            </span>
+          </summary>
+          <div class="govuk-details__text">
+            <h3 class="govuk-heading-s">
+              <a href="${checklist.url}" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                ${standardNumber}. ${checklist.title} (opens in new tab)
+              </a>
+            </h3>
+            <p class="govuk-body">Consider the following when updating this standard:</p>
+            <ul class="govuk-list govuk-list--bullet">
+              ${checklistItems}
+            </ul>
+          </div>
+        </details>
+      `;
+      
+      helpContent.innerHTML = detailsHtml;
+      helpSection.style.display = 'block';
+    }
+
+    // Function to fetch current assessment and pre-populate form fields
+    async function fetchCurrentAssessment(professionId, standardId) {
+      if (!professionId || !standardId) {
+        clearFormFields();
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/projects/{{ projectId }}/standards/${standardId}/professions/${professionId}/assessment`);
+        
+        if (response.ok) {
+          const assessment = await response.json();
+          if (assessment) {
+            populateFormFields(assessment);
+          } else {
+            clearFormFields();
+          }
+        } else {
+          clearFormFields();
+        }
+      } catch (error) {
+        console.log('Could not fetch current assessment:', error);
+        clearFormFields();
+      }
+    }
+    
+    // Function to populate form fields with current assessment data
+    function populateFormFields(assessment) {
+      // Set the status dropdown
+      if (assessment.status && statusSelect) {
+        statusSelect.value = assessment.status;
+        // Trigger change event to show/hide appropriate commentary fields
+        updateCommentaryFields();
+      }
+      
+      // Handle commentary based on status
+      if (assessment.commentary) {
+        if (assessment.status === 'GREEN') {
+          // For green status, put commentary in the green commentary field
+          const greenCommentary = document.getElementById('commentary-green');
+          if (greenCommentary) {
+            greenCommentary.value = assessment.commentary;
+          }
+        } else {
+          // For non-green status, split commentary by "Path to green:" if present
+          const commentary = assessment.commentary;
+          if (commentary.includes('Path to green:')) {
+            const parts = commentary.split('Path to green:');
+            const issue = parts[0] ? parts[0].trim() : '';
+            const path = parts[1] ? parts[1].trim() : '';
+            
+            const issueField = document.getElementById('issue-description');
+            const pathField = document.getElementById('path-to-green');
+            
+            if (issueField) issueField.value = issue;
+            if (pathField) pathField.value = path;
+          } else {
+            // No "Path to green:" separator, put all in issue description
+            const issueField = document.getElementById('issue-description');
+            if (issueField) issueField.value = commentary;
+          }
+        }
+        
+        // Update the combined commentary field
+        updateCommentaryField();
+      }
+    }
+    
+    // Function to clear form fields
+    function clearFormFields() {
+      if (statusSelect) {
+        statusSelect.value = '';
+      }
+      
+      const greenCommentary = document.getElementById('commentary-green');
+      const issueField = document.getElementById('issue-description');
+      const pathField = document.getElementById('path-to-green');
+      
+      if (greenCommentary) greenCommentary.value = '';
+      if (issueField) issueField.value = '';
+      if (pathField) pathField.value = '';
+      
+      // Update commentary fields visibility and combined field
+      updateCommentaryFields();
+      updateCommentaryField();
+    }
+
     // Function to update standards dropdown based on selected profession
     function updateStandardsDropdown() {
       const selectedProfession = professionSelect.value;
@@ -249,6 +402,7 @@
       standardSelect.innerHTML = '<option value="">Choose a service standard</option>';
       
       if (!selectedProfession || !projectPhase || projectPhase === '') {
+        clearFormFields();
         return;
       }
 
@@ -289,6 +443,14 @@
         option.disabled = true;
         standardSelect.appendChild(option);
       }
+      
+      // Update help section and check for current assessment
+      updateStandardHelp(standardSelect.value);
+              if (standardSelect.value) {
+          fetchCurrentAssessment(selectedProfession, standardSelect.value);
+        } else {
+          clearFormFields();
+        }
     }
 
     // Function to show/hide commentary fields based on status
@@ -351,6 +513,16 @@
         if (professionSelect) {
           professionSelect.addEventListener('change', updateStandardsDropdown);
         }
+        if (standardSelect) {
+          standardSelect.addEventListener('change', function() {
+            updateStandardHelp(this.value);
+            if (this.value && professionSelect.value) {
+              fetchCurrentAssessment(professionSelect.value, this.value);
+            } else {
+              clearFormFields();
+            }
+          });
+        }
       }
       
       // Always add status and form listeners
@@ -365,6 +537,16 @@
       // Initialize on page load
       if (!editMode && professionSelect && professionSelect.value) {
         updateStandardsDropdown();
+      }
+      
+      // For edit mode, show help and current assessment for the pre-selected standard
+      if (editMode) {
+        const selectedStandardId = '{{ selectedValues.standardId if selectedValues else "" }}';
+        const selectedProfessionId = '{{ selectedValues.professionId if selectedValues else "" }}';
+        if (selectedStandardId) {
+          updateStandardHelp(selectedStandardId);
+          // In edit mode, form fields are already pre-populated, so no need to fetch current assessment
+        }
       }
       
       // Force trigger update

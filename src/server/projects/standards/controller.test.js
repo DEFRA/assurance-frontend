@@ -1590,4 +1590,194 @@ describe('Standards Controller', () => {
       )
     })
   })
+
+  describe('getAssessmentData', () => {
+    let mockResponseObject
+
+    beforeEach(() => {
+      // Mock response object that has code() method
+      mockResponseObject = {
+        code: jest.fn().mockReturnThis()
+      }
+
+      // Mock h.response() to return the response object
+      mockH.response = jest.fn().mockReturnValue(mockResponseObject)
+    })
+
+    test('should return assessment data as JSON when assessment exists', async () => {
+      // Arrange
+      const mockAssessment = {
+        id: 'assessment-123',
+        projectId: 'project-123',
+        standardId: 'std-1',
+        professionId: 'prof-1',
+        status: 'RED',
+        commentary: 'Needs improvement\n\nPath to green: Fix security issues',
+        lastUpdated: '2023-01-01T10:00:00Z'
+      }
+
+      getAssessment.mockResolvedValue(mockAssessment)
+
+      // Act
+      const result = await standardsController.getAssessmentData(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(getAssessment).toHaveBeenCalledWith(
+        'project-123',
+        'std-1',
+        'prof-1',
+        mockRequest
+      )
+      expect(mockH.response).toHaveBeenCalledWith(mockAssessment)
+      expect(mockResponseObject.code).toHaveBeenCalledWith(200)
+      expect(result).toBe(mockResponseObject)
+    })
+
+    test('should return 404 when assessment does not exist', async () => {
+      // Arrange
+      getAssessment.mockResolvedValue(null)
+
+      // Act
+      const result = await standardsController.getAssessmentData(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(getAssessment).toHaveBeenCalledWith(
+        'project-123',
+        'std-1',
+        'prof-1',
+        mockRequest
+      )
+      expect(mockH.response).toHaveBeenCalledWith()
+      expect(mockResponseObject.code).toHaveBeenCalledWith(404)
+      expect(result).toBe(mockResponseObject)
+    })
+
+    test('should return 500 when service throws error', async () => {
+      // Arrange
+      const error = new Error('Database connection failed')
+      getAssessment.mockRejectedValue(error)
+
+      // Act
+      const result = await standardsController.getAssessmentData(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(getAssessment).toHaveBeenCalledWith(
+        'project-123',
+        'std-1',
+        'prof-1',
+        mockRequest
+      )
+      expect(mockRequest.logger.error).toHaveBeenCalledWith(
+        {
+          error,
+          projectId: 'project-123',
+          standardId: 'std-1',
+          professionId: 'prof-1'
+        },
+        'Error fetching assessment data'
+      )
+      expect(mockH.response).toHaveBeenCalledWith()
+      expect(mockResponseObject.code).toHaveBeenCalledWith(500)
+      expect(result).toBe(mockResponseObject)
+    })
+
+    test('should handle different parameter formats', async () => {
+      // Arrange
+      const customRequest = {
+        ...mockRequest,
+        params: {
+          id: 'different-project-id',
+          standardId: 'different-standard',
+          professionId: 'different-profession'
+        }
+      }
+
+      const mockAssessment = {
+        id: 'assessment-456',
+        status: 'GREEN',
+        commentary: 'All good!',
+        lastUpdated: '2023-02-01T15:30:00Z'
+      }
+
+      getAssessment.mockResolvedValue(mockAssessment)
+
+      // Act
+      const result = await standardsController.getAssessmentData(
+        customRequest,
+        mockH
+      )
+
+      // Assert
+      expect(getAssessment).toHaveBeenCalledWith(
+        'different-project-id',
+        'different-standard',
+        'different-profession',
+        customRequest
+      )
+      expect(mockH.response).toHaveBeenCalledWith(mockAssessment)
+      expect(mockResponseObject.code).toHaveBeenCalledWith(200)
+      expect(result).toBe(mockResponseObject)
+    })
+
+    test('should handle assessment with empty commentary', async () => {
+      // Arrange
+      const mockAssessment = {
+        id: 'assessment-789',
+        projectId: 'project-123',
+        standardId: 'std-1',
+        professionId: 'prof-1',
+        status: 'TBC',
+        commentary: '',
+        lastUpdated: '2023-03-01T12:00:00Z'
+      }
+
+      getAssessment.mockResolvedValue(mockAssessment)
+
+      // Act
+      const result = await standardsController.getAssessmentData(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(mockH.response).toHaveBeenCalledWith(mockAssessment)
+      expect(mockResponseObject.code).toHaveBeenCalledWith(200)
+      expect(result).toBe(mockResponseObject)
+    })
+
+    test('should handle assessment with null commentary', async () => {
+      // Arrange
+      const mockAssessment = {
+        id: 'assessment-999',
+        projectId: 'project-123',
+        standardId: 'std-1',
+        professionId: 'prof-1',
+        status: 'AMBER',
+        commentary: null,
+        lastUpdated: '2023-04-01T09:15:00Z'
+      }
+
+      getAssessment.mockResolvedValue(mockAssessment)
+
+      // Act
+      const result = await standardsController.getAssessmentData(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(mockH.response).toHaveBeenCalledWith(mockAssessment)
+      expect(mockResponseObject.code).toHaveBeenCalledWith(200)
+      expect(result).toBe(mockResponseObject)
+    })
+  })
 })

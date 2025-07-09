@@ -48,6 +48,7 @@ const ERROR_MESSAGES = {
 }
 
 const HTTP_STATUS = {
+  OK: 200,
   NOT_FOUND: 404,
   INTERNAL_SERVER_ERROR: 500
 }
@@ -995,16 +996,16 @@ export const standardsController = {
       )
 
       if (!assessment) {
-        return h.response().code(404)
+        return h.response().code(HTTP_STATUS.NOT_FOUND)
       }
 
-      return h.response(assessment).code(200)
+      return h.response(assessment).code(HTTP_STATUS.OK)
     } catch (error) {
       request.logger.error(
         { error, projectId, standardId, professionId },
         'Error fetching assessment data'
       )
-      return h.response().code(500)
+      return h.response().code(HTTP_STATUS.INTERNAL_SERVER_ERROR)
     }
   }
 }

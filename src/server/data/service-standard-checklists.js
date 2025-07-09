@@ -8,88 +8,88 @@ export const serviceStandardChecklists = {
     title: 'Understand users and their needs',
     url: 'https://www.gov.uk/service-manual/service-standard/point-1-understand-user-needs',
     checklist: [
-      'User research has been conducted to understand user needs',
-      'User personas and user journey maps have been created',
-      'Accessibility needs have been identified and documented',
-      'User needs are prioritized and regularly reviewed',
-      'Evidence of user research findings is documented and shared'
+      'The team has done user research to understand what users need',
+      'The team understands how users currently meet their needs',
+      'The team can show that their understanding of user needs is based on evidence',
+      'The team understands the different ways users access the service',
+      'The team has identified users who struggle to use digital services'
     ]
   },
   2: {
     title: 'Solve a whole problem',
     url: 'https://www.gov.uk/service-manual/service-standard/point-2-solve-a-whole-problem',
     checklist: [
-      'The whole user journey has been mapped and understood',
-      'Handoffs between different parts of government are identified',
-      'Pain points in the current process have been documented',
-      'The service addresses the complete user need, not just part of it',
-      'Integration points with other services have been considered'
+      'The team understands the problem that needs to be solved',
+      'The team has mapped the entire user journey across all channels',
+      'The team has identified other organisations involved in the user journey',
+      'The team has planned to work with other organisations where needed',
+      'The service works to fix the whole problem, not just the part the organisation owns'
     ]
   },
   3: {
     title: 'Provide a joined up experience across all channels',
     url: 'https://www.gov.uk/service-manual/service-standard/point-3-join-up-across-channels',
     checklist: [
-      'All service channels (online, phone, face-to-face) are consistent',
-      'Users can switch between channels without repeating information',
-      'Staff across all channels have access to the same information',
-      'Channel preferences and accessibility needs are accommodated',
-      'The service works equally well across all channels'
+      'The team understands how users move between different channels',
+      'The service works consistently across all channels',
+      'Users can move between digital and non-digital channels without repeating information',
+      'Staff across all channels can access the same information about users',
+      'The service has ways to support users who cannot use digital channels'
     ]
   },
   4: {
     title: 'Make the service simple to use',
     url: 'https://www.gov.uk/service-manual/service-standard/point-4-make-the-service-simple-to-use',
     checklist: [
-      'The service follows GOV.UK Design System patterns and components',
-      'User journey is as simple and straightforward as possible',
-      'Content is written in plain English and tested with users',
-      'Forms and interactions are intuitive and minimize cognitive load',
-      'Error messages are clear and help users complete their task'
+      'The service uses the GOV.UK Design System where possible',
+      'Users can complete their task the first time they try',
+      'The team has tested the service with users and iterated based on feedback',
+      'The service asks users for information only when needed',
+      'Error messages help users understand what has gone wrong and how to fix it'
     ]
   },
   5: {
     title: 'Make sure everyone can use the service',
     url: 'https://www.gov.uk/service-manual/service-standard/point-5-make-sure-everyone-can-use-the-service',
     checklist: [
-      'Service meets WCAG 2.2 AA accessibility standards',
-      'Accessibility testing has been conducted with assistive technologies',
-      'Service works with users who have low digital skills',
-      'Alternative routes are available for users who cannot use digital channels',
-      'Service has been tested with users with disabilities'
+      'The team has done research with users who have access needs',
+      'The service meets accessibility standards (WCAG 2.2 to level AA)',
+      'The team has tested the service with assistive technologies',
+      'The service has a plan to support users who cannot use the digital service',
+      'The team has considered the digital skills and confidence of users'
     ]
   },
   6: {
     title: 'Have a multidisciplinary team',
     url: 'https://www.gov.uk/service-manual/service-standard/point-6-have-a-multidisciplinary-team',
     checklist: [
-      'Team includes appropriate roles (product manager, delivery manager, etc.)',
-      'User researcher is embedded in the team',
-      'Service designer and interaction designer are part of the team',
-      'Developer and technical architect roles are filled',
-      'Content designer is involved in service development'
+      'The team has a product manager who understands user needs',
+      'The team has a delivery manager who can remove blockers',
+      'The team has a user researcher who works with the team regularly',
+      'The team has designers who understand user needs and can design for accessibility',
+      'The team has developers who can build and maintain the service'
     ]
   },
   7: {
     title: 'Use agile ways of working',
     url: 'https://www.gov.uk/service-manual/service-standard/point-7-use-agile-ways-of-working',
     checklist: [
-      'Team follows agile methodology (Scrum, Kanban, etc.)',
-      'Regular sprint reviews and retrospectives are conducted',
-      'User stories are written and prioritized in a backlog',
-      'Work is delivered in small, frequent iterations',
-      'Team adapts and responds to change effectively'
+      'The team works in small iterations and releases often',
+      'The team tests ideas with users regularly',
+      'The team has a clear process for prioritising work',
+      'The team reviews and improves ways of working regularly',
+      'The team can respond to changes in user needs or policy'
     ]
   },
   8: {
     title: 'Iterate and improve frequently',
     url: 'https://www.gov.uk/service-manual/service-standard/point-8-iterate-and-improve-frequently',
     checklist: [
-      'Performance data is collected and analyzed regularly',
-      'User feedback mechanisms are in place and monitored',
-      'Service improvements are prioritized based on user needs and data',
-      'A/B testing or other experimentation methods are used',
-      'Changes are deployed frequently and safely'
+      'The service has analytics set up to measure user behaviour',
+      'The team collects feedback from users and acts on it',
+      'The team uses data to make decisions about improvements',
+      'The team tests changes with users before releasing them',
+      'The team has a plan for ongoing user research'
     ]
   },
   9: {
@@ -107,33 +107,33 @@ export const serviceStandardChecklists = {
     title: 'Define what success looks like and publish performance data',
     url: 'https://www.gov.uk/service-manual/service-standard/point-10-define-success-publish-performance-data',
     checklist: [
-      'Key performance indicators (KPIs) have been defined',
-      'Performance data is collected and monitored continuously',
-      'Success metrics align with user needs and business objectives',
-      'Performance data is published and accessible to users',
-      'Regular performance reviews are conducted and acted upon'
+      'The team has identified metrics that tell them if the service is solving the problem',
+      'The service collects data that shows how well it is performing',
+      'The team uses data to improve the service',
+      'The service publishes performance data regularly',
+      'The data helps the team understand user behaviour and needs'
     ]
   },
   11: {
     title: 'Choose the right tools and technology',
     url: 'https://www.gov.uk/service-manual/service-standard/point-11-choose-the-right-tools-and-technology',
     checklist: [
-      'Technology choices are justified and documented',
-      'Vendor lock-in risks have been assessed and mitigated',
-      'Technology stack supports accessibility and performance requirements',
-      'Open source solutions have been considered where appropriate',
-      'Technology decisions align with government technology strategy'
+      'The team has chosen technology that meets user needs',
+      'The team has considered the total cost of ownership',
+      'The team has avoided vendor lock-in where possible',
+      'The technology choices support accessibility requirements',
+      'The team has documented why they chose specific technologies'
     ]
   },
   12: {
     title: 'Make new source code open',
     url: 'https://www.gov.uk/service-manual/service-standard/point-12-make-new-source-code-open',
     checklist: [
-      'Source code is published under an open source license',
-      'Code repositories are public and accessible',
-      'Sensitive configuration and secrets are properly managed',
-      'Code follows coding standards and is well-documented',
-      'Contributing guidelines are provided for external contributors'
+      'The team has published source code in an open repository',
+      'The team has used an appropriate open source licence',
+      'The team has documented code so others can understand it',
+      'The team has removed sensitive data and configuration from public code',
+      'The team has a plan for maintaining and updating the code'
     ]
   },
   13: {
@@ -141,22 +141,22 @@ export const serviceStandardChecklists = {
       'Use and contribute to open standards, common components and patterns',
     url: 'https://www.gov.uk/service-manual/service-standard/point-13-use-common-standards-components-patterns',
     checklist: [
-      'GOV.UK Design System components and patterns are used',
-      'Service follows government open standards for technology',
-      'Reusable components are identified and shared',
-      'APIs follow government API standards',
-      'Service contributes back to common patterns and components'
+      'The service uses GOV.UK Design System components and patterns',
+      'The team has followed government open standards where they exist',
+      'The team has contributed to common patterns or components where possible',
+      'The service APIs follow government standards',
+      'The team has shared what they have learnt with the wider community'
     ]
   },
   14: {
     title: 'Operate a reliable service',
     url: 'https://www.gov.uk/service-manual/service-standard/point-14-operate-a-reliable-service',
     checklist: [
-      'Service meets agreed uptime and performance targets',
-      'Monitoring and alerting systems are in place',
-      'Incident response procedures are documented and tested',
-      'Backup and disaster recovery processes are established',
-      'Service desk and support processes are operational'
+      'The service has processes for monitoring its health',
+      'The team can quickly identify and fix problems',
+      'The team has a plan for dealing with outages and incidents',
+      'The service has adequate support arrangements for users',
+      'The team regularly tests backup and recovery processes'
     ]
   }
 }

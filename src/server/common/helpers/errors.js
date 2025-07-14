@@ -3,8 +3,10 @@ import { statusCodes } from '~/src/server/common/constants/status-codes.js'
 /**
  * @param {number} statusCode
  */
-function statusCodeMessage(statusCode) {
+export function statusCodeMessage(statusCode) {
   switch (statusCode) {
+    case statusCodes.ok:
+      return 'OK'
     case statusCodes.notFound:
       return 'Page not found'
     case statusCodes.forbidden:
@@ -45,6 +47,12 @@ export function catchAll(request, h) {
     template = 'errors/forbidden'
   } else if (statusCode >= statusCodes.internalServerError) {
     template = 'errors/server-error'
+  } else if (
+    statusCode >= statusCodes.badRequest &&
+    statusCode < statusCodes.internalServerError
+  ) {
+    // Other 4xx client errors - use generic error template
+    template = 'error/index'
   }
 
   return h

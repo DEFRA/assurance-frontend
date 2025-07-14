@@ -196,35 +196,27 @@ describe('Home Controller', () => {
     })
 
     describe('error handling', () => {
-      it('should handle API errors gracefully', async () => {
+      it('should throw Boom error when API fails', async () => {
         // Arrange
         const testError = new Error('API unavailable')
         mockGetProjects.mockRejectedValue(testError)
 
-        // Act
-        await homeController.handler(mockRequest, mockH)
-
-        // Assert
+        // Act & Assert
+        await expect(
+          homeController.handler(mockRequest, mockH)
+        ).rejects.toThrow()
         expect(mockLogger.error).toHaveBeenCalled()
-
-        const viewArgs = mockH.view.mock.calls[0][1]
-        expect(viewArgs.projects).toEqual([])
-        expect(viewArgs.error).toContain('Unable to load projects')
       })
 
-      it('should handle unexpected API response format', async () => {
+      it('should throw error when API returns unexpected response format', async () => {
         // Arrange - API returns null instead of array
         mockGetProjects.mockResolvedValue(null)
 
-        // Act
-        await homeController.handler(mockRequest, mockH)
-
-        // Assert
-        const viewArgs = mockH.view.mock.calls[0][1]
-
-        // Should handle this gracefully
-        expect(viewArgs.projects).toEqual([])
-        expect(viewArgs.projectNames).toEqual([])
+        // Act & Assert
+        await expect(
+          homeController.handler(mockRequest, mockH)
+        ).rejects.toThrow()
+        expect(mockLogger.error).toHaveBeenCalled()
       })
 
       it('should handle empty API response', async () => {

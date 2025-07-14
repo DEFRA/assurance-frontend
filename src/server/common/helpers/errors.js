@@ -36,8 +36,19 @@ export function catchAll(request, h) {
     request.logger.error(response?.stack)
   }
 
+  // Use appropriate error template based on status code
+  let template = 'error/index' // fallback to generic template
+
+  if (statusCode === statusCodes.notFound) {
+    template = 'errors/not-found'
+  } else if (statusCode === statusCodes.forbidden) {
+    template = 'errors/forbidden'
+  } else if (statusCode >= statusCodes.internalServerError) {
+    template = 'errors/server-error'
+  }
+
   return h
-    .view('error/index', {
+    .view(template, {
       pageTitle: errorMessage,
       heading: statusCode,
       message: errorMessage

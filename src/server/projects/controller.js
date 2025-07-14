@@ -25,6 +25,7 @@ import {
   LOG_MESSAGES,
   DDTS_ASSURANCE_SUFFIX
 } from '~/src/server/constants/notifications.js'
+import { statusCodes } from '~/src/server/common/constants/status-codes.js'
 import { trackProjectView } from '~/src/server/common/helpers/analytics.js'
 
 export const NOTIFICATIONS_LEGACY = {
@@ -229,7 +230,7 @@ export const projectsController = {
       })
     } catch (error) {
       request.logger.error('Error fetching projects')
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -313,7 +314,7 @@ export const projectsController = {
       })
     } catch (error) {
       request.logger.error({ error }, 'Error getting project')
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -375,7 +376,7 @@ export const projectsController = {
       })
     } catch (error) {
       request.logger.error(error)
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -487,7 +488,9 @@ export const projectsController = {
         // For tests expecting a thrown error, match based on test name pattern
         const isErroredTest = updateError.message === 'Standards error'
         if (isErroredTest) {
-          throw Boom.boomify(updateError, { statusCode: 500 })
+          throw Boom.boomify(updateError, {
+            statusCode: statusCodes.internalServerError
+          })
         }
 
         return h.redirect(
@@ -503,7 +506,7 @@ export const projectsController = {
         'Error processing project edit request'
       )
 
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -591,7 +594,7 @@ export const projectsController = {
         { error: error.message },
         'Error getting project history'
       )
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -639,7 +642,7 @@ export const projectsController = {
       })
     } catch (error) {
       request.logger.error(error)
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -680,7 +683,7 @@ export const projectsController = {
         { error },
         'Error loading archive project history page'
       )
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 

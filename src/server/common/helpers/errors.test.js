@@ -56,7 +56,7 @@ describe('errors helper', () => {
       const result = catchAll(mockRequest, mockH)
 
       // Assert
-      expect(mockH.view).toHaveBeenCalledWith('error/index', {
+      expect(mockH.view).toHaveBeenCalledWith('errors/not-found', {
         pageTitle: 'Page not found',
         heading: statusCodes.notFound,
         message: 'Page not found'
@@ -78,7 +78,7 @@ describe('errors helper', () => {
       const result = catchAll(mockRequest, mockH)
 
       // Assert
-      expect(mockH.view).toHaveBeenCalledWith('error/index', {
+      expect(mockH.view).toHaveBeenCalledWith('errors/forbidden', {
         pageTitle: 'Forbidden',
         heading: statusCodes.forbidden,
         message: 'Forbidden'
@@ -169,7 +169,7 @@ describe('errors helper', () => {
       const result = catchAll(mockRequest, mockH)
 
       // Assert
-      expect(mockH.view).toHaveBeenCalledWith('error/index', {
+      expect(mockH.view).toHaveBeenCalledWith('errors/server-error', {
         pageTitle: 'Something went wrong',
         heading: statusCodes.internalServerError,
         message: 'Something went wrong'
@@ -192,7 +192,7 @@ describe('errors helper', () => {
       const result = catchAll(mockRequest, mockH)
 
       // Assert
-      expect(mockH.view).toHaveBeenCalledWith('error/index', {
+      expect(mockH.view).toHaveBeenCalledWith('errors/server-error', {
         pageTitle: 'Something went wrong',
         heading: statusCodes.internalServerError,
         message: 'Something went wrong'
@@ -216,7 +216,7 @@ describe('errors helper', () => {
       const result = catchAll(mockRequest, mockH)
 
       // Assert
-      expect(mockH.view).toHaveBeenCalledWith('error/index', {
+      expect(mockH.view).toHaveBeenCalledWith('errors/server-error', {
         pageTitle: 'Something went wrong',
         heading: badGatewayCode,
         message: 'Something went wrong'

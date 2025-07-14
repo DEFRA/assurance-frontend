@@ -1,0 +1,43 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block content %}
+  {{ appHeading({
+    text: "You do not have permission to access this page"
+  }) }}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <p class="govuk-body">You do not have the required permissions to view this content.</p>
+      
+      <p class="govuk-body">This might be because:</p>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>you need to be signed in with the correct account</li>
+        <li>you need administrator privileges</li>
+        <li>the content has restricted access</li>
+      </ul>
+      
+      <p class="govuk-body">You can:</p>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>check you're signed in with the correct account</li>
+        <li>go back to the <a href="/" class="govuk-link">projects homepage</a></li>
+        <li><a href="/about" class="govuk-link">contact us</a> if you think you should have access</li>
+      </ul>
+
+      <div class="govuk-button-group">
+        {{ govukButton({
+          text: "Go to homepage",
+          href: "/",
+          classes: "govuk-button--primary"
+        }) }}
+        
+        {{ govukButton({
+          text: "Sign in",
+          href: "/auth/login",
+          classes: "govuk-button--secondary"
+        }) }}
+      </div>
+    </div>
+  </div>
+{% endblock %} 

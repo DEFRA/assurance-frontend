@@ -14,6 +14,7 @@ import {
   PAGE_TITLES,
   VIEW_TEMPLATES
 } from '~/src/server/constants/notifications.js'
+import { statusCodes } from '~/src/server/common/constants/status-codes.js'
 
 // Helper function to format profession name to title case
 function formatDisplayName(name) {
@@ -147,7 +148,7 @@ export const professionsController = {
       })
     } catch (error) {
       request.logger.error('Error fetching professions')
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -163,7 +164,7 @@ export const professionsController = {
       if (!profession) {
         request.logger.error('Profession not found')
         throw Boom.boomify(new Error('Profession not found'), {
-          statusCode: 404
+          statusCode: statusCodes.notFound
         })
       }
 
@@ -193,7 +194,7 @@ export const professionsController = {
         throw error
       }
       request.logger.error(error)
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   }
 }

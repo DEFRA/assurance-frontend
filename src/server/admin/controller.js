@@ -18,6 +18,7 @@ import {
   ADMIN_NOTIFICATIONS,
   LOG_MESSAGES
 } from '~/src/server/constants/notifications.js'
+import { statusCodes } from '~/src/server/common/constants/status-codes.js'
 
 // API endpoint constants for admin operations
 const SERVICESTANDARDS_DELETE_ALL = 'servicestandards/deleteAll'
@@ -54,14 +55,18 @@ export const adminController = {
         projects = (await getProjects(request)) || []
       } catch (error) {
         request.logger.error({ error }, 'Error fetching projects')
-        throw Boom.boomify(error, { statusCode: 500 })
+        throw Boom.boomify(error, {
+          statusCode: statusCodes.internalServerError
+        })
       }
 
       try {
         professions = (await getProfessions(request)) || []
       } catch (error) {
         request.logger.error({ error }, 'Error fetching professions')
-        throw Boom.boomify(error, { statusCode: 500 })
+        throw Boom.boomify(error, {
+          statusCode: statusCodes.internalServerError
+        })
       }
 
       // Get environment from config or use a default for testing
@@ -86,7 +91,7 @@ export const adminController = {
       })
     } catch (error) {
       request.logger.error({ error }, 'Error fetching admin dashboard data')
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 

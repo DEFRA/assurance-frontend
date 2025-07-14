@@ -1,9 +1,11 @@
+import Boom from '@hapi/boom'
 import { getProjects } from '~/src/server/services/projects.js'
 import {
   PAGE_TITLES,
   VIEW_TEMPLATES
 } from '~/src/server/constants/notifications.js'
 import { trackProjectSearch } from '~/src/server/common/helpers/analytics.js'
+import { statusCodes } from '~/src/server/common/constants/status-codes.js'
 
 /**
  * A GET route for the homepage
@@ -48,16 +50,8 @@ export const homeController = {
     } catch (error) {
       request.logger.error('Error fetching projects for homepage')
 
-      // Still render the page but without projects
-      return h.view(VIEW_TEMPLATES.HOME_INDEX, {
-        pageTitle: PAGE_TITLES.HOME,
-        projects: [],
-        searchTerm: request.query.search,
-        projectNames: [],
-        isAuthenticated,
-        notification,
-        error: 'Unable to load projects at this time'
-      })
+      // Throw a 500 error to trigger our professional error page
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   }
 }

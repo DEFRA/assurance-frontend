@@ -18,6 +18,7 @@ import {
   MANAGE_NOTIFICATIONS,
   LOG_MESSAGES
 } from '~/src/server/constants/notifications.js'
+import { statusCodes } from '~/src/server/common/constants/status-codes.js'
 
 export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND,
@@ -455,7 +456,7 @@ export const manageController = {
           .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
             pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
-          .code(404)
+          .code(statusCodes.notFound)
       }
 
       return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_SELECT, {
@@ -469,7 +470,7 @@ export const manageController = {
         { error, id },
         'Error loading manage project selection'
       )
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -484,7 +485,7 @@ export const manageController = {
           .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
             pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
-          .code(404)
+          .code(statusCodes.notFound)
       }
 
       // Validate selection
@@ -522,7 +523,7 @@ export const manageController = {
         { error, id },
         'Error processing manage project selection'
       )
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -546,7 +547,7 @@ export const manageController = {
           .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
             pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
-          .code(404)
+          .code(statusCodes.notFound)
       }
 
       let selectedValues = {
@@ -587,7 +588,7 @@ export const manageController = {
         { error, id },
         'Error loading project status management'
       )
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -606,7 +607,7 @@ export const manageController = {
           .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
             pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
-          .code(404)
+          .code(statusCodes.notFound)
       }
 
       // Validate required fields
@@ -668,7 +669,7 @@ export const manageController = {
       }
     } catch (error) {
       request.logger.error({ error, id }, 'Error managing project status')
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -683,7 +684,7 @@ export const manageController = {
           .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
             pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
-          .code(404)
+          .code(statusCodes.notFound)
       }
 
       const phaseOptions = createPhaseOptions(project.phase)
@@ -700,7 +701,7 @@ export const manageController = {
         { error, id },
         'Error loading project details management'
       )
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
 
@@ -715,7 +716,7 @@ export const manageController = {
           .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
             pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
-          .code(404)
+          .code(statusCodes.notFound)
       }
 
       // Validate required fields
@@ -761,7 +762,7 @@ export const manageController = {
       }
     } catch (error) {
       request.logger.error({ error, id }, 'Error managing project details')
-      throw Boom.boomify(error, { statusCode: 500 })
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   }
 }

@@ -39,7 +39,7 @@ export function catchAll(request, h) {
   }
 
   // Use appropriate error template based on status code
-  let template = 'error/index' // fallback to generic template
+  let template
 
   if (statusCode === statusCodes.notFound) {
     template = 'errors/not-found'
@@ -47,8 +47,10 @@ export function catchAll(request, h) {
     template = 'errors/forbidden'
   } else if (statusCode >= statusCodes.internalServerError) {
     template = 'errors/server-error'
+  } else {
+    // All other status codes (including 4xx client errors) use the generic error template
+    template = 'error/index'
   }
-  // All other status codes (including 4xx client errors) use the default 'error/index' template
 
   return h
     .view(template, {

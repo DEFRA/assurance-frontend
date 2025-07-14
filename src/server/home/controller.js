@@ -1,9 +1,12 @@
+import Boom from '@hapi/boom'
 import { getProjects } from '~/src/server/services/projects.js'
 import {
   PAGE_TITLES,
   VIEW_TEMPLATES
 } from '~/src/server/constants/notifications.js'
 import { trackProjectSearch } from '~/src/server/common/helpers/analytics.js'
+import { statusCodes } from '~/src/server/common/constants/status-codes.js'
+import { PROJECT_STATUS } from '~/src/server/constants/status.js'
 
 /**
  * A GET route for the homepage
@@ -21,16 +24,21 @@ export const homeController = {
       request.logger.info('Home page - fetching projects')
       const projects = await getProjects(request)
 
-      // Get all project names for autocomplete
-      const projectNames = projects.map((project) => project.name)
+      // Filter out TBC projects for unauthenticated users
+      const visibleProjects = isAuthenticated
+        ? projects // Authenticated users see all projects
+        : projects.filter((project) => project.status !== PROJECT_STATUS.TBC)
+
+      // Get all project names for autocomplete (from visible projects only)
+      const projectNames = visibleProjects.map((project) => project.name)
 
       // Filter projects if search term is provided
       const search = request.query.search
       const filteredProjects = search
-        ? projects.filter((project) =>
+        ? visibleProjects.filter((project) =>
             project.name.toLowerCase().includes(search.toLowerCase())
           )
-        : projects
+        : visibleProjects
 
       // Track search if provided
       if (search) {
@@ -48,16 +56,8 @@ export const homeController = {
     } catch (error) {
       request.logger.error('Error fetching projects for homepage')
 
-      // Still render the page but without projects
-      return h.view(VIEW_TEMPLATES.HOME_INDEX, {
-        pageTitle: PAGE_TITLES.HOME,
-        projects: [],
-        searchTerm: request.query.search,
-        projectNames: [],
-        isAuthenticated,
-        notification,
-        error: 'Unable to load projects at this time'
-      })
+      // Throw a 500 error to trigger our professional error page
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   }
 }

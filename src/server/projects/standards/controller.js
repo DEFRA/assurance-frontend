@@ -24,6 +24,7 @@ import {
 } from '~/src/server/constants/notifications.js'
 import { SERVICE_STANDARD_STATUS_OPTIONS } from '~/src/server/constants/status.js'
 import { serviceStandardChecklists } from '~/src/server/data/service-standard-checklists.js'
+import { statusCodes } from '~/src/server/common/constants/status-codes.js'
 
 export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND
@@ -45,12 +46,6 @@ const ERROR_MESSAGES = {
   ERROR_LOADING_ASSESSMENT_HISTORY: 'Error loading assessment history',
   ERROR_LOADING_ARCHIVE_PAGE: 'Error loading archive assessment page',
   ERROR_ARCHIVING_ASSESSMENT: 'Error archiving assessment entry'
-}
-
-const HTTP_STATUS = {
-  OK: 200,
-  NOT_FOUND: 404,
-  INTERNAL_SERVER_ERROR: 500
 }
 
 // Route path patterns
@@ -247,7 +242,7 @@ function createProjectNotFoundView(h) {
     .view('projects/not-found', {
       pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
     })
-    .code(HTTP_STATUS.NOT_FOUND)
+    .code(statusCodes.notFound)
 }
 
 // Helper function to handle edit mode redirect
@@ -481,11 +476,11 @@ async function handlePostAssessmentError(
       { projectError },
       'Failed to load project for error handling'
     )
-    throw Boom.boomify(error, { statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR })
+    throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
   }
 
   if (!project) {
-    throw Boom.boomify(error, { statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR })
+    throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
   }
 
   return await handleAssessmentError(
@@ -522,7 +517,7 @@ function validateProjectAndStandard(
       .view('projects/not-found', {
         pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
       })
-      .code(HTTP_STATUS.NOT_FOUND)
+      .code(statusCodes.notFound)
   }
 
   // Find the specific standard
@@ -624,7 +619,7 @@ export const standardsController = {
     } catch (error) {
       request.logger.error(error)
       throw Boom.boomify(error, {
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR
+        statusCode: statusCodes.internalServerError
       })
     }
   },
@@ -684,7 +679,7 @@ export const standardsController = {
     } catch (error) {
       request.logger.error({ error }, 'Error loading standard detail')
       throw Boom.boomify(error, {
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR
+        statusCode: statusCodes.internalServerError
       })
     }
   },
@@ -720,7 +715,7 @@ export const standardsController = {
     } catch (error) {
       request.logger.error(error)
       throw Boom.boomify(error, {
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR
+        statusCode: statusCodes.internalServerError
       })
     }
   },
@@ -774,7 +769,7 @@ export const standardsController = {
         ERROR_MESSAGES.ERROR_LOADING_ASSESSMENT_SCREEN
       )
       throw Boom.boomify(error, {
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR
+        statusCode: statusCodes.internalServerError
       })
     }
   },
@@ -883,7 +878,7 @@ export const standardsController = {
         ERROR_MESSAGES.ERROR_LOADING_ASSESSMENT_HISTORY
       )
       throw Boom.boomify(error, {
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR
+        statusCode: statusCodes.internalServerError
       })
     }
   },
@@ -906,7 +901,7 @@ export const standardsController = {
           .view('projects/not-found', {
             pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
           })
-          .code(HTTP_STATUS.NOT_FOUND)
+          .code(statusCodes.notFound)
       }
 
       // Find the specific standard and profession
@@ -937,7 +932,7 @@ export const standardsController = {
     } catch (error) {
       request.logger.error({ error }, ERROR_MESSAGES.ERROR_LOADING_ARCHIVE_PAGE)
       throw Boom.boomify(error, {
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR
+        statusCode: statusCodes.internalServerError
       })
     }
   },
@@ -996,16 +991,16 @@ export const standardsController = {
       )
 
       if (!assessment) {
-        return h.response().code(HTTP_STATUS.NOT_FOUND)
+        return h.response().code(statusCodes.notFound)
       }
 
-      return h.response(assessment).code(HTTP_STATUS.OK)
+      return h.response(assessment).code(statusCodes.ok)
     } catch (error) {
       request.logger.error(
         { error, projectId, standardId, professionId },
         'Error fetching assessment data'
       )
-      return h.response().code(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      return h.response().code(statusCodes.internalServerError)
     }
   }
 }

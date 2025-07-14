@@ -50,8 +50,13 @@ export const HEADINGS = {
 }
 
 export const VIEW_TEMPLATES = {
-  // Common views
+  // Error views
   ERRORS_NOT_FOUND: 'errors/not-found',
+  ERRORS_SERVER_ERROR: 'errors/server-error',
+  ERRORS_FORBIDDEN: 'errors/forbidden',
+
+  // Project-specific errors
+  PROJECTS_NOT_FOUND: 'projects/not-found',
 
   // Project views
   PROJECTS_INDEX: 'projects/views/index',

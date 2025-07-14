@@ -56,6 +56,13 @@ describe('Home Controller', () => {
       status: 'GREEN',
       lastUpdated: '2023-01-03',
       tags: ['Portfolio: Other']
+    },
+    {
+      id: 'project-4',
+      name: 'TBC Project',
+      status: 'TBC',
+      lastUpdated: '2023-01-04',
+      tags: ['Portfolio: Future Farming', 'Type: Development']
     }
   ]
 
@@ -92,6 +99,9 @@ describe('Home Controller', () => {
 
   describe('handler', () => {
     it('should return all projects when no search query is provided', async () => {
+      // Arrange - unauthenticated user by default
+      mockGetProjects.mockResolvedValue(sampleProjects)
+
       // Act
       await homeController.handler(mockRequest, mockH)
 
@@ -99,7 +109,7 @@ describe('Home Controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'home/index',
         expect.objectContaining({
-          projects: sampleProjects,
+          projects: expect.any(Array),
           projectNames: expect.arrayContaining([
             'Project 1',
             'Project 2',
@@ -107,9 +117,12 @@ describe('Home Controller', () => {
           ])
         })
       )
-      // Verify expected number of projects
+      // Verify expected number of projects (3 for unauthenticated users - TBC hidden)
       const viewArgs = mockH.view.mock.calls[0][1]
       expect(viewArgs.projects).toHaveLength(3)
+
+      // Should not include TBC project for unauthenticated users
+      expect(viewArgs.projects.some((p) => p.status === 'TBC')).toBe(false)
     })
 
     it('should filter projects by name when search term is provided', async () => {
@@ -232,6 +245,145 @@ describe('Home Controller', () => {
         expect(viewArgs.projects).toEqual([])
         expect(viewArgs.projectNames).toEqual([])
       })
+    })
+  })
+
+  describe('TBC project filtering', () => {
+    it('should hide TBC projects from unauthenticated users', async () => {
+      // Arrange
+      mockGetProjects.mockResolvedValue(sampleProjects)
+      mockRequest.auth.isAuthenticated = false
+
+      // Act
+      await homeController.handler(mockRequest, mockH)
+
+      // Assert
+      const viewArgs = mockH.view.mock.calls[0][1]
+
+      // Should not include the TBC project
+      expect(viewArgs.projects).toHaveLength(3)
+      expect(viewArgs.projects.map((p) => p.id)).toEqual([
+        'project-1',
+        'project-2',
+        'project-3'
+      ])
+      expect(viewArgs.projects.some((p) => p.status === 'TBC')).toBe(false)
+
+      // Project names should also exclude TBC project
+      expect(viewArgs.projectNames).toEqual([
+        'Project 1',
+        'Project 2',
+        'Different Project'
+      ])
+    })
+
+    it('should show TBC projects to authenticated users', async () => {
+      // Arrange
+      mockGetProjects.mockResolvedValue(sampleProjects)
+      mockRequest.auth.isAuthenticated = true
+
+      // Act
+      await homeController.handler(mockRequest, mockH)
+
+      // Assert
+      const viewArgs = mockH.view.mock.calls[0][1]
+
+      // Should include all projects including TBC
+      expect(viewArgs.projects).toHaveLength(4)
+      expect(viewArgs.projects.map((p) => p.id)).toEqual([
+        'project-1',
+        'project-2',
+        'project-3',
+        'project-4'
+      ])
+      expect(viewArgs.projects.some((p) => p.status === 'TBC')).toBe(true)
+
+      // Project names should include TBC project
+      expect(viewArgs.projectNames).toEqual([
+        'Project 1',
+        'Project 2',
+        'Different Project',
+        'TBC Project'
+      ])
+    })
+
+    it('should filter TBC projects correctly when searching as unauthenticated user', async () => {
+      // Arrange
+      mockGetProjects.mockResolvedValue(sampleProjects)
+      mockRequest.auth.isAuthenticated = false
+      mockRequest.query.search = 'project' // Should match projects 1, 2, 3 but not TBC project
+
+      // Act
+      await homeController.handler(mockRequest, mockH)
+
+      // Assert
+      const viewArgs = mockH.view.mock.calls[0][1]
+
+      // Should match only visible (non-TBC) projects
+      expect(viewArgs.projects).toHaveLength(3)
+      expect(viewArgs.projects.map((p) => p.id)).toEqual([
+        'project-1',
+        'project-2',
+        'project-3'
+      ])
+      expect(viewArgs.projects.some((p) => p.status === 'TBC')).toBe(false)
+    })
+
+    it('should include TBC projects in search results for authenticated users', async () => {
+      // Arrange
+      mockGetProjects.mockResolvedValue(sampleProjects)
+      mockRequest.auth.isAuthenticated = true
+      mockRequest.query.search = 'project' // Should match all projects including TBC
+
+      // Act
+      await homeController.handler(mockRequest, mockH)
+
+      // Assert
+      const viewArgs = mockH.view.mock.calls[0][1]
+
+      // Should match all projects including TBC
+      expect(viewArgs.projects).toHaveLength(4)
+      expect(viewArgs.projects.map((p) => p.id)).toEqual([
+        'project-1',
+        'project-2',
+        'project-3',
+        'project-4'
+      ])
+      expect(viewArgs.projects.some((p) => p.status === 'TBC')).toBe(true)
+    })
+
+    it('should handle search for TBC project name as unauthenticated user', async () => {
+      // Arrange
+      mockGetProjects.mockResolvedValue(sampleProjects)
+      mockRequest.auth.isAuthenticated = false
+      mockRequest.query.search = 'TBC Project' // Searching specifically for TBC project
+
+      // Act
+      await homeController.handler(mockRequest, mockH)
+
+      // Assert
+      const viewArgs = mockH.view.mock.calls[0][1]
+
+      // Should return empty results since TBC projects are hidden
+      expect(viewArgs.projects).toHaveLength(0)
+    })
+
+    it('should handle search for TBC project name as authenticated user', async () => {
+      // Arrange
+      mockGetProjects.mockResolvedValue(sampleProjects)
+      mockRequest.auth.isAuthenticated = true
+      mockRequest.query.search = 'TBC Project' // Searching specifically for TBC project
+
+      // Act
+      await homeController.handler(mockRequest, mockH)
+
+      // Assert
+      const viewArgs = mockH.view.mock.calls[0][1]
+
+      // Should return the TBC project since user is authenticated
+      expect(viewArgs.projects).toHaveLength(1)
+      expect(viewArgs.projects[0].id).toBe('project-4')
+      expect(viewArgs.projects[0].status).toBe('TBC')
     })
   })
 })

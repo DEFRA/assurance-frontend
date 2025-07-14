@@ -47,13 +47,8 @@ export function catchAll(request, h) {
     template = 'errors/forbidden'
   } else if (statusCode >= statusCodes.internalServerError) {
     template = 'errors/server-error'
-  } else if (
-    statusCode >= statusCodes.badRequest &&
-    statusCode < statusCodes.internalServerError
-  ) {
-    // Other 4xx client errors - use generic error template
-    template = 'error/index'
   }
+  // All other status codes (including 4xx client errors) use the default 'error/index' template
 
   return h
     .view(template, {

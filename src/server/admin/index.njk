@@ -3,6 +3,12 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/fieldset/macro.njk" import govukFieldset %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
 
 {% block content %}
   {{ appHeading({
@@ -23,151 +29,484 @@
     }) }}
   {% endif %}
 
-  <div class="govuk-grid-row">
-    <div class="govuk-grid-column-two-thirds">
-      <h2 class="govuk-heading-m">Projects</h2>
-      <p class="govuk-body">Currently {{ projectsCount }} projects loaded</p>
-      
-      {% if projects and projects.length > 0 %}
-        <table class="govuk-table">
-          <thead class="govuk-table__head">
+  {% set professionsTabContent %}
+    <!-- Add New Profession Form -->
+    <details class="govuk-details" data-module="govuk-details">
+      <summary class="govuk-details__summary">
+        <span class="govuk-details__summary-text">
+          Add New Profession
+        </span>
+      </summary>
+      <div class="govuk-details__text">
+        <form method="POST" action="/admin/professions/create">
+          {{ govukInput({
+            label: {
+              text: "Name",
+              classes: "govuk-label--s"
+            },
+            id: "profession-name",
+            name: "name",
+            classes: "govuk-!-width-two-thirds"
+          }) }}
+          
+          {{ govukTextarea({
+            label: {
+              text: "Description",
+              classes: "govuk-label--s"
+            },
+            id: "profession-description",
+            name: "description",
+            rows: 3,
+            classes: "govuk-!-width-two-thirds"
+          }) }}
+          
+          {{ govukButton({
+            text: "Add Profession",
+            classes: "govuk-button--secondary"
+          }) }}
+        </form>
+      </div>
+    </details>
+
+    <!-- Update Profession Form -->
+    <details class="govuk-details" data-module="govuk-details">
+      <summary class="govuk-details__summary">
+        <span class="govuk-details__summary-text">
+          Update Profession Name
+        </span>
+      </summary>
+      <div class="govuk-details__text">
+        <div class="govuk-inset-text">
+          <p><strong>Note:</strong> Individual profession updates are not currently supported by the API. This feature requires backend API enhancement.</p>
+          <p>Available operations: Create, Archive, Restore, and Bulk Seed via the Bulk Operations tab.</p>
+        </div>
+        
+        <form method="POST" action="/admin/professions/update">
+          {% set professionOptions = [{ value: "", text: "Choose profession" }] %}
+          {% for profession in professions %}
+            {% set professionOptions = professionOptions.concat([{ 
+              value: profession.id, 
+              text: profession.name + (" (Archived)" if not profession.isActive else "")
+            }]) %}
+          {% endfor %}
+          
+          {{ govukSelect({
+            id: "update-profession-id",
+            name: "id",
+            label: {
+              text: "Select profession to update",
+              classes: "govuk-label--s"
+            },
+            items: professionOptions,
+            attributes: {
+              disabled: true
+            }
+          }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "New Name",
+              classes: "govuk-label--s"
+            },
+            id: "update-profession-name",
+            name: "name",
+            classes: "govuk-!-width-two-thirds",
+            attributes: {
+              disabled: true
+            }
+          }) }}
+          
+          {{ govukButton({
+            text: "Update Name",
+            classes: "govuk-button--secondary",
+            attributes: {
+              disabled: true
+            }
+          }) }}
+        </form>
+      </div>
+    </details>
+
+    <!-- Professions Table -->
+    {% if professions.length > 0 %}
+      <h3 class="govuk-heading-s">All Professions</h3>
+      <table class="govuk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header">Name</th>
+            <th scope="col" class="govuk-table__header">Status</th>
+            <th scope="col" class="govuk-table__header">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for profession in professions %}
             <tr class="govuk-table__row">
-              <th scope="col" class="govuk-table__header">Name</th>
-              <th scope="col" class="govuk-table__header">Status</th>
-              <th scope="col" class="govuk-table__header">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="govuk-table__body">
-            {% for project in projects %}
-              <tr class="govuk-table__row">
-                <td class="govuk-table__cell">{{ project.name }}</td>
-                <td class="govuk-table__cell">{{ project.status }}</td>
-                <td class="govuk-table__cell">
-                  {% if not isTestEnvironment %}
-                  <div class="govuk-!-margin-bottom-0">
-                    {{ govukButton({
-                      text: "Delete",
-                      href: "/admin/projects/" + project.id + "/delete/confirm",
-                      classes: "govuk-button--warning govuk-!-margin-bottom-0"
-                    }) }}
-                  </div>
+              <td class="govuk-table__cell">{{ profession.name }}</td>
+              <td class="govuk-table__cell">
+                {% if profession.isActive %}
+                  {{ govukTag({ text: "Active", classes: "govuk-tag--green" }) }}
+                {% else %}
+                  {{ govukTag({ text: "Archived", classes: "govuk-tag--grey" }) }}
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                <div class="govuk-button-group">
+                  {% if profession.isActive %}
+                    {% if not isTestEnvironment %}
+                      <form method="POST" action="/admin/professions/{{ profession.id }}/archive" class="govuk-!-display-inline-block">
+                        <button class="govuk-button govuk-button--warning govuk-!-margin-bottom-0">Archive</button>
+                      </form>
+                    {% endif %}
+                  {% else %}
+                    {% if not isTestEnvironment %}
+                      <form method="POST" action="/admin/professions/{{ profession.id }}/restore" class="govuk-!-display-inline-block">
+                        <button class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0">Restore</button>
+                      </form>
+                    {% endif %}
                   {% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <p class="govuk-body">No projects available.</p>
-      {% endif %}
-      
-      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
-      
-      <h2 class="govuk-heading-m">Service Standards</h2>
-      <p class="govuk-body">Currently {{ standardsCount }} standards loaded</p>
-      
-      <div class="govuk-button-group">
-        <form method="POST" action="/admin/standards/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
-          <button class="govuk-button" data-module="govuk-button">
-            Add Service Standards (Dev Only)
-          </button>
-        </form>
-        
-        {% if not isTestEnvironment %}
-        <div class="govuk-!-display-inline">
-          {{ govukButton({
-            text: "Delete All Standards",
-            href: "/admin/standards/delete/confirm",
-            classes: "govuk-button--warning"
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="govuk-body">No professions found.</p>
+    {% endif %}
+  {% endset %}
+
+  {% set standardsTabContent %}
+    <!-- Add New Service Standard Form -->
+    <details class="govuk-details" data-module="govuk-details">
+      <summary class="govuk-details__summary">
+        <span class="govuk-details__summary-text">
+          Add New Service Standard
+        </span>
+      </summary>
+      <div class="govuk-details__text">
+        <form method="POST" action="/admin/standards/create">
+          {{ govukInput({
+            label: {
+              text: "Number",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Service standard number (e.g. 15)"
+            },
+            id: "standard-number",
+            name: "number",
+            type: "number",
+            classes: "govuk-!-width-one-quarter"
           }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "Name",
+              classes: "govuk-label--s"
+            },
+            id: "standard-name",
+            name: "name",
+            classes: "govuk-!-width-two-thirds"
+          }) }}
+          
+          {{ govukTextarea({
+            label: {
+              text: "Description",
+              classes: "govuk-label--s"
+            },
+            id: "standard-description",
+            name: "description",
+            rows: 3,
+            classes: "govuk-!-width-two-thirds"
+          }) }}
+          
+          {{ govukButton({
+            text: "Add Service Standard",
+            classes: "govuk-button--secondary"
+          }) }}
+        </form>
+      </div>
+    </details>
+
+    <!-- Update Service Standard Form -->
+    <details class="govuk-details" data-module="govuk-details">
+      <summary class="govuk-details__summary">
+        <span class="govuk-details__summary-text">
+          Update Service Standard Name
+        </span>
+      </summary>
+      <div class="govuk-details__text">
+        <div class="govuk-inset-text">
+          <p><strong>Note:</strong> Individual service standard updates are not currently supported by the API. This feature requires backend API enhancement.</p>
+          <p>Available operations: Archive, Restore, and Bulk Seed via the Bulk Operations tab.</p>
         </div>
+        
+        <form method="POST" action="/admin/standards/update">
+          {% set standardOptions = [{ value: "", text: "Choose service standard" }] %}
+          {% for standard in standards %}
+            {% set standardOptions = standardOptions.concat([{ 
+              value: standard.id, 
+              text: "Standard " + standard.number + ": " + standard.name + (" (Archived)" if not standard.isActive else "")
+            }]) %}
+          {% endfor %}
+          
+          {{ govukSelect({
+            id: "update-standard-id",
+            name: "id",
+            label: {
+              text: "Select service standard to update",
+              classes: "govuk-label--s"
+            },
+            items: standardOptions,
+            attributes: {
+              disabled: true
+            }
+          }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "New Name",
+              classes: "govuk-label--s"
+            },
+            id: "update-standard-name",
+            name: "name",
+            classes: "govuk-!-width-two-thirds",
+            attributes: {
+              disabled: true
+            }
+          }) }}
+          
+          {{ govukButton({
+            text: "Update Name",
+            classes: "govuk-button--secondary",
+            attributes: {
+              disabled: true
+            }
+          }) }}
+        </form>
+      </div>
+    </details>
+
+    <!-- Standards Table -->
+    {% if standards.length > 0 %}
+      <h3 class="govuk-heading-s">All Service Standards</h3>
+      <table class="govuk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header">Number</th>
+            <th scope="col" class="govuk-table__header">Name</th>
+            <th scope="col" class="govuk-table__header">Status</th>
+            <th scope="col" class="govuk-table__header">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for standard in standards %}
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell">{{ standard.number }}</td>
+              <td class="govuk-table__cell">{{ standard.name }}</td>
+              <td class="govuk-table__cell">
+                {% if standard.isActive %}
+                  {{ govukTag({ text: "Active", classes: "govuk-tag--green" }) }}
+                {% else %}
+                  {{ govukTag({ text: "Archived", classes: "govuk-tag--grey" }) }}
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                <div class="govuk-button-group">
+                  {% if standard.isActive %}
+                    {% if not isTestEnvironment %}
+                      <form method="POST" action="/admin/standards/{{ standard.id }}/archive" class="govuk-!-display-inline-block">
+                        <button class="govuk-button govuk-button--warning govuk-!-margin-bottom-0">Archive</button>
+                      </form>
+                    {% endif %}
+                  {% else %}
+                    {% if not isTestEnvironment %}
+                      <form method="POST" action="/admin/standards/{{ standard.id }}/restore" class="govuk-!-display-inline-block">
+                        <button class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0">Restore</button>
+                      </form>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="govuk-body">No service standards found.</p>
+    {% endif %}
+  {% endset %}
+
+  {% set bulkTabContent %}
+    <h2 class="govuk-heading-m">Bulk Operations</h2>
+    
+    <div class="govuk-grid-row">
+      <div class="govuk-grid-column-one-half">
+        <h3 class="govuk-heading-s">Projects</h3>
+        <p class="govuk-body">Currently {{ projectsCount }} projects loaded</p>
+        
+        {% if projects and projects.length > 0 %}
+          <details class="govuk-details" data-module="govuk-details">
+            <summary class="govuk-details__summary">
+              <span class="govuk-details__summary-text">
+                View Projects
+              </span>
+            </summary>
+            <div class="govuk-details__text">
+              <table class="govuk-table">
+                <thead class="govuk-table__head">
+                  <tr class="govuk-table__row">
+                    <th scope="col" class="govuk-table__header">Name</th>
+                    <th scope="col" class="govuk-table__header">Status</th>
+                    <th scope="col" class="govuk-table__header">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="govuk-table__body">
+                  {% for project in projects %}
+                    <tr class="govuk-table__row">
+                      <td class="govuk-table__cell">{{ project.name }}</td>
+                      <td class="govuk-table__cell">{{ project.status }}</td>
+                      <td class="govuk-table__cell">
+                        {% if not isTestEnvironment %}
+                        <div class="govuk-!-margin-bottom-0">
+                          {{ govukButton({
+                            text: "Delete",
+                            href: "/admin/projects/" + project.id + "/delete/confirm",
+                            classes: "govuk-button--warning govuk-!-margin-bottom-0"
+                          }) }}
+                        </div>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        {% else %}
+          <p class="govuk-body">No projects available.</p>
         {% endif %}
       </div>
       
-      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
-      
-      <h2 class="govuk-heading-m">Professions</h2>
-      <p class="govuk-body">Currently {{ professionsCount }} professions loaded</p>
-      
-      <div class="govuk-inset-text">
-        Note: The professions API endpoints may not be fully implemented in the backend yet. 
-        The UI will show default profession data until the backend is ready.
-      </div>
-      
-      <div class="govuk-button-group">
-        <form method="POST" action="/admin/professions/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
-          <button class="govuk-button" data-module="govuk-button">
-            Add Professions (Dev Only)
-          </button>
-        </form>
+      <div class="govuk-grid-column-one-half">
+        <h3 class="govuk-heading-s">Bulk Data Operations</h3>
         
-        {% if not isTestEnvironment %}
-        <div class="govuk-!-display-inline">
-          {{ govukButton({
-            text: "Delete All Professions",
-            href: "/admin/professions/delete/confirm",
-            classes: "govuk-button--warning"
-          }) }}
+        <div class="govuk-!-margin-bottom-6">
+          <h4 class="govuk-heading-s">Service Standards</h4>
+          <p class="govuk-body">Currently {{ standardsCount }} standards loaded</p>
+          
+          <div class="govuk-button-group">
+            <form method="POST" action="/admin/standards/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
+              <button class="govuk-button" data-module="govuk-button">
+                Seed Standards
+              </button>
+            </form>
+            
+            {% if not isTestEnvironment %}
+            <div class="govuk-!-display-inline">
+              {{ govukButton({
+                text: "Delete All Standards",
+                href: "/admin/standards/delete/confirm",
+                classes: "govuk-button--warning"
+              }) }}
+            </div>
+            {% endif %}
+          </div>
         </div>
-        {% endif %}
-      </div>
-      
-      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
-      
-      <h2 class="govuk-heading-m">System Management</h2>
-      
-      <h3 class="govuk-heading-s">Reset Data</h3>
-      <p class="govuk-body">
-        You can reset the database to its initial state by following these steps:
-      </p>
-      
-      <ol class="govuk-list govuk-list--number">
-        <li>Delete all existing data</li>
-        <li>Seed service standards</li>
-        <li>Seed professions</li>
-      </ol>
-      
-      <div class="govuk-warning-text">
-        <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
-        <strong class="govuk-warning-text__text">
-          <span class="govuk-warning-text__assistive">Warning</span>
-          This action cannot be undone
-        </strong>
+        
+        <div class="govuk-!-margin-bottom-6">
+          <h4 class="govuk-heading-s">Professions</h4>
+          <p class="govuk-body">Currently {{ professionsCount }} professions loaded</p>
+          
+          <div class="govuk-button-group">
+            <form method="POST" action="/admin/professions/seed-dev" class="govuk-!-display-inline govuk-!-margin-right-2">
+              <button class="govuk-button" data-module="govuk-button">
+                Seed Professions
+              </button>
+            </form>
+            
+            {% if not isTestEnvironment %}
+            <div class="govuk-!-display-inline">
+              {{ govukButton({
+                text: "Delete All Professions",
+                href: "/admin/professions/delete/confirm",
+                classes: "govuk-button--warning"
+              }) }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
+        
+        <h4 class="govuk-heading-s">System Reset</h4>
+        <p class="govuk-body">Reset the database to its initial state:</p>
+        
+        <ol class="govuk-list govuk-list--number">
+          <li>Delete all existing data</li>
+          <li>Seed service standards</li>
+          <li>Seed professions</li>
+        </ol>
+        
+        <div class="govuk-warning-text">
+          <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+          <strong class="govuk-warning-text__text">
+            <span class="govuk-warning-text__assistive">Warning</span>
+            This action cannot be undone
+          </strong>
+        </div>
       </div>
     </div>
-  </div>
+  {% endset %}
+
+  {{ govukTabs({
+    attributes: {
+      "data-module": "govuk-tabs"
+    },
+    items: [
+      {
+        label: "Professions",
+        id: "professions",
+        panel: {
+          html: professionsTabContent
+        }
+      },
+      {
+        label: "Service Standards",
+        id: "standards", 
+        panel: {
+          html: standardsTabContent
+        }
+      },
+      {
+        label: "Bulk Operations",
+        id: "bulk",
+        panel: {
+          html: bulkTabContent
+        }
+      }
+    ]
+  }) }}
+
 {% endblock %}
 
-{% block bodyEnd %}
+{% block pageScripts %}
 <script nonce="{{nonce}}">
-  async function deleteStandards() {
-    try {
-      const response = await fetch('/admin/standards/delete', { method: 'DELETE' });
-      window.location.href = '/admin?notification=' + 
-        (response.ok ? 'Standards deleted successfully' : 'Failed to delete standards');
-    } catch (error) {
-      window.location.href = '/admin?notification=Failed to delete standards';
-    }
-  }
-  
-  async function deleteProjects() {
-    try {
-      const response = await fetch('/admin/projects/delete', { method: 'DELETE' });
-      window.location.href = '/admin?notification=' + 
-        (response.ok ? 'Projects deleted successfully' : 'Failed to delete projects');
-    } catch (error) {
-      window.location.href = '/admin?notification=Failed to delete projects';
-    }
-  }
-  
-  async function deleteProfessions() {
-    try {
-      const response = await fetch('/admin/professions/delete', { method: 'DELETE' });
-      window.location.href = '/admin?notification=' + 
-        (response.ok ? 'Professions deleted successfully' : 'Failed to delete professions');
-    } catch (error) {
-      window.location.href = '/admin?notification=Failed to delete professions';
-    }
-  }
+  // Handle tab switching based on URL query parameter
+  document.addEventListener('DOMContentLoaded', function() {
+    // Wait for GOV.UK tabs to be initialized
+    setTimeout(function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const activeTab = urlParams.get('tab');
+      
+      if (activeTab) {
+        // GOV.UK tabs structure uses specific classes
+        const tabButton = document.querySelector(`a[href="#${activeTab}"].govuk-tabs__tab`);
+        if (tabButton) {
+          tabButton.click();
+        }
+      }
+    }, 100); // Small delay to ensure GOV.UK tabs are initialized
+  });
 </script>
 {% endblock %}

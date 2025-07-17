@@ -3,6 +3,7 @@ import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { config } from '~/src/config/config.js'
+import { API_AUTH_MESSAGES } from '~/src/server/common/constants/log-messages.js'
 
 // API endpoint constants
 const API_BASE_PATH = 'projects'
@@ -26,14 +27,14 @@ export async function getProjects(request) {
     let data
     // ALWAYS use authenticated fetcher if request is provided
     if (request) {
-      logger.info('[API_AUTH] Using authenticated fetcher for projects API')
+      logger.info(
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for projects API`
+      )
       const authedFetch = authedFetchJsonDecorator(request)
       data = await authedFetch(endpoint)
     } else {
       // Fall back to unauthenticated fetcher only if no request context
-      logger.warn(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
-      )
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
       data = await fetcher(endpoint)
     }
 

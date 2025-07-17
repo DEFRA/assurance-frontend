@@ -2,6 +2,7 @@ import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { config } from '~/src/config/config.js'
+import { API_AUTH_MESSAGES } from '~/src/server/common/constants/log-messages.js'
 
 // API endpoint constants
 const API_BASE_PATH = 'servicestandards'
@@ -20,13 +21,13 @@ export async function getServiceStandards(request) {
 
     let data
     if (request) {
-      logger.info('[API_AUTH] Using authenticated fetcher for standards API')
+      logger.info(
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for standards API`
+      )
       const authedFetch = authedFetchJsonDecorator(request)
       data = await authedFetch(endpoint)
     } else {
-      logger.warn(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
-      )
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
       data = await fetcher(endpoint)
     }
 
@@ -70,14 +71,12 @@ export async function getAllServiceStandards(request) {
     let data
     if (request) {
       logger.info(
-        '[API_AUTH] Using authenticated fetcher for all standards API'
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for all standards API`
       )
       const authedFetch = authedFetchJsonDecorator(request)
       data = await authedFetch(endpoint)
     } else {
-      logger.warn(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
-      )
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
       data = await fetcher(endpoint)
     }
 
@@ -169,6 +168,130 @@ export async function restoreServiceStandard(id, request) {
         id
       },
       'Failed to restore service standard'
+    )
+    throw error
+  }
+}
+
+/**
+ * Get service standard by ID
+ * @param {string} id - The standard ID
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object|null>} - The service standard or null if not found
+ */
+export async function getServiceStandardById(id, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
+    logger.info({ endpoint, id }, 'Fetching service standard by ID from API')
+
+    let data
+    if (request) {
+      logger.info(
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for service standard by ID API`
+      )
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
+      data = await fetcher(endpoint)
+    }
+
+    logger.info({ id }, 'Service standard retrieved successfully by ID')
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to fetch service standard by ID'
+    )
+    throw error
+  }
+}
+
+/**
+ * Create a new service standard
+ * @param {object} standardData - The service standard data to create
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object>} - The created service standard
+ */
+export async function createServiceStandard(standardData, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
+    logger.info({ endpoint }, 'Creating new service standard')
+
+    let data
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(standardData)
+      })
+    } else {
+      data = await fetcher(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(standardData)
+      })
+    }
+
+    logger.info({ id: data?.id }, 'Service standard created successfully')
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code
+      },
+      'Failed to create service standard'
+    )
+    throw error
+  }
+}
+
+/**
+ * Update a service standard (name only)
+ * @param {string} id - The standard ID
+ * @param {object} updateData - The data to update (should contain name)
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object>} - The updated service standard
+ */
+export async function updateServiceStandard(id, updateData, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
+    logger.info({ endpoint, id }, 'Updating service standard')
+
+    let data
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(updateData)
+      })
+    } else {
+      data = await fetcher(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(updateData)
+      })
+    }
+
+    logger.info({ id }, 'Service standard updated successfully')
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to update service standard'
     )
     throw error
   }

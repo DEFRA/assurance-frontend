@@ -7,6 +7,7 @@
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
 {% from "status-tag.njk" import renderStatusTag %}
 
 {% block beforeContent %}
@@ -48,6 +49,31 @@
           <span>{{ renderStatusTag(project.status) }}</span>
         </h2>
       </div>
+
+      {% set ragStatusHelpHtml %}
+        <ul class="govuk-list">
+          <li class="govuk-body-s govuk-!-margin-bottom-2">
+            <strong>Red</strong> - Major concerns, delivery is at risk and needs immediate intervention.
+          </li>
+          <li class="govuk-body-s govuk-!-margin-bottom-2">
+            <strong>Amber/Red</strong> - Concerns, possibly becoming major. The delivery is at risk and needs intervention before it escalates to red.
+          </li>
+          <li class="govuk-body-s govuk-!-margin-bottom-2">
+            <strong>Amber</strong> - Concerns, needs monitoring and support.
+          </li>
+          <li class="govuk-body-s govuk-!-margin-bottom-2">
+            <strong>Green/Amber</strong> - Minor issues that need monitoring.
+          </li>
+          <li class="govuk-body-s">
+            <strong>Green</strong> - On track, no immediate issues.
+          </li>
+        </ul>
+      {% endset %}
+
+      {{ govukDetails({
+        summaryText: "Help with delivery status",
+        html: ragStatusHelpHtml
+      }) }}
       
       <!-- Full width inset -->
       {% set commentaryContent %}

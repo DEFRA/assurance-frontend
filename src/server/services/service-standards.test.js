@@ -7,6 +7,7 @@ import {
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
+import { API_AUTH_MESSAGES } from '~/src/server/common/constants/log-messages.js'
 
 // Mock dependencies
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
@@ -121,7 +122,7 @@ describe('Service Standards Service', () => {
       expect(fetcher).toHaveBeenCalledWith('/api/v1.0/servicestandards')
       expect(result).toEqual(mockApiResponse)
       expect(logger.warn).toHaveBeenCalledWith(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
+        API_AUTH_MESSAGES.NO_REQUEST_CONTEXT
       )
     })
 
@@ -316,7 +317,7 @@ describe('Service Standards Service', () => {
 
       // Assert
       expect(logger.info).toHaveBeenCalledWith(
-        '[API_AUTH] Using authenticated fetcher for standards API'
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for standards API`
       )
       expect(authedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
       expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/servicestandards')
@@ -375,7 +376,7 @@ describe('Service Standards Service', () => {
       )
       expect(result).toEqual(mockApiResponse)
       expect(logger.warn).toHaveBeenCalledWith(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
+        API_AUTH_MESSAGES.NO_REQUEST_CONTEXT
       )
     })
 

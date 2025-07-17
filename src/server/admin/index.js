@@ -18,6 +18,105 @@ export const admin = {
             pre: [{ method: requireRole('admin') }]
           }
         },
+        // Profession CRUD routes
+        {
+          method: 'POST',
+          path: '/admin/professions/create',
+          handler: adminController.createProfession,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/professions/update',
+          handler: adminController.updateProfession,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/professions/{id}/archive',
+          handler: adminController.archiveProfession,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/professions/{id}/restore',
+          handler: adminController.restoreProfession,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        // Service Standard CRUD routes
+        {
+          method: 'POST',
+          path: '/admin/standards/create',
+          handler: adminController.createServiceStandard,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/standards/update',
+          handler: adminController.updateServiceStandard,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/standards/{id}/archive',
+          handler: adminController.archiveServiceStandard,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/standards/{id}/restore',
+          handler: adminController.restoreServiceStandard,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        // Existing bulk operation routes
         {
           method: 'POST',
           path: '/admin/standards/delete',

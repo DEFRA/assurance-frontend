@@ -1,11 +1,27 @@
 import { adminController } from './controller.js'
-import { getServiceStandards } from '~/src/server/services/service-standards.js'
+import {
+  getServiceStandards,
+  getAllServiceStandards,
+  getServiceStandardById,
+  createServiceStandard,
+  updateServiceStandard,
+  deleteServiceStandard,
+  restoreServiceStandard
+} from '~/src/server/services/service-standards.js'
 import {
   getProjects,
   getProjectById,
   deleteProject
 } from '~/src/server/services/projects.js'
-import { getProfessions } from '~/src/server/services/professions.js'
+import {
+  getProfessions,
+  getAllProfessions,
+  getProfessionById,
+  createProfession,
+  updateProfession,
+  deleteProfession,
+  restoreProfession
+} from '~/src/server/services/professions.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProfessions } from '~/src/server/data/professions.js'
 import { config } from '~/src/config/config.js'
@@ -29,12 +45,7 @@ jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
 // Mock config to return API version for versioned endpoints
 jest.mock('~/src/config/config.js', () => ({
   config: {
-    get: jest.fn((key) => {
-      if (key === 'api.version') {
-        return 'v1.0' // Return actual version to use versioned endpoints
-      }
-      return undefined
-    })
+    get: jest.fn()
   }
 }))
 
@@ -50,42 +61,299 @@ describe('Admin controller', () => {
   ]
 
   beforeEach(() => {
-    // Reset all mocks
     jest.clearAllMocks()
 
-    // Mock request object
+    // Mock request and response objects
     mockRequest = {
+      query: { notification: 'Test notification' },
+      payload: {},
+      params: {},
       logger: {
         info: jest.fn(),
         error: jest.fn(),
         warn: jest.fn()
-      },
-      query: {
-        notification: 'Test notification'
-      },
-      auth: {
-        credentials: {
-          token: 'test-token'
-        }
       }
     }
 
-    // Mock response object
     mockH = {
-      view: jest.fn().mockReturnThis(),
-      redirect: jest.fn().mockReturnThis()
+      view: jest.fn(),
+      redirect: jest.fn()
     }
 
-    // Mock authedFetchJsonDecorator
-    mockAuthedFetch = jest.fn().mockResolvedValue({ ok: true })
+    // Set up default config mock
+    config.get.mockImplementation((key) => {
+      switch (key) {
+        case 'api.version':
+          return 'v1.0'
+        case 'env':
+          return 'test'
+        default:
+          return undefined
+      }
+    })
+
+    // Mock authed fetch decorator
+    mockAuthedFetch = jest.fn()
     authedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
 
-    // Mock config
-    config.get = jest.fn().mockImplementation((key) => {
-      if (key === 'api.version') {
-        return 'v1.0' // Return actual version to use versioned endpoints
-      }
-      return 'test'
+    // Mock service functions
+    getServiceStandards.mockResolvedValue(defaultServiceStandards)
+    getAllServiceStandards.mockResolvedValue(defaultServiceStandards)
+    getServiceStandardById.mockResolvedValue(null)
+    createServiceStandard.mockResolvedValue({})
+    updateServiceStandard.mockResolvedValue({})
+    deleteServiceStandard.mockResolvedValue(true)
+    restoreServiceStandard.mockResolvedValue(true)
+
+    getProjects.mockResolvedValue(mockProjects)
+    getProjectById.mockResolvedValue(null)
+    deleteProject.mockResolvedValue(true)
+
+    getProfessions.mockResolvedValue(defaultProfessions)
+    getAllProfessions.mockResolvedValue(defaultProfessions)
+    getProfessionById.mockResolvedValue(null)
+    createProfession.mockResolvedValue({})
+    updateProfession.mockResolvedValue({})
+    deleteProfession.mockResolvedValue(true)
+    restoreProfession.mockResolvedValue(true)
+  })
+
+  // Add tests for helper functions
+  describe('Helper Functions Coverage', () => {
+    describe('fetchStandardsData scenarios', () => {
+      it('should handle standards API error and return defaults', async () => {
+        // Arrange
+        getServiceStandards.mockRejectedValue(new Error('Standards API Error'))
+        getAllServiceStandards.mockRejectedValue(
+          new Error('All Standards API Error')
+        )
+
+        // Act
+        await adminController.get(mockRequest, mockH)
+
+        // Assert - should render view with default standards despite API errors
+        expect(mockH.view).toHaveBeenCalledWith('admin/index', {
+          pageTitle: 'Data Management',
+          heading: 'Data Management',
+          standardsCount: defaultServiceStandards.length,
+          projectsCount: mockProjects.length,
+          professionsCount: defaultProfessions.length,
+          projects: mockProjects,
+          standards: defaultServiceStandards,
+          professions: defaultProfessions,
+          notification: 'Test notification',
+          isTestEnvironment: true, // Uses test environment from default config
+          isDevelopment: false
+        })
+        expect(mockRequest.logger.warn).toHaveBeenCalledWith(
+          { error: expect.any(Error) },
+          'Could not fetch standards from API, using defaults'
+        )
+      })
+
+      it('should handle partial standards API errors', async () => {
+        // Arrange
+        getServiceStandards.mockResolvedValue([
+          { id: 'std-1', name: 'Standard 1' }
+        ])
+        getAllServiceStandards.mockRejectedValue(
+          new Error('All Standards API Error')
+        )
+
+        // Act
+        await adminController.get(mockRequest, mockH)
+
+        // Assert - should use defaults for allStandards when getAllServiceStandards fails
+        expect(mockH.view).toHaveBeenCalledWith(
+          'admin/index',
+          expect.objectContaining({
+            standards: defaultServiceStandards,
+            standardsCount: defaultServiceStandards.length, // Uses default when getAllServiceStandards fails
+            notification: 'Test notification'
+          })
+        )
+        expect(mockRequest.logger.warn).toHaveBeenCalledWith(
+          { error: expect.any(Error) },
+          'Could not fetch standards from API, using defaults'
+        )
+      })
+    })
+
+    describe('fetchProjectsData scenarios', () => {
+      it('should handle projects API error and throw Boom error', async () => {
+        // Arrange
+        const projectsError = new Error('Projects API Error')
+        getProjects.mockRejectedValue(projectsError)
+
+        // Act & Assert
+        await expect(adminController.get(mockRequest, mockH)).rejects.toThrow()
+        expect(mockRequest.logger.error).toHaveBeenCalledWith(
+          { error: projectsError },
+          'Error fetching projects'
+        )
+      })
+
+      it('should handle null projects response', async () => {
+        // Arrange
+        getProjects.mockResolvedValue(null)
+
+        // Act
+        await adminController.get(mockRequest, mockH)
+
+        // Assert - should handle null gracefully
+        expect(mockH.view).toHaveBeenCalledWith(
+          'admin/index',
+          expect.objectContaining({
+            projects: [],
+            projectsCount: 0
+          })
+        )
+      })
+    })
+
+    describe('fetchProfessionsData scenarios', () => {
+      it('should handle professions API error and return defaults', async () => {
+        // Arrange
+        getProfessions.mockRejectedValue(new Error('Professions API Error'))
+        getAllProfessions.mockRejectedValue(
+          new Error('All Professions API Error')
+        )
+
+        // Act
+        await adminController.get(mockRequest, mockH)
+
+        // Assert - should render view with default professions despite API errors
+        expect(mockH.view).toHaveBeenCalledWith(
+          'admin/index',
+          expect.objectContaining({
+            professions: defaultProfessions,
+            professionsCount: defaultProfessions.length
+          })
+        )
+        expect(mockRequest.logger.error).toHaveBeenCalledWith(
+          { error: expect.any(Error) },
+          'Error fetching professions'
+        )
+      })
+
+      it('should handle partial professions API errors', async () => {
+        // Arrange
+        getProfessions.mockResolvedValue([
+          { id: 'prof-1', name: 'Profession 1' }
+        ])
+        getAllProfessions.mockRejectedValue(
+          new Error('All Professions API Error')
+        )
+
+        // Act
+        await adminController.get(mockRequest, mockH)
+
+        // Assert - should use defaults for allProfessions when getAllProfessions fails
+        expect(mockH.view).toHaveBeenCalledWith(
+          'admin/index',
+          expect.objectContaining({
+            professions: defaultProfessions,
+            professionsCount: defaultProfessions.length, // Uses default when getAllProfessions fails
+            notification: 'Test notification'
+          })
+        )
+        expect(mockRequest.logger.error).toHaveBeenCalledWith(
+          { error: expect.any(Error) },
+          'Error fetching professions'
+        )
+      })
+    })
+
+    describe('getEnvironmentFlags scenarios', () => {
+      it('should handle development environment', async () => {
+        // Arrange - temporarily override env for this test
+        const originalMock = config.get.getMockImplementation()
+        config.get.mockImplementation((key) => {
+          if (key === 'env') return 'development'
+          if (key === 'api.version') return 'v1.0'
+          return undefined
+        })
+
+        // Act
+        await adminController.get(mockRequest, mockH)
+
+        // Assert
+        expect(mockH.view).toHaveBeenCalledWith(
+          'admin/index',
+          expect.objectContaining({
+            isTestEnvironment: false,
+            isDevelopment: true
+          })
+        )
+
+        // Restore original mock
+        config.get.mockImplementation(originalMock)
+      })
+
+      it('should handle production environment', async () => {
+        // Arrange - temporarily override env for this test
+        const originalMock = config.get.getMockImplementation()
+        config.get.mockImplementation((key) => {
+          if (key === 'env') return 'production'
+          if (key === 'api.version') return 'v1.0'
+          return undefined
+        })
+
+        // Act
+        await adminController.get(mockRequest, mockH)
+
+        // Assert
+        expect(mockH.view).toHaveBeenCalledWith(
+          'admin/index',
+          expect.objectContaining({
+            isTestEnvironment: false,
+            isDevelopment: false
+          })
+        )
+
+        // Restore original mock
+        config.get.mockImplementation(originalMock)
+      })
+
+      it('should handle test environment', async () => {
+        // Arrange - use default test environment from beforeEach
+
+        // Act
+        await adminController.get(mockRequest, mockH)
+
+        // Assert
+        expect(mockH.view).toHaveBeenCalledWith(
+          'admin/index',
+          expect.objectContaining({
+            isTestEnvironment: true,
+            isDevelopment: false
+          })
+        )
+      })
+
+      it('should handle undefined config', async () => {
+        // Arrange - temporarily override to return undefined
+        const originalMock = config.get.getMockImplementation()
+        config.get.mockImplementation((key) => {
+          if (key === 'api.version') return 'v1.0'
+          return undefined
+        })
+
+        // Act
+        await adminController.get(mockRequest, mockH)
+
+        // Assert
+        expect(mockH.view).toHaveBeenCalledWith(
+          'admin/index',
+          expect.objectContaining({
+            isTestEnvironment: false,
+            isDevelopment: false
+          })
+        )
+
+        // Restore original mock
+        config.get.mockImplementation(originalMock)
+      })
     })
   })
 
@@ -107,6 +375,8 @@ describe('Admin controller', () => {
         projectsCount: mockProjects.length,
         professionsCount: defaultProfessions.length,
         projects: mockProjects,
+        standards: defaultServiceStandards,
+        professions: defaultProfessions,
         notification: 'Test notification',
         isTestEnvironment: true,
         isDevelopment: false
@@ -130,6 +400,8 @@ describe('Admin controller', () => {
         projectsCount: mockProjects.length,
         professionsCount: defaultProfessions.length,
         projects: mockProjects,
+        standards: defaultServiceStandards,
+        professions: defaultProfessions,
         notification: 'Test notification',
         isTestEnvironment: true,
         isDevelopment: false
@@ -695,6 +967,405 @@ describe('Admin controller', () => {
           professionsCount: 0,
           standardsCount: 0
         })
+      )
+    })
+  })
+
+  describe('createServiceStandard', () => {
+    it('should create service standard and redirect', async () => {
+      // Arrange
+      mockRequest.payload = {
+        number: '15',
+        name: 'Test Standard',
+        description: 'A test service standard'
+      }
+
+      // Act
+      await adminController.createServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(createServiceStandard).toHaveBeenCalledWith(
+        {
+          id: 'standard-15',
+          number: 15,
+          name: 'Test Standard',
+          description: 'A test service standard',
+          guidance: ''
+        },
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Service standard created successfully&tab=standards'
+      )
+    })
+
+    it('should handle validation errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        number: '',
+        name: 'Test Standard'
+        // description missing
+      }
+
+      // Act
+      await adminController.createServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(createServiceStandard).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Number, name and description are required&tab=standards'
+      )
+    })
+
+    it('should handle creation errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        number: '15',
+        name: 'Test Standard',
+        description: 'A test service standard'
+      }
+      createServiceStandard.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.createServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to create service standard&tab=standards'
+      )
+    })
+  })
+
+  describe('seedStandards', () => {
+    it('should seed standards and redirect', async () => {
+      // Arrange
+      mockAuthedFetch.mockResolvedValue({ ok: true })
+
+      // Act
+      await adminController.seedStandards(mockRequest, mockH)
+
+      // Assert
+      expect(mockAuthedFetch).toHaveBeenCalledWith(
+        '/api/v1.0/servicestandards/seed',
+        {
+          method: 'POST',
+          body: JSON.stringify(defaultServiceStandards)
+        }
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Service standards seeded successfully'
+      )
+    })
+
+    it('should handle seeding errors', async () => {
+      // Arrange
+      mockAuthedFetch.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.seedStandards(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to seed service standards'
+      )
+    })
+  })
+
+  describe('createProfession', () => {
+    it('should create profession and redirect', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: 'Test Profession',
+        description: 'A test profession'
+      }
+
+      // Act
+      await adminController.createProfession(mockRequest, mockH)
+
+      // Assert
+      expect(createProfession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          Id: 'test-profession',
+          Name: 'Test Profession',
+          Description: 'A test profession',
+          IsActive: true
+        }),
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Profession created successfully&tab=professions'
+      )
+    })
+
+    it('should handle validation errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: '',
+        description: 'A test profession'
+      }
+
+      // Act
+      await adminController.createProfession(mockRequest, mockH)
+
+      // Assert
+      expect(createProfession).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Name and description are required&tab=professions'
+      )
+    })
+
+    it('should handle creation errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: 'Test Profession',
+        description: 'A test profession'
+      }
+      createProfession.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.createProfession(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to create profession&tab=professions'
+      )
+    })
+  })
+
+  describe('updateProfession', () => {
+    it('should update profession and redirect', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'prof-1',
+        name: 'Updated Profession'
+      }
+
+      // Act
+      await adminController.updateProfession(mockRequest, mockH)
+
+      // Assert
+      expect(updateProfession).toHaveBeenCalledWith(
+        'prof-1',
+        expect.objectContaining({
+          Name: 'Updated Profession'
+        }),
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Profession updated successfully&tab=professions'
+      )
+    })
+
+    it('should handle validation errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: '',
+        name: 'Updated Profession'
+      }
+
+      // Act
+      await adminController.updateProfession(mockRequest, mockH)
+
+      // Assert
+      expect(updateProfession).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Please select a profession and enter a new name&tab=professions'
+      )
+    })
+
+    it('should handle update errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'prof-1',
+        name: 'Updated Profession'
+      }
+      updateProfession.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.updateProfession(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to update profession&tab=professions'
+      )
+    })
+  })
+
+  describe('archiveProfession', () => {
+    it('should archive profession and redirect', async () => {
+      // Arrange
+      mockRequest.params = { id: 'prof-1' }
+
+      // Act
+      await adminController.archiveProfession(mockRequest, mockH)
+
+      // Assert
+      expect(deleteProfession).toHaveBeenCalledWith('prof-1', mockRequest)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Profession archived successfully&tab=professions'
+      )
+    })
+
+    it('should handle archive errors', async () => {
+      // Arrange
+      mockRequest.params = { id: 'prof-1' }
+      deleteProfession.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.archiveProfession(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to archive profession&tab=professions'
+      )
+    })
+  })
+
+  describe('restoreProfession', () => {
+    it('should restore profession and redirect', async () => {
+      // Arrange
+      mockRequest.params = { id: 'prof-1' }
+
+      // Act
+      await adminController.restoreProfession(mockRequest, mockH)
+
+      // Assert
+      expect(restoreProfession).toHaveBeenCalledWith('prof-1', mockRequest)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Profession restored successfully&tab=professions'
+      )
+    })
+
+    it('should handle restore errors', async () => {
+      // Arrange
+      mockRequest.params = { id: 'prof-1' }
+      restoreProfession.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.restoreProfession(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to restore profession&tab=professions'
+      )
+    })
+  })
+
+  describe('updateServiceStandard', () => {
+    it('should update service standard and redirect', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'std-1',
+        name: 'Updated Standard'
+      }
+
+      // Act
+      await adminController.updateServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(updateServiceStandard).toHaveBeenCalledWith(
+        'std-1',
+        expect.objectContaining({
+          Name: 'Updated Standard'
+        }),
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Service standard updated successfully&tab=standards'
+      )
+    })
+
+    it('should handle validation errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: '',
+        name: 'Updated Standard'
+      }
+
+      // Act
+      await adminController.updateServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(updateServiceStandard).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Please select a service standard and enter a new name&tab=standards'
+      )
+    })
+
+    it('should handle update errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'std-1',
+        name: 'Updated Standard'
+      }
+      updateServiceStandard.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.updateServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to update service standard&tab=standards'
+      )
+    })
+  })
+
+  describe('archiveServiceStandard', () => {
+    it('should archive service standard and redirect', async () => {
+      // Arrange
+      mockRequest.params = { id: 'std-1' }
+
+      // Act
+      await adminController.archiveServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(deleteServiceStandard).toHaveBeenCalledWith('std-1', mockRequest)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Service standard archived successfully&tab=standards'
+      )
+    })
+
+    it('should handle archive errors', async () => {
+      // Arrange
+      mockRequest.params = { id: 'std-1' }
+      deleteServiceStandard.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.archiveServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to archive service standard&tab=standards'
+      )
+    })
+  })
+
+  describe('restoreServiceStandard', () => {
+    it('should restore service standard and redirect', async () => {
+      // Arrange
+      mockRequest.params = { id: 'std-1' }
+
+      // Act
+      await adminController.restoreServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(restoreServiceStandard).toHaveBeenCalledWith('std-1', mockRequest)
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Service standard restored successfully&tab=standards'
+      )
+    })
+
+    it('should handle restore errors', async () => {
+      // Arrange
+      mockRequest.params = { id: 'std-1' }
+      restoreServiceStandard.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.restoreServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to restore service standard&tab=standards'
       )
     })
   })

@@ -2,6 +2,7 @@ import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { config } from '~/src/config/config.js'
+import { API_AUTH_MESSAGES } from '~/src/server/common/constants/log-messages.js'
 
 // API endpoint constants
 const API_BASE_PATH = 'professions'
@@ -25,13 +26,13 @@ export async function getProfessions(request) {
 
     let data
     if (request) {
-      logger.info('[API_AUTH] Using authenticated fetcher for professions API')
+      logger.info(
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for professions API`
+      )
       const authedFetch = authedFetchJsonDecorator(request)
       data = await authedFetch(endpoint)
     } else {
-      logger.warn(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
-      )
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
       data = await fetcher(endpoint)
     }
 
@@ -70,14 +71,12 @@ export async function getProfessionById(id, request) {
     let data
     if (request) {
       logger.info(
-        '[API_AUTH] Using authenticated fetcher for profession by ID API'
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for profession by ID API`
       )
       const authedFetch = authedFetchJsonDecorator(request)
       data = await authedFetch(endpoint)
     } else {
-      logger.warn(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
-      )
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
       data = await fetcher(endpoint)
     }
 
@@ -149,14 +148,12 @@ export async function getAllProfessions(request) {
     let data
     if (request) {
       logger.info(
-        '[API_AUTH] Using authenticated fetcher for all professions API'
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for all professions API`
       )
       const authedFetch = authedFetchJsonDecorator(request)
       data = await authedFetch(endpoint)
     } else {
-      logger.warn(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
-      )
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
       data = await fetcher(endpoint)
     }
 
@@ -213,6 +210,90 @@ export async function restoreProfession(id, request) {
         id
       },
       'Failed to restore profession'
+    )
+    throw error
+  }
+}
+
+/**
+ * Create a new profession
+ * @param {object} professionData - The profession data to create
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object>} - The created profession
+ */
+export async function createProfession(professionData, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
+    logger.info({ endpoint }, 'Creating new profession')
+
+    let data
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(professionData)
+      })
+    } else {
+      data = await fetcher(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(professionData)
+      })
+    }
+
+    logger.info({ id: data?.id }, 'Profession created successfully')
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code
+      },
+      'Failed to create profession'
+    )
+    throw error
+  }
+}
+
+/**
+ * Update a profession (name only)
+ * @param {string} id - The profession ID
+ * @param {object} updateData - The data to update (should contain name)
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object>} - The updated profession
+ */
+export async function updateProfession(id, updateData, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
+    logger.info({ endpoint, id }, 'Updating profession')
+
+    let data
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(updateData)
+      })
+    } else {
+      data = await fetcher(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(updateData)
+      })
+    }
+
+    logger.info({ id }, 'Profession updated successfully')
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to update profession'
     )
     throw error
   }

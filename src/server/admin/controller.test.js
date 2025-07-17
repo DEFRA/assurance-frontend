@@ -1,11 +1,27 @@
 import { adminController } from './controller.js'
-import { getServiceStandards } from '~/src/server/services/service-standards.js'
+import {
+  getServiceStandards,
+  getAllServiceStandards,
+  getServiceStandardById,
+  createServiceStandard,
+  updateServiceStandard,
+  deleteServiceStandard,
+  restoreServiceStandard
+} from '~/src/server/services/service-standards.js'
 import {
   getProjects,
   getProjectById,
   deleteProject
 } from '~/src/server/services/projects.js'
-import { getProfessions } from '~/src/server/services/professions.js'
+import {
+  getProfessions,
+  getAllProfessions,
+  getProfessionById,
+  createProfession,
+  updateProfession,
+  deleteProfession,
+  restoreProfession
+} from '~/src/server/services/professions.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProfessions } from '~/src/server/data/professions.js'
 import { config } from '~/src/config/config.js'
@@ -50,43 +66,61 @@ describe('Admin controller', () => {
   ]
 
   beforeEach(() => {
-    // Reset all mocks
     jest.clearAllMocks()
 
-    // Mock request object
+    // Mock request and response objects
     mockRequest = {
+      query: { notification: 'Test notification' },
+      payload: {},
+      params: {},
       logger: {
         info: jest.fn(),
         error: jest.fn(),
         warn: jest.fn()
-      },
-      query: {
-        notification: 'Test notification'
-      },
-      auth: {
-        credentials: {
-          token: 'test-token'
-        }
       }
     }
 
-    // Mock response object
     mockH = {
-      view: jest.fn().mockReturnThis(),
-      redirect: jest.fn().mockReturnThis()
+      view: jest.fn(),
+      redirect: jest.fn()
     }
 
-    // Mock authedFetchJsonDecorator
-    mockAuthedFetch = jest.fn().mockResolvedValue({ ok: true })
+    // Set up default mocks
+    config.get.mockImplementation((key) => {
+      switch (key) {
+        case 'api.version':
+          return 'v1.0'
+        case 'env':
+          return 'test'
+        default:
+          return undefined
+      }
+    })
+
+    // Mock authed fetch decorator
+    mockAuthedFetch = jest.fn()
     authedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
 
-    // Mock config
-    config.get = jest.fn().mockImplementation((key) => {
-      if (key === 'api.version') {
-        return 'v1.0' // Return actual version to use versioned endpoints
-      }
-      return 'test'
-    })
+    // Mock service functions
+    getServiceStandards.mockResolvedValue(defaultServiceStandards)
+    getAllServiceStandards.mockResolvedValue(defaultServiceStandards)
+    getServiceStandardById.mockResolvedValue(null)
+    createServiceStandard.mockResolvedValue({})
+    updateServiceStandard.mockResolvedValue({})
+    deleteServiceStandard.mockResolvedValue(true)
+    restoreServiceStandard.mockResolvedValue(true)
+
+    getProjects.mockResolvedValue(mockProjects)
+    getProjectById.mockResolvedValue(null)
+    deleteProject.mockResolvedValue(true)
+
+    getProfessions.mockResolvedValue(defaultProfessions)
+    getAllProfessions.mockResolvedValue(defaultProfessions)
+    getProfessionById.mockResolvedValue(null)
+    createProfession.mockResolvedValue({})
+    updateProfession.mockResolvedValue({})
+    deleteProfession.mockResolvedValue(true)
+    restoreProfession.mockResolvedValue(true)
   })
 
   describe('get', () => {
@@ -107,6 +141,8 @@ describe('Admin controller', () => {
         projectsCount: mockProjects.length,
         professionsCount: defaultProfessions.length,
         projects: mockProjects,
+        standards: defaultServiceStandards,
+        professions: defaultProfessions,
         notification: 'Test notification',
         isTestEnvironment: true,
         isDevelopment: false
@@ -130,6 +166,8 @@ describe('Admin controller', () => {
         projectsCount: mockProjects.length,
         professionsCount: defaultProfessions.length,
         projects: mockProjects,
+        standards: defaultServiceStandards,
+        professions: defaultProfessions,
         notification: 'Test notification',
         isTestEnvironment: true,
         isDevelopment: false
@@ -695,6 +733,71 @@ describe('Admin controller', () => {
           professionsCount: 0,
           standardsCount: 0
         })
+      )
+    })
+  })
+
+  describe('createServiceStandard', () => {
+    it('should create service standard and redirect', async () => {
+      // Arrange
+      mockRequest.payload = {
+        number: '15',
+        name: 'Test Standard',
+        description: 'A test service standard'
+      }
+
+      // Act
+      await adminController.createServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(createServiceStandard).toHaveBeenCalledWith(
+        {
+          id: 'standard-15',
+          number: 15,
+          name: 'Test Standard',
+          description: 'A test service standard',
+          guidance: ''
+        },
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Service standard created successfully&tab=standards'
+      )
+    })
+
+    it('should handle validation errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        number: '',
+        name: 'Test Standard'
+        // description missing
+      }
+
+      // Act
+      await adminController.createServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(createServiceStandard).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Number, name and description are required&tab=standards'
+      )
+    })
+
+    it('should handle creation errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        number: '15',
+        name: 'Test Standard',
+        description: 'A test service standard'
+      }
+      createServiceStandard.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.createServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to create service standard&tab=standards'
       )
     })
   })

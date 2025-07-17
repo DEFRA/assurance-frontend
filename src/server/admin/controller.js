@@ -1,11 +1,25 @@
 import Boom from '@hapi/boom'
-import { getServiceStandards } from '~/src/server/services/service-standards.js'
+import {
+  getServiceStandards,
+  getAllServiceStandards,
+  createServiceStandard,
+  updateServiceStandard,
+  deleteServiceStandard,
+  restoreServiceStandard
+} from '~/src/server/services/service-standards.js'
 import {
   getProjects,
   deleteProject,
   getProjectById
 } from '~/src/server/services/projects.js'
-import { getProfessions } from '~/src/server/services/professions.js'
+import {
+  getProfessions,
+  getAllProfessions,
+  createProfession,
+  updateProfession,
+  deleteProfession,
+  restoreProfession
+} from '~/src/server/services/professions.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProfessions } from '~/src/server/data/professions.js'
@@ -37,18 +51,22 @@ export const adminController = {
   get: async (request, h) => {
     try {
       let standards = []
+      let allStandards = []
       let projects = []
       let professions = []
+      let allProfessions = []
 
       // Try to get standards from API, fall back to defaults if not available
       try {
         standards = (await getServiceStandards(request)) || []
+        allStandards = (await getAllServiceStandards(request)) || []
       } catch (error) {
         request.logger.warn(
           { error },
           'Could not fetch standards from API, using defaults'
         )
         standards = defaultServiceStandards
+        allStandards = defaultServiceStandards
       }
 
       try {
@@ -62,11 +80,12 @@ export const adminController = {
 
       try {
         professions = (await getProfessions(request)) || []
+        allProfessions = (await getAllProfessions(request)) || []
       } catch (error) {
         request.logger.error({ error }, 'Error fetching professions')
-        throw Boom.boomify(error, {
-          statusCode: statusCodes.internalServerError
-        })
+        // Don't throw - use defaults if API isn't available
+        professions = defaultProfessions
+        allProfessions = defaultProfessions
       }
 
       // Get environment from config or use a default for testing
@@ -85,6 +104,8 @@ export const adminController = {
         projectsCount: projects?.length || 0,
         professionsCount: professions?.length || 0,
         projects,
+        standards: allStandards,
+        professions: allProfessions,
         notification: request.query.notification,
         isTestEnvironment,
         isDevelopment
@@ -327,6 +348,208 @@ export const adminController = {
       request.logger.error(error, 'Failed to seed professions')
       return h.redirect(
         `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_SEED_PROFESSIONS}`
+      )
+    }
+  },
+
+  // Profession CRUD operations
+  createProfession: async (request, h) => {
+    try {
+      const { name, description } = request.payload
+
+      if (!name || !description) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Name and description are required&tab=professions`
+        )
+      }
+
+      // Generate ID from name (kebab-case)
+      const id = name
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+
+      const professionData = {
+        Id: id,
+        Name: name,
+        Description: description,
+        IsActive: true,
+        CreatedAt: new Date().toISOString(),
+        UpdatedAt: new Date().toISOString()
+      }
+      await createProfession(professionData, request)
+
+      request.logger.info({ id, name }, 'Profession created successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Profession created successfully&tab=professions`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to create profession')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Failed to create profession&tab=professions`
+      )
+    }
+  },
+
+  updateProfession: async (request, h) => {
+    try {
+      const { id, name } = request.payload
+
+      if (!id || !name) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Please select a profession and enter a new name&tab=professions`
+        )
+      }
+
+      await updateProfession(
+        id,
+        { Name: name, UpdatedAt: new Date().toISOString() },
+        request
+      )
+
+      request.logger.info({ id, name }, 'Profession updated successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Profession updated successfully&tab=professions`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to update profession')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Failed to update profession&tab=professions`
+      )
+    }
+  },
+
+  archiveProfession: async (request, h) => {
+    try {
+      const { id } = request.params
+      await deleteProfession(id, request)
+
+      request.logger.info({ id }, 'Profession archived successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Profession archived successfully&tab=professions`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to archive profession')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Failed to archive profession&tab=professions`
+      )
+    }
+  },
+
+  restoreProfession: async (request, h) => {
+    try {
+      const { id } = request.params
+      await restoreProfession(id, request)
+
+      request.logger.info({ id }, 'Profession restored successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Profession restored successfully&tab=professions`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to restore profession')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Failed to restore profession&tab=professions`
+      )
+    }
+  },
+
+  // Service Standard CRUD operations
+  createServiceStandard: async (request, h) => {
+    try {
+      const { number, name, description, guidance } = request.payload
+
+      if (!number || !name || !description) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Number, name and description are required&tab=standards`
+        )
+      }
+
+      // Generate ID from number
+      const id = `standard-${number}`
+
+      const standardData = {
+        id,
+        number: parseInt(number, 10),
+        name,
+        description,
+        guidance: guidance || '' // Provide empty string as default
+      }
+
+      await createServiceStandard(standardData, request)
+
+      request.logger.info(
+        { id, name, number },
+        'Service standard created successfully'
+      )
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Service standard created successfully&tab=standards`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to create service standard')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Failed to create service standard&tab=standards`
+      )
+    }
+  },
+
+  updateServiceStandard: async (request, h) => {
+    try {
+      const { id, name } = request.payload
+
+      if (!id || !name) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Please select a service standard and enter a new name&tab=standards`
+        )
+      }
+
+      await updateServiceStandard(
+        id,
+        { Name: name, UpdatedAt: new Date().toISOString() },
+        request
+      )
+
+      request.logger.info({ id, name }, 'Service standard updated successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Service standard updated successfully&tab=standards`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to update service standard')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Failed to update service standard&tab=standards`
+      )
+    }
+  },
+
+  archiveServiceStandard: async (request, h) => {
+    try {
+      const { id } = request.params
+      await deleteServiceStandard(id, request)
+
+      request.logger.info({ id }, 'Service standard archived successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Service standard archived successfully&tab=standards`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to archive service standard')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Failed to archive service standard&tab=standards`
+      )
+    }
+  },
+
+  restoreServiceStandard: async (request, h) => {
+    try {
+      const { id } = request.params
+      await restoreServiceStandard(id, request)
+
+      request.logger.info({ id }, 'Service standard restored successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Service standard restored successfully&tab=standards`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to restore service standard')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=Failed to restore service standard&tab=standards`
       )
     }
   }

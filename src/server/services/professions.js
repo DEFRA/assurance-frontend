@@ -217,3 +217,87 @@ export async function restoreProfession(id, request) {
     throw error
   }
 }
+
+/**
+ * Create a new profession
+ * @param {object} professionData - The profession data to create
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object>} - The created profession
+ */
+export async function createProfession(professionData, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
+    logger.info({ endpoint }, 'Creating new profession')
+
+    let data
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(professionData)
+      })
+    } else {
+      data = await fetcher(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(professionData)
+      })
+    }
+
+    logger.info({ id: data?.id }, 'Profession created successfully')
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code
+      },
+      'Failed to create profession'
+    )
+    throw error
+  }
+}
+
+/**
+ * Update a profession (name only)
+ * @param {string} id - The profession ID
+ * @param {object} updateData - The data to update (should contain name)
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object>} - The updated profession
+ */
+export async function updateProfession(id, updateData, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
+    logger.info({ endpoint, id }, 'Updating profession')
+
+    let data
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(updateData)
+      })
+    } else {
+      data = await fetcher(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(updateData)
+      })
+    }
+
+    logger.info({ id }, 'Profession updated successfully')
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to update profession'
+    )
+    throw error
+  }
+}

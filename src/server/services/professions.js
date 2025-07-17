@@ -2,6 +2,7 @@ import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { config } from '~/src/config/config.js'
+import { API_AUTH_MESSAGES } from '~/src/server/common/constants/log-messages.js'
 
 // API endpoint constants
 const API_BASE_PATH = 'professions'
@@ -25,13 +26,13 @@ export async function getProfessions(request) {
 
     let data
     if (request) {
-      logger.info('[API_AUTH] Using authenticated fetcher for professions API')
+      logger.info(
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for professions API`
+      )
       const authedFetch = authedFetchJsonDecorator(request)
       data = await authedFetch(endpoint)
     } else {
-      logger.warn(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
-      )
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
       data = await fetcher(endpoint)
     }
 
@@ -70,14 +71,12 @@ export async function getProfessionById(id, request) {
     let data
     if (request) {
       logger.info(
-        '[API_AUTH] Using authenticated fetcher for profession by ID API'
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for profession by ID API`
       )
       const authedFetch = authedFetchJsonDecorator(request)
       data = await authedFetch(endpoint)
     } else {
-      logger.warn(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
-      )
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
       data = await fetcher(endpoint)
     }
 
@@ -149,14 +148,12 @@ export async function getAllProfessions(request) {
     let data
     if (request) {
       logger.info(
-        '[API_AUTH] Using authenticated fetcher for all professions API'
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for all professions API`
       )
       const authedFetch = authedFetchJsonDecorator(request)
       data = await authedFetch(endpoint)
     } else {
-      logger.warn(
-        '[API_AUTH] No request context provided, using unauthenticated fetcher'
-      )
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
       data = await fetcher(endpoint)
     }
 

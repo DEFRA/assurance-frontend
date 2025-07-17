@@ -47,55 +47,63 @@ const ADMIN_BASE_URL = '/admin'
 const API_VERSION_KEY = 'api.version'
 const API_BASE_PREFIX = '/api'
 
+// Helper functions to reduce complexity
+const fetchStandardsData = async (request) => {
+  try {
+    const standards = (await getServiceStandards(request)) || []
+    const allStandards = (await getAllServiceStandards(request)) || []
+    return { standards, allStandards }
+  } catch (error) {
+    request.logger.warn(
+      { error },
+      'Could not fetch standards from API, using defaults'
+    )
+    return {
+      standards: defaultServiceStandards,
+      allStandards: defaultServiceStandards
+    }
+  }
+}
+
+const fetchProjectsData = async (request) => {
+  try {
+    return (await getProjects(request)) || []
+  } catch (error) {
+    request.logger.error({ error }, 'Error fetching projects')
+    throw Boom.boomify(error, {
+      statusCode: statusCodes.internalServerError
+    })
+  }
+}
+
+const fetchProfessionsData = async (request) => {
+  try {
+    const professions = (await getProfessions(request)) || []
+    const allProfessions = (await getAllProfessions(request)) || []
+    return { professions, allProfessions }
+  } catch (error) {
+    request.logger.error({ error }, 'Error fetching professions')
+    return {
+      professions: defaultProfessions,
+      allProfessions: defaultProfessions
+    }
+  }
+}
+
+const getEnvironmentFlags = () => {
+  const isTestEnvironment = config.get ? config.get('env') === 'test' : false
+  const isDevelopment = config.get ? config.get('env') === 'development' : false
+  return { isTestEnvironment, isDevelopment }
+}
+
 export const adminController = {
   get: async (request, h) => {
     try {
-      let standards = []
-      let allStandards = []
-      let projects = []
-      let professions = []
-      let allProfessions = []
-
-      // Try to get standards from API, fall back to defaults if not available
-      try {
-        standards = (await getServiceStandards(request)) || []
-        allStandards = (await getAllServiceStandards(request)) || []
-      } catch (error) {
-        request.logger.warn(
-          { error },
-          'Could not fetch standards from API, using defaults'
-        )
-        standards = defaultServiceStandards
-        allStandards = defaultServiceStandards
-      }
-
-      try {
-        projects = (await getProjects(request)) || []
-      } catch (error) {
-        request.logger.error({ error }, 'Error fetching projects')
-        throw Boom.boomify(error, {
-          statusCode: statusCodes.internalServerError
-        })
-      }
-
-      try {
-        professions = (await getProfessions(request)) || []
-        allProfessions = (await getAllProfessions(request)) || []
-      } catch (error) {
-        request.logger.error({ error }, 'Error fetching professions')
-        // Don't throw - use defaults if API isn't available
-        professions = defaultProfessions
-        allProfessions = defaultProfessions
-      }
-
-      // Get environment from config or use a default for testing
-      const isTestEnvironment = config.get
-        ? config.get('env') === 'test'
-        : false
-
-      const isDevelopment = config.get
-        ? config.get('env') === 'development'
-        : false
+      const { standards, allStandards } = await fetchStandardsData(request)
+      const projects = await fetchProjectsData(request)
+      const { professions, allProfessions } =
+        await fetchProfessionsData(request)
+      const { isTestEnvironment, isDevelopment } = getEnvironmentFlags()
 
       return h.view(VIEW_TEMPLATES.ADMIN_INDEX, {
         pageTitle: PAGE_TITLES.DATA_MANAGEMENT,

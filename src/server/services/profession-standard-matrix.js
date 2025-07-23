@@ -6,7 +6,7 @@ export const PROFESSION_STANDARD_MATRIX = {
     'business-analysis': [6, 7],
     'delivery-management': [4, 5, 6, 7, 8],
     'product-management': [2, 6, 10],
-    'quality-assurance': [6],
+    'quality-assurance': [6, 14],
     'release-management': [],
     'technical-architecture': [6, 11, 12, 13, 14],
     architecture: [6, 11, 12, 13, 14], // Same as technical-architecture
@@ -18,7 +18,7 @@ export const PROFESSION_STANDARD_MATRIX = {
     'business-analysis': [7, 11],
     'delivery-management': [4, 5, 6, 7, 8],
     'product-management': [2, 3, 6, 7, 10],
-    'quality-assurance': [3, 4, 5, 8, 9, 11],
+    'quality-assurance': [3, 4, 5, 8, 9, 11, 14],
     'release-management': [14],
     'technical-architecture': [6, 8, 9, 11, 12, 13, 14],
     architecture: [6, 8, 9, 11, 12, 13, 14], // Same as technical-architecture

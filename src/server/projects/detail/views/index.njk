@@ -218,23 +218,27 @@
         {% endif %}
       {% endset %}
 
-      {{ govukTabs({
-        items: [
-          {
-            id: "compliance",
-            label: "Service Standard compliance",
-            panel: {
-              html: complianceTabHtml
-            }
-          },
-          {
-            id: "engagement",
-            label: "Project engagement",
-            panel: {
-              html: engagementTabHtml
-            }
+      {% set tabItems = [
+        {
+          id: "compliance",
+          label: "Service Standard compliance",
+          panel: {
+            html: complianceTabHtml
           }
-        ]
+        },
+        {
+          id: "engagement",
+          label: "Project engagement",
+          panel: {
+            html: engagementTabHtml
+          }
+        }
+      ] %}
+
+
+
+      {{ govukTabs({
+        items: tabItems
       }) }}
 
     </div>

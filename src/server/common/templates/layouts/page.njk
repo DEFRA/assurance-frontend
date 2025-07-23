@@ -54,6 +54,9 @@
             <li class="govuk-service-navigation__item{% if currentPath and currentPath.startsWith('/professions') %} govuk-service-navigation__item--active{% endif %}">
               <a class="govuk-service-navigation__link" href="/professions">Professions</a>
             </li>
+            <li class="govuk-service-navigation__item{% if currentPath and currentPath.startsWith('/code-analysis') %} govuk-service-navigation__item--active{% endif %}">
+              <a class="govuk-service-navigation__link" href="/code-analysis">Code Analysis</a>
+            </li>
             {% endif %}
             <li class="govuk-service-navigation__item govuk-service-navigation__item--end">
               <a class="govuk-service-navigation__link" href="{{ '/auth/logout' if isAuthenticated else '/auth/login' }}">

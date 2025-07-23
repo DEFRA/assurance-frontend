@@ -1,0 +1,941 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {{ appHeading({
+        text: "Code Analysis",
+        classes: "govuk-heading-xl govuk-!-margin-bottom-4"
+      }) }}
+
+      <p class="govuk-body-l">
+        Analyze code quality, dependencies, and security for any GitHub repository.
+      </p>
+
+      {% if not serviceAvailable %}
+        {{ govukWarningText({
+          text: "Code analysis service is currently unavailable. Please check that the service is running on localhost:8086.",
+          iconFallbackText: "Warning"
+        }) }}
+      {% endif %}
+
+      {% if error %}
+        {{ govukNotificationBanner({
+          type: "error",
+          html: "<p class=\"govuk-notification-banner__heading\">Error</p><p>" + error + "</p>"
+        }) }}
+      {% endif %}
+
+      {% if analysisResults %}
+        {{ govukNotificationBanner({
+          type: "success",
+          html: "<p class=\"govuk-notification-banner__heading\">Analysis Complete</p><p>Code analysis completed successfully for " + repositoryUrl + "</p>"
+        }) }}
+      {% endif %}
+
+      {% if analysisError %}
+        {{ govukNotificationBanner({
+          type: "error",
+          html: "<p class=\"govuk-notification-banner__heading\">Analysis Failed</p><p>" + analysisError + "</p>"
+        }) }}
+      {% endif %}
+
+      {% if serviceAvailable %}
+        <form method="post" action="/code-analysis">
+          {{ govukInput({
+            label: {
+              text: "GitHub Repository URL",
+              classes: "govuk-label--m"
+            },
+            hint: {
+              text: "Enter the full GitHub repository URL (e.g., https://github.com/owner/repo)"
+            },
+            id: "repositoryUrl",
+            name: "repositoryUrl",
+            type: "url",
+            value: repositoryUrl if repositoryUrl else "",
+            classes: "govuk-!-margin-bottom-4"
+          }) }}
+
+          {{ govukButton({
+            text: "Analyze Repository",
+            type: "submit"
+          }) }}
+        </form>
+
+        {% set howItWorksHtml %}
+          <h3 class="govuk-heading-s">What this analysis provides:</h3>
+          <ul class="govuk-list govuk-list--bullet">
+            <li><strong>Repository Activity:</strong> Analyzes merge frequency, CI/CD configuration, and recent development activity</li>
+            <li><strong>Dependency Analysis:</strong> Identifies programming languages, file types, configuration files, and unexpected libraries</li>
+            <li><strong>GOV.UK Frontend Compliance:</strong> Comprehensive compliance scoring (0-100), detects non-compliant UI libraries, custom CSS classes, and non-standard form patterns</li>
+            <li><strong>NPM Security Audit:</strong> Scans for vulnerabilities in npm packages with detailed severity analysis and remediation guidance</li>
+            <li><strong>Logging & Monitoring Audit:</strong> Identifies potentially sensitive log statements, logging frameworks, and monitoring tools usage</li>
+            <li><strong>Error Handling & UX Audit:</strong> Analyzes error handling patterns, custom error pages, and user experience considerations</li>
+            <li><strong>SonarCloud Integration:</strong> Provides code quality metrics including bugs, vulnerabilities, and test coverage (when configured)</li>
+          </ul>
+          
+          <h3 class="govuk-heading-s govuk-!-margin-top-4">Key Benefits:</h3>
+          <ul class="govuk-list govuk-list--bullet">
+            <li><strong>Design System Compliance:</strong> Ensures adherence to GOV.UK Design System standards</li>
+            <li><strong>Security Assessment:</strong> Identifies vulnerable dependencies and sensitive logging practices</li>
+            <li><strong>Quality Assurance:</strong> Comprehensive error handling and user experience analysis</li>
+            <li><strong>Actionable Insights:</strong> Specific recommendations for improving code quality and compliance</li>
+          </ul>
+          
+          <p class="govuk-body govuk-!-margin-top-3">Analysis typically takes 1-3 minutes per repository depending on size and complexity. Results are organized into expandable sections for easy review.</p>
+        {% endset %}
+
+        {{ govukDetails({
+          summaryText: "How it works",
+          html: howItWorksHtml
+        }) }}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if analysisResults %}
+    <div class="govuk-grid-row govuk-!-margin-top-6">
+      <div class="govuk-grid-column-full">
+        <h2 class="govuk-heading-l">Analysis Results</h2>
+        
+        <p class="govuk-body-s">
+          <strong>Repository:</strong> 
+          <a href="{{ repositoryUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer">
+            {{ repositoryUrl }}
+          </a>
+          <br>
+          <strong>Analysis completed:</strong> {{ analysisResults.dependency_analysis.analysis_timestamp | formatDate if analysisResults.dependency_analysis.analysis_timestamp else "Not available" }}
+          <br>
+          <strong>Status:</strong> {{ analysisResults.status | title }}
+        </p>
+
+        <!-- Repository Activity Section -->
+        {% if analysisResults.repo_activity %}
+          {{ govukDetails({
+            summaryText: "Repository Activity",
+            html: '<div class="govuk-!-margin-top-3">
+              ' + govukSummaryList({
+                rows: [
+                  {
+                    key: { text: "Total merges (last 30 days)" },
+                    value: { text: analysisResults.repo_activity.total_merges }
+                  },
+                  {
+                    key: { text: "Merges per day" },
+                    value: { text: analysisResults.repo_activity.merges_per_day | round(2) }
+                  },
+                  {
+                    key: { text: "Last merge date" },
+                    value: { text: analysisResults.repo_activity.last_merge_date | formatDate if analysisResults.repo_activity.last_merge_date else "No recent merges" }
+                  },
+                  {
+                    key: { text: "CI/CD configured" },
+                    value: { 
+                      html: govukTag({
+                        text: "Yes" if analysisResults.repo_activity.ci_configured else "No",
+                        classes: "govuk-tag--green" if analysisResults.repo_activity.ci_configured else "govuk-tag--red"
+                      })
+                    }
+                  },
+                  {
+                    key: { text: "Recent CI runs" },
+                    value: { text: analysisResults.repo_activity.ci_recent_runs }
+                  }
+                ]
+              }) + '
+            </div>'
+          }) }}
+        {% endif %}
+
+        <!-- Dependency Analysis Section -->
+        {% if analysisResults.dependency_analysis %}
+          {% set dependencyHtml %}
+            <div class="govuk-!-margin-top-3">
+              {{ govukSummaryList({
+                rows: [
+                  {
+                    key: { text: "Primary language" },
+                    value: { text: analysisResults.dependency_analysis.language_info.language | title if analysisResults.dependency_analysis.language_info.language else "Not detected" }
+                  },
+                  {
+                    key: { text: "Language confidence" },
+                    value: { text: ((analysisResults.dependency_analysis.language_info.confidence * 100) | round(1) + "%") if analysisResults.dependency_analysis.language_info.confidence else "Not available" }
+                  },
+                  {
+                    key: { text: "Config files found" },
+                    value: { text: analysisResults.dependency_analysis.language_info.config_files | join(", ") if analysisResults.dependency_analysis.language_info.config_files and analysisResults.dependency_analysis.language_info.config_files.length > 0 else "None detected" }
+                  },
+                  {
+                    key: { text: "Total files analyzed" },
+                    value: { text: analysisResults.dependency_analysis.language_info.total_files if analysisResults.dependency_analysis.language_info.total_files else 0 }
+                  }
+                ]
+              }) }}
+
+              {% if analysisResults.dependency_analysis.language_info.file_counts %}
+                <h4 class="govuk-heading-s govuk-!-margin-top-4">File Types</h4>
+                <table class="govuk-table">
+                  <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                      <th scope="col" class="govuk-table__header">Extension</th>
+                      <th scope="col" class="govuk-table__header">Count</th>
+                    </tr>
+                  </thead>
+                  <tbody class="govuk-table__body">
+                    {% for extension, count in analysisResults.dependency_analysis.language_info.file_counts %}
+                      <tr class="govuk-table__row">
+                        <td class="govuk-table__cell">{{ extension }}</td>
+                        <td class="govuk-table__cell">{{ count }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% endif %}
+
+              {% if analysisResults.dependency_analysis.language_info.govuk_frontend_info %}
+                {% set govukInfo = analysisResults.dependency_analysis.language_info.govuk_frontend_info %}
+                <h4 class="govuk-heading-s govuk-!-margin-top-4">GOV.UK Frontend Analysis</h4>
+                
+                {{ govukSummaryList({
+                  rows: [
+                    {
+                      key: { text: "GOV.UK Frontend present" },
+                      value: { 
+                        html: govukTag({
+                          text: "Yes" if govukInfo.is_present else "No",
+                          classes: "govuk-tag--green" if govukInfo.is_present else "govuk-tag--grey"
+                        })
+                      }
+                    },
+                    {
+                      key: { text: "Version" },
+                      value: { text: govukInfo.version if govukInfo.version else "Not detected" }
+                    },
+                    {
+                      key: { text: "Compliance score" },
+                      value: { 
+                        html: govukTag({
+                          text: govukInfo.compliance_score + "/100" if govukInfo.compliance_score else "Not assessed",
+                          classes: "govuk-tag--green" if (govukInfo.compliance_score and govukInfo.compliance_score >= 90) else ("govuk-tag--orange" if (govukInfo.compliance_score and govukInfo.compliance_score >= 70) else "govuk-tag--red")
+                        })
+                      }
+                    },
+                    {
+                      key: { text: "Template files analyzed" },
+                      value: { text: govukInfo.template_files_count if govukInfo.template_files_count else 0 }
+                    },
+                    {
+                      key: { text: "Components used" },
+                      value: { text: govukInfo.components_used.length if govukInfo.components_used else 0 }
+                    }
+                  ]
+                }) }}
+
+                {% if govukInfo.components_used and govukInfo.components_used.length > 0 %}
+                  <h5 class="govuk-heading-xs govuk-!-margin-top-3">Components in Use</h5>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                    {% set componentCount = 0 %}
+                    {% for component in govukInfo.components_used %}
+                      {% if componentCount < 15 %}
+                        {{ govukTag({
+                          text: component | replace("govuk", "") | title,
+                          classes: "govuk-tag--blue"
+                        }) }}
+                        {% set componentCount = componentCount + 1 %}
+                      {% endif %}
+                    {% endfor %}
+                    {% if govukInfo.components_used.length > 15 %}
+                      <span class="govuk-body-s">... and {{ govukInfo.components_used.length - 15 }} more</span>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                {% if govukInfo.compliance_issues and govukInfo.compliance_issues.length > 0 %}
+                  <h5 class="govuk-heading-xs govuk-!-margin-top-3">Compliance Assessment</h5>
+                  <ul class="govuk-list govuk-list--bullet">
+                    {% for issue in govukInfo.compliance_issues %}
+                      <li>{{ issue }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+
+                {% if govukInfo.non_govuk_libraries and govukInfo.non_govuk_libraries.length > 0 %}
+                  <h5 class="govuk-heading-xs govuk-!-margin-top-3">Non-GOV.UK Libraries Detected</h5>
+                  <div class="govuk-warning-text">
+                    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                    <strong class="govuk-warning-text__text">
+                      <span class="govuk-visually-hidden">Warning</span>
+                      {{ govukInfo.non_govuk_libraries.length }} non-compliant UI libraries detected
+                    </strong>
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                    {% for library in govukInfo.non_govuk_libraries %}
+                      {{ govukTag({
+                        text: library,
+                        classes: "govuk-tag--red"
+                      }) }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                {% if govukInfo.custom_css_classes and govukInfo.custom_css_classes.length > 0 %}
+                  <h5 class="govuk-heading-xs govuk-!-margin-top-3">Custom CSS Classes</h5>
+                  <p class="govuk-body-s">{{ govukInfo.custom_css_classes.length }} custom CSS classes that don't follow GOV.UK patterns:</p>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                    {% for cssClass in govukInfo.custom_css_classes %}
+                      {{ govukTag({
+                        text: cssClass,
+                        classes: "govuk-tag--yellow"
+                      }) }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                {% if govukInfo.non_standard_form_patterns and govukInfo.non_standard_form_patterns.length > 0 %}
+                  <h5 class="govuk-heading-xs govuk-!-margin-top-3">Non-Standard Form Patterns</h5>
+                  <p class="govuk-body-s">{{ govukInfo.non_standard_form_patterns.length }} form patterns that don't follow GOV.UK standards:</p>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                    {% for pattern in govukInfo.non_standard_form_patterns %}
+                      {{ govukTag({
+                        text: pattern,
+                        classes: "govuk-tag--orange"
+                      }) }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                {% if govukInfo.recommendations and govukInfo.recommendations.length > 0 %}
+                  <h5 class="govuk-heading-xs govuk-!-margin-top-3">Recommendations</h5>
+                  <ul class="govuk-list govuk-list--bullet">
+                    {% for recommendation in govukInfo.recommendations %}
+                      <li>{{ recommendation }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% endset %}
+          
+          {{ govukDetails({
+            summaryText: "Dependency Analysis",
+            html: dependencyHtml
+          }) }}
+        {% endif %}
+
+        <!-- NPM Security Audit Section -->
+        {% if analysisResults.dependency_analysis and analysisResults.dependency_analysis.npm_audit %}
+          {% set npmAudit = analysisResults.dependency_analysis.npm_audit %}
+          {% set auditHtml %}
+            <div class="govuk-!-margin-top-3">
+              {{ govukSummaryList({
+                rows: [
+                  {
+                    key: { text: "Package.json found" },
+                    value: { 
+                      html: govukTag({
+                        text: "Yes" if npmAudit.package_json_found else "No",
+                        classes: "govuk-tag--green" if npmAudit.package_json_found else "govuk-tag--grey"
+                      })
+                    }
+                  },
+                  {
+                    key: { text: "Audit executed" },
+                    value: { 
+                      html: govukTag({
+                        text: "Yes" if npmAudit.audit_ran else "No",
+                        classes: "govuk-tag--green" if npmAudit.audit_ran else "govuk-tag--red"
+                      })
+                    }
+                  }
+                ]
+              }) }}
+
+              {% if npmAudit.error_message %}
+                {{ govukInsetText({
+                  text: "Audit failed: " + npmAudit.error_message
+                }) }}
+              {% endif %}
+
+              {% if npmAudit.summary and npmAudit.summary.total_vulnerabilities > 0 %}
+                <h4 class="govuk-heading-s govuk-!-margin-top-4">Vulnerability Summary</h4>
+                <table class="govuk-table">
+                  <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                      <th scope="col" class="govuk-table__header">Severity</th>
+                      <th scope="col" class="govuk-table__header">Count</th>
+                    </tr>
+                  </thead>
+                  <tbody class="govuk-table__body">
+                    {% if npmAudit.summary.critical > 0 %}
+                      <tr class="govuk-table__row">
+                        <td class="govuk-table__cell">
+                          {{ govukTag({
+                            text: "Critical",
+                            classes: "govuk-tag--red"
+                          }) }}
+                        </td>
+                        <td class="govuk-table__cell">{{ npmAudit.summary.critical }}</td>
+                      </tr>
+                    {% endif %}
+                    {% if npmAudit.summary.high > 0 %}
+                      <tr class="govuk-table__row">
+                        <td class="govuk-table__cell">
+                          {{ govukTag({
+                            text: "High",
+                            classes: "govuk-tag--red"
+                          }) }}
+                        </td>
+                        <td class="govuk-table__cell">{{ npmAudit.summary.high }}</td>
+                      </tr>
+                    {% endif %}
+                    {% if npmAudit.summary.moderate > 0 %}
+                      <tr class="govuk-table__row">
+                        <td class="govuk-table__cell">
+                          {{ govukTag({
+                            text: "Moderate",
+                            classes: "govuk-tag--orange"
+                          }) }}
+                        </td>
+                        <td class="govuk-table__cell">{{ npmAudit.summary.moderate }}</td>
+                      </tr>
+                    {% endif %}
+                    {% if npmAudit.summary.low > 0 %}
+                      <tr class="govuk-table__row">
+                        <td class="govuk-table__cell">
+                          {{ govukTag({
+                            text: "Low",
+                            classes: "govuk-tag--yellow"
+                          }) }}
+                        </td>
+                        <td class="govuk-table__cell">{{ npmAudit.summary.low }}</td>
+                      </tr>
+                    {% endif %}
+                    {% if npmAudit.summary.info > 0 %}
+                      <tr class="govuk-table__row">
+                        <td class="govuk-table__cell">
+                          {{ govukTag({
+                            text: "Info",
+                            classes: "govuk-tag--blue"
+                          }) }}
+                        </td>
+                        <td class="govuk-table__cell">{{ npmAudit.summary.info }}</td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+
+                {% if npmAudit.vulnerabilities and npmAudit.vulnerabilities.length > 0 %}
+                  <h4 class="govuk-heading-s govuk-!-margin-top-4">Vulnerability Details</h4>
+                  
+                  <table class="govuk-table">
+                    <thead class="govuk-table__head">
+                      <tr class="govuk-table__row">
+                        <th scope="col" class="govuk-table__header">Package</th>
+                        <th scope="col" class="govuk-table__header">Version Range</th>
+                        <th scope="col" class="govuk-table__header">Severity</th>
+                        <th scope="col" class="govuk-table__header">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody class="govuk-table__body">
+                      <!-- Show critical and high severity first -->
+                      {% for vuln in npmAudit.vulnerabilities %}
+                        {% if vuln.severity == "critical" and loop.index <= 10 %}
+                          <tr class="govuk-table__row">
+                            <td class="govuk-table__cell">{{ vuln.name }}</td>
+                            <td class="govuk-table__cell">{{ vuln.range if vuln.range else "All versions" }}</td>
+                            <td class="govuk-table__cell">
+                              {{ govukTag({
+                                text: vuln.severity | title,
+                                classes: "govuk-tag--red"
+                              }) }}
+                            </td>
+                            <td class="govuk-table__cell">
+                              {% if vuln.url and vuln.title %}
+                                <a href="{{ vuln.url }}" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                                  {{ vuln.title }}
+                                </a>
+                              {% elif vuln.title %}
+                                {{ vuln.title }}
+                              {% else %}
+                                <span class="govuk-body-s">No description available</span>
+                              {% endif %}
+                            </td>
+                          </tr>
+                        {% endif %}
+                      {% endfor %}
+                      
+                      {% for vuln in npmAudit.vulnerabilities %}
+                        {% if vuln.severity == "high" and loop.index <= 10 %}
+                          <tr class="govuk-table__row">
+                            <td class="govuk-table__cell">{{ vuln.name }}</td>
+                            <td class="govuk-table__cell">{{ vuln.range if vuln.range else "All versions" }}</td>
+                            <td class="govuk-table__cell">
+                              {{ govukTag({
+                                text: vuln.severity | title,
+                                classes: "govuk-tag--red"
+                              }) }}
+                            </td>
+                            <td class="govuk-table__cell">
+                              {% if vuln.url and vuln.title %}
+                                <a href="{{ vuln.url }}" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                                  {{ vuln.title }}
+                                </a>
+                              {% elif vuln.title %}
+                                {{ vuln.title }}
+                              {% else %}
+                                <span class="govuk-body-s">No description available</span>
+                              {% endif %}
+                            </td>
+                          </tr>
+                        {% endif %}
+                      {% endfor %}
+                      
+                      {% for vuln in npmAudit.vulnerabilities %}
+                        {% if vuln.severity != "critical" and vuln.severity != "high" and loop.index <= 5 %}
+                          <tr class="govuk-table__row">
+                            <td class="govuk-table__cell">{{ vuln.name }}</td>
+                            <td class="govuk-table__cell">{{ vuln.range if vuln.range else "All versions" }}</td>
+                            <td class="govuk-table__cell">
+                              {{ govukTag({
+                                text: vuln.severity | title,
+                                classes: "govuk-tag--orange" if vuln.severity == "moderate" else ("govuk-tag--yellow" if vuln.severity == "low" else "govuk-tag--blue")
+                              }) }}
+                            </td>
+                            <td class="govuk-table__cell">
+                              {% if vuln.url and vuln.title %}
+                                <a href="{{ vuln.url }}" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                                  {{ vuln.title }}
+                                </a>
+                              {% elif vuln.title %}
+                                {{ vuln.title }}
+                              {% else %}
+                                <span class="govuk-body-s">No description available</span>
+                              {% endif %}
+                            </td>
+                          </tr>
+                        {% endif %}
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                {% endif %}
+
+                {% if npmAudit.recommendations and npmAudit.recommendations.length > 0 %}
+                  <h4 class="govuk-heading-s govuk-!-margin-top-4">Security Recommendations</h4>
+                  <ul class="govuk-list govuk-list--bullet">
+                    {% for recommendation in npmAudit.recommendations %}
+                      {% if "🔶" not in recommendation and "vulnerabilities found" not in recommendation %}
+                        <li>{{ recommendation }}</li>
+                      {% endif %}
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              {% elif npmAudit.audit_ran %}
+                {{ govukInsetText({
+                  text: "No security vulnerabilities found in npm packages.",
+                  classes: "govuk-inset-text--success"
+                }) }}
+              {% endif %}
+            </div>
+          {% endset %}
+          
+          {{ govukDetails({
+            summaryText: "NPM Security Audit" + (" (" + npmAudit.summary.total_vulnerabilities + " vulnerabilities)" if npmAudit.summary and npmAudit.summary.total_vulnerabilities > 0 else ""),
+            html: auditHtml
+          }) }}
+        {% endif %}
+
+        <!-- Logging & Monitoring Audit Section -->
+        {% if analysisResults.dependency_analysis and analysisResults.dependency_analysis.logging_monitoring_audit %}
+          {% set loggingAudit = analysisResults.dependency_analysis.logging_monitoring_audit %}
+          {% set loggingHtml %}
+            <div class="govuk-!-margin-top-3">
+              {{ govukSummaryList({
+                rows: [
+                  {
+                    key: { text: "Total loggers found" },
+                    value: { text: loggingAudit.summary.total_loggers }
+                  },
+                  {
+                    key: { text: "Total log statements" },
+                    value: { text: loggingAudit.summary.total_log_statements }
+                  },
+                  {
+                    key: { text: "Potentially sensitive logs" },
+                    value: { 
+                      html: govukTag({
+                        text: loggingAudit.summary.potentially_sensitive_logs,
+                        classes: "govuk-tag--green" if loggingAudit.summary.potentially_sensitive_logs == 0 else ("govuk-tag--orange" if loggingAudit.summary.potentially_sensitive_logs < 10 else "govuk-tag--red")
+                      })
+                    }
+                  },
+                  {
+                    key: { text: "Logging frameworks" },
+                    value: { text: loggingAudit.summary.logging_frameworks | join(", ") if loggingAudit.summary.logging_frameworks and loggingAudit.summary.logging_frameworks.length > 0 else "None detected" }
+                  },
+                  {
+                    key: { text: "Monitoring tools" },
+                    value: { text: loggingAudit.summary.monitoring_tools_found | join(", ") if loggingAudit.summary.monitoring_tools_found and loggingAudit.summary.monitoring_tools_found.length > 0 else "None detected" }
+                  }
+                ]
+              }) }}
+
+              {% if loggingAudit.monitoring_tools and loggingAudit.monitoring_tools.length > 0 %}
+                <h4 class="govuk-heading-s govuk-!-margin-top-4">Monitoring Tools Details</h4>
+                <table class="govuk-table">
+                  <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                      <th scope="col" class="govuk-table__header">Tool</th>
+                      <th scope="col" class="govuk-table__header">File</th>
+                      <th scope="col" class="govuk-table__header">Usage Type</th>
+                    </tr>
+                  </thead>
+                  <tbody class="govuk-table__body">
+                    {% set toolCount = 0 %}
+                    {% for tool in loggingAudit.monitoring_tools %}
+                      {% if toolCount < 10 %}
+                        <tr class="govuk-table__row">
+                          <td class="govuk-table__cell">{{ tool.name }}</td>
+                          <td class="govuk-table__cell">{{ tool.file_path }}</td>
+                          <td class="govuk-table__cell">{{ tool.usage_type | title }}</td>
+                        </tr>
+                        {% set toolCount = toolCount + 1 %}
+                      {% endif %}
+                    {% endfor %}
+                  </tbody>
+                </table>
+                {% if loggingAudit.monitoring_tools.length > 10 %}
+                  <p class="govuk-body-s">Showing first 10 of {{ loggingAudit.monitoring_tools.length }} monitoring tool references.</p>
+                {% endif %}
+              {% endif %}
+
+              {% if loggingAudit.summary.potentially_sensitive_logs > 0 %}
+                <h4 class="govuk-heading-s govuk-!-margin-top-4">Potentially Sensitive Logging Statements</h4>
+                <p class="govuk-body-s govuk-!-margin-bottom-3">
+                  Found {{ loggingAudit.summary.potentially_sensitive_logs }} potentially sensitive log statements that may contain PII or secrets.
+                </p>
+                
+                {% if loggingAudit.logging_patterns %}
+                  <table class="govuk-table">
+                    <thead class="govuk-table__head">
+                      <tr class="govuk-table__row">
+                        <th scope="col" class="govuk-table__header">File</th>
+                        <th scope="col" class="govuk-table__header">Line</th>
+                        <th scope="col" class="govuk-table__header">Pattern Type</th>
+                        <th scope="col" class="govuk-table__header">Content</th>
+                      </tr>
+                    </thead>
+                    <tbody class="govuk-table__body">
+                      {% set sensitiveCount = 0 %}
+                      {% for pattern in loggingAudit.logging_patterns %}
+                        {% if (pattern.potentially_sensitive or (sensitiveCount < loggingAudit.summary.potentially_sensitive_logs and ("token" in (pattern.content | lower) or "password" in (pattern.content | lower) or "secret" in (pattern.content | lower) or "key" in (pattern.content | lower) or "console" in (pattern.pattern_type | lower)))) and sensitiveCount < 20 %}
+                          <tr class="govuk-table__row">
+                            <td class="govuk-table__cell">
+                              <span class="govuk-body-s">{{ pattern.file_path }}</span>
+                            </td>
+                            <td class="govuk-table__cell">
+                              <strong>{{ pattern.line_number }}</strong>
+                            </td>
+                            <td class="govuk-table__cell">
+                              {{ govukTag({
+                                text: pattern.pattern_type | replace("_", " ") | title,
+                                classes: "govuk-tag--orange"
+                              }) }}
+                            </td>
+                            <td class="govuk-table__cell">
+                              <code class="govuk-body-s">{{ pattern.content }}</code>
+                            </td>
+                          </tr>
+                          {% set sensitiveCount = sensitiveCount + 1 %}
+                        {% endif %}
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                  {% if sensitiveCount == 0 %}
+                    {{ govukInsetText({
+                      text: "Sensitive logs detected in analysis but individual patterns could not be displayed. This may indicate console.log statements or other potentially sensitive logging practices."
+                    }) }}
+                  {% endif %}
+                {% else %}
+                  {{ govukInsetText({
+                    text: "Sensitive logs detected but detailed patterns not available for display."
+                  }) }}
+                {% endif %}
+              {% endif %}
+
+              {% if loggingAudit.recommendations and loggingAudit.recommendations.length > 0 %}
+                <h4 class="govuk-heading-s govuk-!-margin-top-4">Security Recommendations</h4>
+                <ul class="govuk-list govuk-list--bullet">
+                  {% for recommendation in loggingAudit.recommendations %}
+                    <li>{{ recommendation }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          {% endset %}
+          
+          {{ govukDetails({
+            summaryText: "Logging & Monitoring Audit" + (" (" + loggingAudit.summary.potentially_sensitive_logs + " sensitive logs)" if loggingAudit.summary.potentially_sensitive_logs > 0 else ""),
+            html: loggingHtml
+          }) }}
+        {% endif %}
+
+        <!-- Error Handling & UX Audit Section -->
+        {% if analysisResults.dependency_analysis and analysisResults.dependency_analysis.error_handling_audit %}
+          {% set errorAudit = analysisResults.dependency_analysis.error_handling_audit %}
+          {% set errorHandlingHtml %}
+            <div class="govuk-!-margin-top-3">
+              {{ govukSummaryList({
+                rows: [
+                  {
+                    key: { text: "Error routes found" },
+                    value: { text: errorAudit.summary.total_error_routes }
+                  },
+                  {
+                    key: { text: "Error handlers found" },
+                    value: { text: errorAudit.summary.total_error_handlers }
+                  },
+                  {
+                    key: { text: "Custom error pages" },
+                    value: { text: errorAudit.summary.total_custom_error_pages }
+                  },
+                  {
+                    key: { text: "404 handling" },
+                    value: { 
+                      html: govukTag({
+                        text: "Yes" if errorAudit.summary.has_404_handling else "No",
+                        classes: "govuk-tag--green" if errorAudit.summary.has_404_handling else "govuk-tag--red"
+                      })
+                    }
+                  },
+                  {
+                    key: { text: "500 handling" },
+                    value: { 
+                      html: govukTag({
+                        text: "Yes" if errorAudit.summary.has_500_handling else "No",
+                        classes: "govuk-tag--green" if errorAudit.summary.has_500_handling else "govuk-tag--red"
+                      })
+                    }
+                  },
+                  {
+                    key: { text: "Global error handler" },
+                    value: { 
+                      html: govukTag({
+                        text: "Yes" if errorAudit.summary.has_global_error_handler else "No",
+                        classes: "govuk-tag--green" if errorAudit.summary.has_global_error_handler else "govuk-tag--red"
+                      })
+                    }
+                  },
+                  {
+                    key: { text: "Error handling standardized" },
+                    value: { 
+                      html: govukTag({
+                        text: "Yes" if errorAudit.summary.error_handling_standardized else "No",
+                        classes: "govuk-tag--green" if errorAudit.summary.error_handling_standardized else "govuk-tag--orange"
+                      })
+                    }
+                  }
+                ]
+              }) }}
+
+              {% if errorAudit.error_handlers and errorAudit.error_handlers.length > 0 %}
+                <h4 class="govuk-heading-s govuk-!-margin-top-4">Error Handler Details</h4>
+                <table class="govuk-table">
+                  <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                      <th scope="col" class="govuk-table__header">File</th>
+                      <th scope="col" class="govuk-table__header">Line</th>
+                      <th scope="col" class="govuk-table__header">Handler Type</th>
+                      <th scope="col" class="govuk-table__header">Error Types</th>
+                    </tr>
+                  </thead>
+                  <tbody class="govuk-table__body">
+                    {% set handlerCount = 0 %}
+                    {% for handler in errorAudit.error_handlers %}
+                      {% if handlerCount < 10 %}
+                        <tr class="govuk-table__row">
+                          <td class="govuk-table__cell">
+                            <span class="govuk-body-s">{{ handler.file_path }}</span>
+                          </td>
+                          <td class="govuk-table__cell">
+                            <strong>{{ handler.line_number }}</strong>
+                          </td>
+                          <td class="govuk-table__cell">
+                            {{ govukTag({
+                              text: handler.handler_type | replace("_", " ") | title,
+                              classes: "govuk-tag--blue"
+                            }) }}
+                          </td>
+                          <td class="govuk-table__cell">
+                            {% if handler.error_types and handler.error_types.length > 0 %}
+                              {{ handler.error_types | join(", ") }}
+                            {% else %}
+                              <span class="govuk-body-s">Generic</span>
+                            {% endif %}
+                          </td>
+                        </tr>
+                        {% set handlerCount = handlerCount + 1 %}
+                      {% endif %}
+                    {% endfor %}
+                  </tbody>
+                </table>
+                {% if errorAudit.error_handlers.length > 10 %}
+                  <p class="govuk-body-s">Showing first 10 of {{ errorAudit.error_handlers.length }} error handlers.</p>
+                {% endif %}
+              {% endif %}
+
+              {% if errorAudit.custom_error_pages and errorAudit.custom_error_pages.length > 0 %}
+                <h4 class="govuk-heading-s govuk-!-margin-top-4">Custom Error Pages</h4>
+                <table class="govuk-table">
+                  <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                      <th scope="col" class="govuk-table__header">File</th>
+                      <th scope="col" class="govuk-table__header">Page Type</th>
+                      <th scope="col" class="govuk-table__header">Template Engine</th>
+                      <th scope="col" class="govuk-table__header">Features</th>
+                    </tr>
+                  </thead>
+                  <tbody class="govuk-table__body">
+                    {% for page in errorAudit.custom_error_pages %}
+                      <tr class="govuk-table__row">
+                        <td class="govuk-table__cell">
+                          <span class="govuk-body-s">{{ page.file_path }}</span>
+                        </td>
+                        <td class="govuk-table__cell">
+                          {{ govukTag({
+                            text: page.page_type | title,
+                            classes: "govuk-tag--orange"
+                          }) }}
+                        </td>
+                        <td class="govuk-table__cell">{{ page.template_engine if page.template_engine else "Unknown" }}</td>
+                        <td class="govuk-table__cell">
+                          {% if page.has_styling %}
+                            {{ govukTag({ text: "Styled", classes: "govuk-tag--green" }) }}
+                          {% endif %}
+                          {% if page.has_navigation %}
+                            {{ govukTag({ text: "Navigation", classes: "govuk-tag--blue" }) }}
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% endif %}
+
+              {% if errorAudit.recommendations and errorAudit.recommendations.length > 0 %}
+                <h4 class="govuk-heading-s govuk-!-margin-top-4">Recommendations</h4>
+                <ul class="govuk-list govuk-list--bullet">
+                  {% for recommendation in errorAudit.recommendations %}
+                    <li>{{ recommendation }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          {% endset %}
+          
+          {{ govukDetails({
+            summaryText: "Error Handling & UX Audit",
+            html: errorHandlingHtml
+          }) }}
+        {% endif %}
+
+        <!-- SonarCloud Analysis Section -->
+        {% if analysisResults.sonarcloud_analysis and analysisResults.sonarcloud_analysis.project_found %}
+          {% set sonarHtml %}
+            <div class="govuk-!-margin-top-3">
+              {{ govukSummaryList({
+                rows: [
+                  {
+                    key: { text: "Project found" },
+                    value: { 
+                      html: govukTag({
+                        text: "Yes",
+                        classes: "govuk-tag--green"
+                      })
+                    }
+                  },
+                  {
+                    key: { text: "Project name" },
+                    value: { text: analysisResults.sonarcloud_analysis.project_name }
+                  },
+                  {
+                    key: { text: "Last analysis" },
+                    value: { text: analysisResults.sonarcloud_analysis.last_analysis_date | formatDate if analysisResults.sonarcloud_analysis.last_analysis_date else "Not available" }
+                  },
+                  {
+                    key: { text: "Quality gate status" },
+                    value: { 
+                      html: govukTag({
+                        text: analysisResults.sonarcloud_analysis.quality_gate_status | title if analysisResults.sonarcloud_analysis.quality_gate_status else "Unknown",
+                        classes: "govuk-tag--green" if analysisResults.sonarcloud_analysis.quality_gate_status == "OK" else ("govuk-tag--red" if analysisResults.sonarcloud_analysis.quality_gate_status == "ERROR" else "govuk-tag--grey")
+                      })
+                    }
+                  }
+                ]
+              }) }}
+
+              {% if analysisResults.sonarcloud_analysis.quality_summary %}
+                <h4 class="govuk-heading-s govuk-!-margin-top-4">Quality Metrics</h4>
+                {{ govukSummaryList({
+                  rows: [
+                    {
+                      key: { text: "Bugs" },
+                      value: { text: analysisResults.sonarcloud_analysis.quality_summary.bugs or "0" }
+                    },
+                    {
+                      key: { text: "Vulnerabilities" },
+                      value: { text: analysisResults.sonarcloud_analysis.quality_summary.vulnerabilities or "0" }
+                    },
+                    {
+                      key: { text: "Security hotspots" },
+                      value: { text: analysisResults.sonarcloud_analysis.quality_summary.security_hotspots or "0" }
+                    },
+                    {
+                      key: { text: "Code smells" },
+                      value: { text: analysisResults.sonarcloud_analysis.quality_summary.code_smells or "0" }
+                    },
+                    {
+                      key: { text: "Coverage" },
+                      value: { text: (analysisResults.sonarcloud_analysis.quality_summary.coverage + "%") if analysisResults.sonarcloud_analysis.quality_summary.coverage else "Not available" }
+                    },
+                    {
+                      key: { text: "Duplicated lines" },
+                      value: { text: (analysisResults.sonarcloud_analysis.quality_summary.duplicated_lines_density + "%") if analysisResults.sonarcloud_analysis.quality_summary.duplicated_lines_density else "Not available" }
+                    },
+                    {
+                      key: { text: "Lines of code" },
+                      value: { text: analysisResults.sonarcloud_analysis.quality_summary.lines_of_code or "Not available" }
+                    }
+                  ]
+                }) }}
+
+                {% if analysisResults.sonarcloud_analysis.project_url %}
+                  <p class="govuk-body">
+                    <a href="{{ analysisResults.sonarcloud_analysis.project_url }}" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                      View full SonarCloud report
+                    </a>
+                  </p>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% endset %}
+          
+          {{ govukDetails({
+            summaryText: "SonarCloud Analysis",
+            html: sonarHtml
+          }) }}
+        {% endif %}
+      </div>
+    </div>
+   {% endif %}
+{% endblock %} 

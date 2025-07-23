@@ -237,6 +237,8 @@ export const projectsController = {
   get: async (request, h) => {
     const { id } = request.params
     const isAuthenticated = request.auth.isAuthenticated
+    const isAdmin =
+      request.auth.credentials?.user?.roles?.includes('admin') || false
 
     try {
       // Get the project details
@@ -309,6 +311,7 @@ export const projectsController = {
         professions,
         projectHistory,
         isAuthenticated,
+        isAdmin,
         statusClassMap: STATUS_CLASS,
         statusLabelMap: STATUS_LABEL
       })

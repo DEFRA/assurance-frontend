@@ -86,6 +86,9 @@ export const VIEW_TEMPLATES = {
   PROJECTS_STANDARDS_ARCHIVE_ASSESSMENT:
     'projects/standards/views/archive-assessment',
 
+  // Code Analysis views
+  CODE_ANALYSIS_INDEX: 'code-analysis/views/index',
+
   // Other views
   PROFESSIONS_INDEX: 'professions/index',
   PROFESSIONS_DETAIL: 'professions/detail',

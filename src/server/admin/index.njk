@@ -232,15 +232,10 @@
     <details class="govuk-details" data-module="govuk-details">
       <summary class="govuk-details__summary">
         <span class="govuk-details__summary-text">
-          Update Service Standard Name
+          Update Service Standard
         </span>
       </summary>
       <div class="govuk-details__text">
-        <div class="govuk-inset-text">
-          <p><strong>Note:</strong> Individual service standard updates are not currently supported by the API. This feature requires backend API enhancement.</p>
-          <p>Available operations: Archive, Restore, and Bulk Seed via the Bulk Operations tab.</p>
-        </div>
-        
         <form method="POST" action="/admin/standards/update">
           {% set standardOptions = [{ value: "", text: "Choose service standard" }] %}
           {% for standard in standards %}
@@ -257,10 +252,7 @@
               text: "Select service standard to update",
               classes: "govuk-label--s"
             },
-            items: standardOptions,
-            attributes: {
-              disabled: true
-            }
+            items: standardOptions
           }) }}
           
           {{ govukInput({
@@ -270,18 +262,40 @@
             },
             id: "update-standard-name",
             name: "name",
-            classes: "govuk-!-width-two-thirds",
-            attributes: {
-              disabled: true
-            }
+            classes: "govuk-!-width-two-thirds"
+          }) }}
+          
+          {{ govukTextarea({
+            label: {
+              text: "New Description (optional)",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Leave empty to keep existing description"
+            },
+            id: "update-standard-description",
+            name: "description",
+            rows: 3,
+            classes: "govuk-!-width-two-thirds"
+          }) }}
+          
+          {{ govukTextarea({
+            label: {
+              text: "New Guidance (optional)",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Leave empty to keep existing guidance"
+            },
+            id: "update-standard-guidance",
+            name: "guidance",
+            rows: 3,
+            classes: "govuk-!-width-two-thirds"
           }) }}
           
           {{ govukButton({
-            text: "Update Name",
-            classes: "govuk-button--secondary",
-            attributes: {
-              disabled: true
-            }
+            text: "Update Service Standard",
+            classes: "govuk-button--secondary"
           }) }}
         </form>
       </div>

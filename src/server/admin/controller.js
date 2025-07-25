@@ -5,7 +5,8 @@ import {
   createServiceStandard,
   updateServiceStandard,
   deleteServiceStandard,
-  restoreServiceStandard
+  restoreServiceStandard,
+  getServiceStandardById
 } from '~/src/server/services/service-standards.js'
 import {
   getProjects,
@@ -502,7 +503,7 @@ export const adminController = {
 
   updateServiceStandard: async (request, h) => {
     try {
-      const { id, name } = request.payload
+      const { id, name, description, guidance } = request.payload
 
       if (!id || !name) {
         return h.redirect(
@@ -510,11 +511,24 @@ export const adminController = {
         )
       }
 
-      await updateServiceStandard(
-        id,
-        { Name: name, UpdatedAt: new Date().toISOString() },
-        request
-      )
+      // Fetch the existing service standard to get all current values
+      const existingStandard = await getServiceStandardById(id, request)
+      if (!existingStandard) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Service standard not found&tab=standards`
+        )
+      }
+
+      // Update with new values while preserving existing data
+      const updatedStandard = {
+        ...existingStandard,
+        name: name,
+        description: description || existingStandard.description,
+        guidance: guidance || existingStandard.guidance,
+        updatedAt: new Date().toISOString()
+      }
+
+      await updateServiceStandard(id, updatedStandard, request)
 
       request.logger.info({ id, name }, 'Service standard updated successfully')
       return h.redirect(

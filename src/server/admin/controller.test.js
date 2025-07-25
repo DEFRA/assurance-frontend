@@ -1256,17 +1256,37 @@ describe('Admin controller', () => {
       // Arrange
       mockRequest.payload = {
         id: 'std-1',
-        name: 'Updated Standard'
+        name: 'Updated Standard',
+        description: 'Updated Description'
       }
+
+      // Mock the existing service standard
+      const existingStandard = {
+        id: 'std-1',
+        number: 1,
+        name: 'Original Standard',
+        description: 'Original Description',
+        guidance: 'Original Guidance',
+        isActive: true
+      }
+
+      getServiceStandardById.mockResolvedValue(existingStandard)
 
       // Act
       await adminController.updateServiceStandard(mockRequest, mockH)
 
       // Assert
+      expect(getServiceStandardById).toHaveBeenCalledWith('std-1', mockRequest)
       expect(updateServiceStandard).toHaveBeenCalledWith(
         'std-1',
         expect.objectContaining({
-          Name: 'Updated Standard'
+          id: 'std-1',
+          number: 1,
+          name: 'Updated Standard',
+          description: 'Updated Description',
+          guidance: 'Original Guidance',
+          isActive: true,
+          updatedAt: expect.any(String)
         }),
         mockRequest
       )
@@ -1286,9 +1306,29 @@ describe('Admin controller', () => {
       await adminController.updateServiceStandard(mockRequest, mockH)
 
       // Assert
+      expect(getServiceStandardById).not.toHaveBeenCalled()
       expect(updateServiceStandard).not.toHaveBeenCalled()
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Please select a service standard and enter a new name&tab=standards'
+      )
+    })
+
+    it('should handle service standard not found', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'std-1',
+        name: 'Updated Standard'
+      }
+      getServiceStandardById.mockResolvedValue(null)
+
+      // Act
+      await adminController.updateServiceStandard(mockRequest, mockH)
+
+      // Assert
+      expect(getServiceStandardById).toHaveBeenCalledWith('std-1', mockRequest)
+      expect(updateServiceStandard).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Service standard not found&tab=standards'
       )
     })
 
@@ -1298,6 +1338,17 @@ describe('Admin controller', () => {
         id: 'std-1',
         name: 'Updated Standard'
       }
+
+      const existingStandard = {
+        id: 'std-1',
+        number: 1,
+        name: 'Original Standard',
+        description: 'Original Description',
+        guidance: 'Original Guidance',
+        isActive: true
+      }
+
+      getServiceStandardById.mockResolvedValue(existingStandard)
       updateServiceStandard.mockRejectedValue(new Error('API Error'))
 
       // Act

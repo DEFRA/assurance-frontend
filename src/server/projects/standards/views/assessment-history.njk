@@ -21,7 +21,7 @@
         href: "/projects/" + project.id + "/standards/" + standard.id
       },
       {
-        text: profession.name + " Assessment History"
+        text: profession.name + " update history"
       }
     ]
   }) }}
@@ -44,7 +44,7 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
       <h1 class="govuk-heading-xl">
-        {{ profession.name }} Assessment History
+        {{ profession.name }} update history
       </h1>
       
       <div class="govuk-grid-row govuk-!-margin-bottom-4">
@@ -70,7 +70,7 @@
                 {% if entry.changes.status %}
                   Status changed to: {{ renderStatusTag(entry.changes.status.to) }}
                 {% else %}
-                  Assessment updated
+                  Standard updated
                 {% endif %}
               </h3>
               
@@ -117,20 +117,20 @@
         </div>
       {% else %}
         <div class="govuk-inset-text">
-          <p class="govuk-body">No assessment history found for this profession and standard combination.</p>
+          <p class="govuk-body">No update history found for this profession and standard combination.</p>
         </div>
       {% endif %}
 
       <div class="govuk-button-group govuk-!-margin-top-6">
         {{ govukButton({
-          text: "Back to Standard",
+          text: "Back to standard",
           href: "/projects/" + project.id + "/standards/" + standard.id,
           classes: "govuk-button--secondary"
         }) }}
         
         {% if isAdmin %}
           {{ govukButton({
-            text: "Add New Assessment",
+            text: "Add new update",
             href: "/projects/" + project.id + "/assessment",
             classes: "govuk-button--secondary"
           }) }}

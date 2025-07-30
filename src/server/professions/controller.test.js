@@ -255,7 +255,7 @@ describe('Professions Controller', () => {
             'project-2': { rag: 'TBC', commentary: '' }
           }
         },
-        summaryCounts: { RED: 1, AMBER: 1, GREEN: 1, TBC: 1 },
+        summaryCounts: { RED: 1, AMBER: 1, GREEN: 1, PENDING: 1 },
         isAuthenticated: true
       })
     })
@@ -274,7 +274,7 @@ describe('Professions Controller', () => {
         projects: mockProjects,
         standards: [],
         matrix: {},
-        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, TBC: 0 },
+        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, PENDING: 0 },
         isAuthenticated: true
       })
     })
@@ -353,7 +353,7 @@ describe('Professions Controller', () => {
             'project-3': { rag: 'TBC', commentary: '' }
           }
         },
-        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, TBC: 6 },
+        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, PENDING: 6 },
         isAuthenticated: true
       })
     })
@@ -401,7 +401,7 @@ describe('Professions Controller', () => {
             'project-1': { rag: 'TBC', commentary: '' }
           }
         },
-        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, TBC: 2 },
+        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, PENDING: 2 },
         isAuthenticated: true
       })
     })
@@ -447,7 +447,7 @@ describe('Professions Controller', () => {
             'project-1': { rag: 'TBC', commentary: '' }
           }
         },
-        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, TBC: 2 },
+        summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, PENDING: 2 },
         isAuthenticated: true
       })
     })
@@ -514,7 +514,7 @@ describe('Professions Controller', () => {
               'project-1': { rag: 'TBC', commentary: '' }
             }
           },
-          summaryCounts: { RED: 0, AMBER: 0, GREEN: 1, TBC: 1 }
+          summaryCounts: { RED: 0, AMBER: 0, GREEN: 1, PENDING: 1 }
         })
       )
     })
@@ -556,7 +556,7 @@ describe('Professions Controller', () => {
               'project-1': { rag: 'TBC', commentary: '' }
             }
           },
-          summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, TBC: 2 }
+          summaryCounts: { RED: 0, AMBER: 0, GREEN: 0, PENDING: 2 }
         })
       )
     })
@@ -628,7 +628,7 @@ describe('Professions Controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'professions/detail',
         expect.objectContaining({
-          summaryCounts: { RED: 1, AMBER: 2, GREEN: 1, TBC: 0 }
+          summaryCounts: { RED: 1, AMBER: 2, GREEN: 1, PENDING: 0 }
         })
       )
     })

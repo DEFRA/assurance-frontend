@@ -40,7 +40,7 @@ describe('Add Project controller', () => {
         { value: 'AMBER', text: 'Amber' },
         { value: 'AMBER_RED', text: 'Amber Red' },
         { value: 'RED', text: 'Red' },
-        { value: 'TBC', text: 'TBC' }
+        { value: 'TBC', text: 'Pending' }
       ]
 
       const expectedPhaseOptions = [

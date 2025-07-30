@@ -23,7 +23,7 @@ function createStatusTagHTML(status) {
     AMBER: 'AMBER',
     AMBER_RED: 'AMBER',
     RED: 'RED',
-    TBC: 'TBC'
+    TBC: 'PENDING' // Display TBC as PENDING in UI
   }
 
   if (status === 'AMBER_RED') {
@@ -37,7 +37,7 @@ function createStatusTagHTML(status) {
       <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
     </span>`
   } else if (status === 'TBC') {
-    return `<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">TBC</strong>`
+    return `<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>`
   } else if (statusClassMap[status] && statusLabelMap[status]) {
     return `<strong class="govuk-tag ${statusClassMap[status]} govuk-tag--uppercase">${statusLabelMap[status]}</strong>`
   } else {

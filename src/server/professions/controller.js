@@ -106,12 +106,13 @@ function categorizeRagStatus(rag) {
   if (rag === 'GREEN') {
     return 'GREEN'
   }
-  return 'TBC'
+  // Map TBC to PENDING for display purposes
+  return 'PENDING'
 }
 
 // Helper function to compute summary counts
 function computeSummaryCounts(matrix) {
-  const summaryCounts = { RED: 0, AMBER: 0, GREEN: 0, TBC: 0 }
+  const summaryCounts = { RED: 0, AMBER: 0, GREEN: 0, PENDING: 0 }
 
   for (const standardId of Object.keys(matrix)) {
     for (const projectId of Object.keys(matrix[standardId])) {

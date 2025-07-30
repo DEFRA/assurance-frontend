@@ -9,13 +9,13 @@
     'RED': 'govuk-tag--red',
     'TBC': 'govuk-tag--grey'
   } %}
-  {% set defaultLabelMap = {
-    'GREEN': 'GREEN',
-    'GREEN_AMBER': 'GREEN',
-    'AMBER': 'AMBER',
-    'AMBER_RED': 'AMBER',
-    'RED': 'RED',
-    'TBC': 'TBC'
+  {% set labelMap = {
+    'GREEN': 'Green',
+    'GREEN_AMBER': 'Green Amber', 
+    'AMBER': 'Amber',
+    'AMBER_RED': 'Amber Red',
+    'RED': 'Red',
+    'TBC': 'Pending'
   } %}
   
   {% if statusClassMap|length > 0 %}
@@ -24,9 +24,9 @@
     {% set classMap = defaultClassMap %}
   {% endif %}
   {% if statusLabelMap|length > 0 %}
-    {% set labelMap = statusLabelMap %}
+    {% set effectiveLabelMap = statusLabelMap %}
   {% else %}
-    {% set labelMap = defaultLabelMap %}
+    {% set effectiveLabelMap = labelMap %}
   {% endif %}
 
   {%- if status == 'AMBER_RED' -%}
@@ -34,10 +34,10 @@
   {%- elif status == 'GREEN_AMBER' -%}
 <span class="app-tag-list"><strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong><strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong></span>
   {%- elif status == 'TBC' -%}
-<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">TBC</strong>
-  {%- elif classMap[status] and labelMap[status] -%}
-<strong class="govuk-tag {{ classMap[status] }} govuk-tag--uppercase">{{ labelMap[status] }}</strong>
+<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>
+  {%- elif classMap[status] and effectiveLabelMap[status] -%}
+<strong class="govuk-tag {{ classMap[status] }} govuk-tag--uppercase">{{ effectiveLabelMap[status] }}</strong>
   {%- else -%}
-<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">TBC</strong>
+<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>
   {%- endif -%}
 {%- endmacro %}

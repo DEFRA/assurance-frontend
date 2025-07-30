@@ -47,7 +47,7 @@ export const STATUS_LABEL = {
   [STATUS.AMBER]: 'Amber',
   [STATUS.AMBER_RED]: 'Amber Red',
   [STATUS.RED]: 'Red',
-  [STATUS.TBC]: 'TBC'
+  [STATUS.TBC]: 'Pending' // Display TBC as "Pending" in UI
 }
 
 // Project status options for dropdowns (5 RAG + TBC)
@@ -67,7 +67,7 @@ export const PROJECT_STATUS_OPTIONS = [
   { value: PROJECT_STATUS.TBC, text: STATUS_LABEL[PROJECT_STATUS.TBC] }
 ]
 
-// Service standard status options for dropdowns (3 RAG + TBC)
+// Service standard status options for dropdowns (3 RAG + TBC displayed as Pending)
 export const SERVICE_STANDARD_STATUS_OPTIONS = [
   { value: '', text: 'Choose a status' },
   {
@@ -84,6 +84,6 @@ export const SERVICE_STANDARD_STATUS_OPTIONS = [
   },
   {
     value: SERVICE_STANDARD_STATUS.TBC,
-    text: STATUS_LABEL[SERVICE_STANDARD_STATUS.TBC]
+    text: STATUS_LABEL[SERVICE_STANDARD_STATUS.TBC] // This will now show "Pending"
   }
 ]

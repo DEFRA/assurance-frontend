@@ -9,19 +9,21 @@
 
 {% macro renderStatusTag(status) %}
   {% if status == 'AMBER_RED' %}
-    <strong class="govuk-tag govuk-tag--red">Red</strong>
-    <strong class="govuk-tag govuk-tag--yellow">Amber</strong>
+    <strong class="govuk-tag govuk-tag--red govuk-tag--uppercase">RED</strong>
+    <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
   {% elif status == 'GREEN_AMBER' %}
-    <strong class="govuk-tag govuk-tag--yellow">Amber</strong>
-    <strong class="govuk-tag govuk-tag--green">Green</strong>
+    <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
+    <strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong>
   {% elif status == 'RED' %}
-    <strong class="govuk-tag govuk-tag--red">Red</strong>
+    <strong class="govuk-tag govuk-tag--red govuk-tag--uppercase">RED</strong>
   {% elif status == 'AMBER' %}
-    <strong class="govuk-tag govuk-tag--yellow">Amber</strong>
+    <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
   {% elif status == 'GREEN' %}
-    <strong class="govuk-tag govuk-tag--green">Green</strong>
+    <strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong>
+  {% elif status == 'TBC' %}
+    <strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>
   {% else %}
-    <strong class="govuk-tag govuk-tag--grey">{{ status }}</strong>
+    <strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>
   {% endif %}
 {% endmacro %}
 
@@ -72,9 +74,9 @@
               </dd>
             </div>
             <div class="govuk-summary-list__row">
-              <dt class="govuk-summary-list__key">TBC</dt>
+              <dt class="govuk-summary-list__key">Pending</dt>
               <dd class="govuk-summary-list__value">
-                <strong class="govuk-tag govuk-tag--grey">{{ summaryCounts.TBC }}</strong>
+                <strong class="govuk-tag govuk-tag--grey">{{ summaryCounts.PENDING }}</strong>
               </dd>
             </div>
           </dl>
@@ -129,17 +131,7 @@
               {% for standard in sortedStandards %}
                 {% set cell = matrix[standard.id][project.id] %}
                 <td class="govuk-table__cell">
-                  {% if cell.rag == 'TBC' %}
-                    <strong class="govuk-tag govuk-tag--grey">TBC</strong>
-                  {% elif cell.rag == 'AMBER' or cell.rag == 'AMBER_RED' or cell.rag == 'GREEN_AMBER' %}
-                    <strong class="govuk-tag govuk-tag--yellow">AMBER</strong>
-                  {% elif cell.rag == 'RED' %}
-                    <strong class="govuk-tag govuk-tag--red">RED</strong>
-                  {% elif cell.rag == 'GREEN' %}
-                    <strong class="govuk-tag govuk-tag--green">GREEN</strong>
-                  {% else %}
-                    <strong class="govuk-tag govuk-tag--grey">{{ cell.rag }}</strong>
-                  {% endif %}
+                  {{ renderStatusTag(cell.rag) }}
                 </td>
               {% endfor %}
             </tr>

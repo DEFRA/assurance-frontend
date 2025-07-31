@@ -10,7 +10,7 @@ export const PROFESSION_STANDARD_MATRIX = {
     'release-management': [],
     'technical-architecture': [6, 11, 12, 13, 14],
     architecture: [6, 11, 12, 13, 14], // Same as technical-architecture
-    'software-development': [6, 11, 12, 13, 14], // Same as technical-architecture
+    'software-development': [6, 9, 11, 12, 13, 14], // Added standard 9
     'user-centred-design': [1, 2, 3, 4, 5, 6]
   },
 

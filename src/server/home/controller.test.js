@@ -259,12 +259,17 @@ describe('Home Controller', () => {
       const projectsWithStatus = sampleProjects.map((project) => ({
         ...project,
         projectStatus: {
-          NumberOfStandardsCompleted: 8,
-          PercentageAcrossAllStandards: 57.14,
-          PercentageAcrossCompletedStandards: 75.0,
-          CalculatedRag: 'GREEN',
-          LowestRag: 'AMBER'
-        }
+          numberOfStandardsCompleted: 8,
+          percentageAcrossAllStandards: 57.14,
+          percentageAcrossCompletedStandards: 75.0,
+          calculatedRag: 'GREEN',
+          lowestRag: 'AMBER'
+        },
+        standardsSummary: [
+          { standardId: 'std-1', aggregatedStatus: 'GREEN' },
+          { standardId: 'std-2', aggregatedStatus: 'AMBER' },
+          { standardId: 'std-3', aggregatedStatus: 'RED' }
+        ]
       }))
       mockGetProjects.mockResolvedValue(projectsWithStatus)
 
@@ -278,6 +283,14 @@ describe('Home Controller', () => {
           pageTitle: 'Project Insights | DDTS Assurance',
           heading: 'Project Insights',
           projects: expect.any(Array),
+          statusCounts: expect.objectContaining({
+            RED: expect.any(Number),
+            AMBER: expect.any(Number),
+            GREEN: expect.any(Number),
+            GREEN_AMBER: expect.any(Number),
+            TBC: expect.any(Number),
+            OTHER: expect.any(Number)
+          }),
           isAuthenticated: true
         })
       )
@@ -287,20 +300,31 @@ describe('Home Controller', () => {
       // Should include all projects (including TBC for authenticated users)
       expect(viewArgs.projects).toHaveLength(4)
 
+      // Check that status counts are calculated correctly
+      // Based on sampleProjects: RED, AMBER, GREEN, TBC
+      expect(viewArgs.statusCounts).toEqual({
+        RED: 1,
+        AMBER: 1,
+        GREEN: 1,
+        GREEN_AMBER: 0,
+        TBC: 1,
+        OTHER: 0
+      })
+
       // Check that ProjectStatus data structure is present
       viewArgs.projects.forEach((project) => {
         expect(project).toHaveProperty('projectStatus')
         expect(project.projectStatus).toHaveProperty(
-          'NumberOfStandardsCompleted'
+          'numberOfStandardsCompleted'
         )
         expect(project.projectStatus).toHaveProperty(
-          'PercentageAcrossAllStandards'
+          'percentageAcrossAllStandards'
         )
         expect(project.projectStatus).toHaveProperty(
-          'PercentageAcrossCompletedStandards'
+          'percentageAcrossCompletedStandards'
         )
-        expect(project.projectStatus).toHaveProperty('CalculatedRag')
-        expect(project.projectStatus).toHaveProperty('LowestRag')
+        expect(project.projectStatus).toHaveProperty('lowestRag')
+        expect(project).toHaveProperty('standardsSummary')
       })
     })
 
@@ -309,12 +333,16 @@ describe('Home Controller', () => {
       const projectsWithStatus = sampleProjects.map((project) => ({
         ...project,
         projectStatus: {
-          NumberOfStandardsCompleted: 5,
-          PercentageAcrossAllStandards: 35.71,
-          PercentageAcrossCompletedStandards: 80.0,
-          CalculatedRag: 'GREEN',
-          LowestRag: 'GREEN'
-        }
+          numberOfStandardsCompleted: 5,
+          percentageAcrossAllStandards: 35.71,
+          percentageAcrossCompletedStandards: 80.0,
+          calculatedRag: 'GREEN',
+          lowestRag: 'GREEN'
+        },
+        standardsSummary: [
+          { standardId: 'std-1', aggregatedStatus: 'GREEN' },
+          { standardId: 'std-2', aggregatedStatus: 'GREEN' }
+        ]
       }))
       mockGetProjects.mockResolvedValue(projectsWithStatus)
       mockRequest.query = { search: 'Project 1' }
@@ -329,9 +357,19 @@ describe('Home Controller', () => {
       expect(viewArgs.projects[0].name).toBe('Project 1')
       expect(viewArgs.searchTerm).toBe('Project 1')
 
+      // Should calculate status counts for filtered projects only
+      expect(viewArgs.statusCounts).toEqual({
+        RED: 1, // Project 1 has RED status
+        AMBER: 0,
+        GREEN: 0,
+        GREEN_AMBER: 0,
+        TBC: 0,
+        OTHER: 0
+      })
+
       // Should have ProjectStatus data
       expect(viewArgs.projects[0]).toHaveProperty('projectStatus')
-      expect(viewArgs.projects[0].projectStatus).toHaveProperty('CalculatedRag')
+      expect(viewArgs.projects[0].projectStatus).toHaveProperty('lowestRag')
     })
 
     it('should handle projects without ProjectStatus gracefully', async () => {
@@ -347,6 +385,16 @@ describe('Home Controller', () => {
       // Should still return projects, even without ProjectStatus
       expect(viewArgs.projects).toHaveLength(4)
 
+      // Should still calculate status counts
+      expect(viewArgs.statusCounts).toEqual({
+        RED: 1,
+        AMBER: 1,
+        GREEN: 1,
+        GREEN_AMBER: 0,
+        TBC: 1,
+        OTHER: 0
+      })
+
       // Projects should not have ProjectStatus in this test scenario
       expect(viewArgs.projects[0]).not.toHaveProperty('projectStatus')
     })
@@ -356,12 +404,17 @@ describe('Home Controller', () => {
       const projectsWithStatus = sampleProjects.map((project) => ({
         ...project,
         projectStatus: {
-          NumberOfStandardsCompleted: 3,
-          PercentageAcrossAllStandards: 21.43,
-          PercentageAcrossCompletedStandards: 66.67,
-          CalculatedRag: 'AMBER',
-          LowestRag: 'RED'
-        }
+          numberOfStandardsCompleted: 3,
+          percentageAcrossAllStandards: 21.43,
+          percentageAcrossCompletedStandards: 66.67,
+          calculatedRag: 'AMBER',
+          lowestRag: 'RED'
+        },
+        standardsSummary: [
+          { standardId: 'std-1', aggregatedStatus: 'RED' },
+          { standardId: 'std-2', aggregatedStatus: 'AMBER' },
+          { standardId: 'std-3', aggregatedStatus: 'AMBER' }
+        ]
       }))
       mockGetProjects.mockResolvedValue(projectsWithStatus)
       mockRequest.query = { search: 'Different' }
@@ -374,6 +427,16 @@ describe('Home Controller', () => {
 
       expect(viewArgs.projects).toHaveLength(1)
       expect(viewArgs.projects[0].name).toBe('Different Project')
+
+      // Should calculate status counts for the filtered project
+      expect(viewArgs.statusCounts).toEqual({
+        RED: 0,
+        AMBER: 0,
+        GREEN: 1, // "Different Project" has GREEN status
+        GREEN_AMBER: 0,
+        TBC: 0,
+        OTHER: 0
+      })
     })
 
     describe('error handling', () => {

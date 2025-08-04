@@ -88,6 +88,25 @@ export const homeController = {
           )
         : visibleProjects
 
+      // Calculate status counts for summary card
+      const statusCounts = {
+        RED: 0,
+        AMBER: 0,
+        GREEN: 0,
+        GREEN_AMBER: 0,
+        TBC: 0,
+        OTHER: 0
+      }
+
+      filteredProjects.forEach((project) => {
+        const status = project.status?.toUpperCase()
+        if (Object.prototype.hasOwnProperty.call(statusCounts, status)) {
+          statusCounts[status]++
+        } else {
+          statusCounts.OTHER++
+        }
+      })
+
       // Track search if provided
       if (search) {
         await trackProjectSearch(request, search, filteredProjects.length)
@@ -97,6 +116,7 @@ export const homeController = {
         pageTitle: 'Project Insights | DDTS Assurance',
         heading: 'Project Insights',
         projects: filteredProjects,
+        statusCounts,
         searchTerm: search,
         projectNames,
         isAuthenticated,

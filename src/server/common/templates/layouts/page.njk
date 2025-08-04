@@ -18,6 +18,7 @@
 {% block head %}
   <link href="{{ getAssetPath('stylesheets/application.scss') }}" rel="stylesheet">
   <link rel="stylesheet" href="{{ getAssetPath('accessible-autocomplete.min.css') }}">
+  {% block pageStyles %}{% endblock %}
 {% endblock %}
 
 {% block skipLink %}

@@ -248,6 +248,151 @@ describe('Home Controller', () => {
     })
   })
 
+  describe('insightsHandler', () => {
+    beforeEach(() => {
+      // For insights handler, user is always authenticated
+      mockRequest.auth.isAuthenticated = true
+    })
+
+    it('should return all projects with analytics data when no search query is provided', async () => {
+      // Arrange - Add ProjectStatus to sample projects to match real API
+      const projectsWithStatus = sampleProjects.map((project) => ({
+        ...project,
+        projectStatus: {
+          NumberOfStandardsCompleted: 8,
+          PercentageAcrossAllStandards: 57.14,
+          PercentageAcrossCompletedStandards: 75.0,
+          CalculatedRag: 'GREEN',
+          LowestRag: 'AMBER'
+        }
+      }))
+      mockGetProjects.mockResolvedValue(projectsWithStatus)
+
+      // Act
+      await homeController.insightsHandler(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        'home/insights',
+        expect.objectContaining({
+          pageTitle: 'Project Insights | DDTS Assurance',
+          heading: 'Project Insights',
+          projects: expect.any(Array),
+          isAuthenticated: true
+        })
+      )
+
+      const viewArgs = mockH.view.mock.calls[0][1]
+
+      // Should include all projects (including TBC for authenticated users)
+      expect(viewArgs.projects).toHaveLength(4)
+
+      // Check that ProjectStatus data structure is present
+      viewArgs.projects.forEach((project) => {
+        expect(project).toHaveProperty('projectStatus')
+        expect(project.projectStatus).toHaveProperty(
+          'NumberOfStandardsCompleted'
+        )
+        expect(project.projectStatus).toHaveProperty(
+          'PercentageAcrossAllStandards'
+        )
+        expect(project.projectStatus).toHaveProperty(
+          'PercentageAcrossCompletedStandards'
+        )
+        expect(project.projectStatus).toHaveProperty('CalculatedRag')
+        expect(project.projectStatus).toHaveProperty('LowestRag')
+      })
+    })
+
+    it('should filter projects by name when search term is provided', async () => {
+      // Arrange
+      const projectsWithStatus = sampleProjects.map((project) => ({
+        ...project,
+        projectStatus: {
+          NumberOfStandardsCompleted: 5,
+          PercentageAcrossAllStandards: 35.71,
+          PercentageAcrossCompletedStandards: 80.0,
+          CalculatedRag: 'GREEN',
+          LowestRag: 'GREEN'
+        }
+      }))
+      mockGetProjects.mockResolvedValue(projectsWithStatus)
+      mockRequest.query = { search: 'Project 1' }
+
+      // Act
+      await homeController.insightsHandler(mockRequest, mockH)
+
+      // Assert
+      const viewArgs = mockH.view.mock.calls[0][1]
+
+      expect(viewArgs.projects).toHaveLength(1)
+      expect(viewArgs.projects[0].name).toBe('Project 1')
+      expect(viewArgs.searchTerm).toBe('Project 1')
+
+      // Should have ProjectStatus data
+      expect(viewArgs.projects[0]).toHaveProperty('projectStatus')
+      expect(viewArgs.projects[0].projectStatus).toHaveProperty('CalculatedRag')
+    })
+
+    it('should handle projects without ProjectStatus gracefully', async () => {
+      // Arrange - Projects without ProjectStatus (for backward compatibility)
+      mockGetProjects.mockResolvedValue(sampleProjects)
+
+      // Act
+      await homeController.insightsHandler(mockRequest, mockH)
+
+      // Assert
+      const viewArgs = mockH.view.mock.calls[0][1]
+
+      // Should still return projects, even without ProjectStatus
+      expect(viewArgs.projects).toHaveLength(4)
+
+      // Projects should not have ProjectStatus in this test scenario
+      expect(viewArgs.projects[0]).not.toHaveProperty('projectStatus')
+    })
+
+    it('should handle search correctly', async () => {
+      // Arrange
+      const projectsWithStatus = sampleProjects.map((project) => ({
+        ...project,
+        projectStatus: {
+          NumberOfStandardsCompleted: 3,
+          PercentageAcrossAllStandards: 21.43,
+          PercentageAcrossCompletedStandards: 66.67,
+          CalculatedRag: 'AMBER',
+          LowestRag: 'RED'
+        }
+      }))
+      mockGetProjects.mockResolvedValue(projectsWithStatus)
+      mockRequest.query = { search: 'Different' }
+
+      // Act
+      await homeController.insightsHandler(mockRequest, mockH)
+
+      // Assert
+      const viewArgs = mockH.view.mock.calls[0][1]
+
+      expect(viewArgs.projects).toHaveLength(1)
+      expect(viewArgs.projects[0].name).toBe('Different Project')
+    })
+
+    describe('error handling', () => {
+      it('should throw Boom error when API fails', async () => {
+        // Arrange
+        const testError = new Error('API unavailable')
+        mockGetProjects.mockRejectedValue(testError)
+
+        // Act & Assert
+        await expect(
+          homeController.insightsHandler(mockRequest, mockH)
+        ).rejects.toThrow()
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          'Error fetching projects for insights page'
+        )
+      })
+    })
+  })
+
   describe('TBC project filtering', () => {
     it('should hide TBC projects from unauthenticated users', async () => {
       // Arrange

@@ -17,6 +17,14 @@ export const home = {
           method: 'GET',
           path: '/',
           handler: homeController.handler
+        },
+        {
+          method: 'GET',
+          path: '/insights',
+          options: {
+            auth: 'session' // Require authentication
+          },
+          handler: homeController.insightsHandler
         }
       ])
     }

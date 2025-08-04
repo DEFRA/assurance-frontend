@@ -1,0 +1,301 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "status-tag.njk" import renderStatusTag %}
+
+{% block content %}
+  {{ appHeading({
+    text: heading
+  }) }}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <form method="GET" action="/insights" class="govuk-!-margin-bottom-6">
+        <div class="govuk-grid-row">
+          <div class="govuk-grid-column-two-thirds">
+            <div class="govuk-form-group">
+              <label class="govuk-label govuk-label--s" for="search">
+                Search projects
+              </label>
+              <div id="search-container" class="govuk-!-margin-bottom-0"></div>
+            </div>
+          </div>
+          <div class="govuk-grid-column-one-third">
+            <div class="govuk-form-group govuk-!-margin-top-6">
+              {{ govukButton({
+                text: "Search",
+                type: "submit"
+              }) }}
+              
+              {% if searchTerm %}
+                <a href="/insights" class="govuk-link govuk-!-margin-left-3">Clear search</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+
+      {% if searchTerm %}
+        <h2 class="govuk-heading-m">Search results for: "{{ searchTerm }}"</h2>
+        {% if projects.length == 0 %}
+          <p class="govuk-body">No projects found matching your search.</p>
+          <p class="govuk-body"><a href="/insights" class="govuk-link">View all projects</a></p>
+        {% endif %}
+      {% endif %}
+
+      {% if projects.length > 0 %}
+        <div class="govuk-table-container">
+          <table class="govuk-table">
+            <caption class="govuk-table__caption govuk-table__caption--m">
+              {% if searchTerm %}
+                Search results - Project insights and analytics
+              {% else %}
+                Project insights and analytics
+              {% endif %}
+            </caption>
+            <thead class="govuk-table__head">
+              <tr class="govuk-table__row">
+                <th scope="col" class="govuk-table__header">Project name</th>
+                <th scope="col" class="govuk-table__header">Standards completed</th>
+                <th scope="col" class="govuk-table__header">All standards score</th>
+                <th scope="col" class="govuk-table__header">Completed standards score</th>
+                <th scope="col" class="govuk-table__header">Manual RAG</th>
+                <th scope="col" class="govuk-table__header">Calculated RAG</th>
+                <th scope="col" class="govuk-table__header">Lowest RAG</th>
+              </tr>
+            </thead>
+            <tbody class="govuk-table__body">
+              {% for project in projects %}
+                <tr class="govuk-table__row">
+                  <td class="govuk-table__cell">
+                    <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if project.projectStatus %}
+                      <strong>{{ project.projectStatus.numberOfStandardsCompleted }}</strong>/14
+                    {% else %}
+                      <span class="govuk-hint">No data available</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if project.projectStatus %}
+                      <div class="progress-bar">
+                        <div class="progress-bar__fill" style="width: {{ project.projectStatus.percentageAcrossAllStandards }}%"></div>
+                      </div>
+                      <span class="govuk-body-s">{{ project.projectStatus.percentageAcrossAllStandards }}%</span>
+                    {% else %}
+                      <span class="govuk-hint">No data</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if project.projectStatus %}
+                      <div class="progress-bar">
+                        <div class="progress-bar__fill progress-bar__fill--quality" style="width: {{ project.projectStatus.percentageAcrossCompletedStandards }}%"></div>
+                      </div>
+                      <span class="govuk-body-s">{{ project.projectStatus.percentageAcrossCompletedStandards }}%</span>
+                    {% else %}
+                      <span class="govuk-hint">No data</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {{ renderStatusTag(project.status) }}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if project.projectStatus and project.projectStatus.calculatedRag %}
+                      {{ renderStatusTag(project.projectStatus.calculatedRag) }}
+                    {% else %}
+                      <span class="govuk-hint">No data</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if project.projectStatus and project.projectStatus.lowestRag %}
+                      {{ renderStatusTag(project.projectStatus.lowestRag) }}
+                    {% else %}
+                      <span class="govuk-hint">No data</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% elif not searchTerm %}
+        <p class="govuk-body">No projects available.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block pageStyles %}
+<style>
+  .govuk-table-container {
+    overflow-x: auto;
+  }
+  
+  .progress-bar {
+    width: 60px;
+    height: 12px;
+    background-color: #f3f2f1;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  
+  .progress-bar__fill {
+    height: 100%;
+    background-color: #00703c;
+    transition: width 0.3s ease;
+  }
+  
+  .progress-bar__fill--quality {
+    background-color: #1d70b8;
+  }
+  
+  @media (max-width: 768px) {
+    .govuk-table__header,
+    .govuk-table__cell {
+      padding: 8px 4px;
+      font-size: 14px;
+    }
+    
+    .progress-bar {
+      width: 40px;
+      height: 8px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block pageScripts %}
+<script>
+  (function() {
+    // Store event handlers in variables for cleanup
+    let formSubmitHandler = null;
+    let domContentLoadedHandler = null;
+
+    // Initialize autocomplete and form handling
+    domContentLoadedHandler = function() {
+      // Create a source array with project names and IDs for easy lookup
+      const projects = {{ projects | dump | safe }};
+      const projectsById = {};
+      const projectsByName = {};
+      
+      // Create lookup maps for faster access
+      projects.forEach(project => {
+        projectsById[project.id] = project;
+        projectsByName[project.name] = project;
+      });
+      
+      // Create a list of project names for the autocomplete
+      const projectNames = projects.map(project => project.name);
+      
+      // Initialize the GOV.UK accessible autocomplete
+      accessibleAutocomplete({
+        element: document.querySelector('#search-container'),
+        id: 'search',
+        name: 'search',
+        defaultValue: '{{ searchTerm }}',
+        source: projectNames,
+        placeholder: 'Start typing to search',
+        autoselect: false,
+        confirmOnBlur: false,
+        showNoOptionsFound: true,
+        minLength: 2,
+        displayMenu: 'overlay',
+        onConfirm: function(selectedProjectName) {
+          // Always submit the form when a value is confirmed (either by selection or Enter)
+          const form = document.querySelector('form[method="GET"]');
+          
+          if (selectedProjectName && selectedProjectName.trim()) {
+            // Check if this is an exact project match for direct navigation
+            const project = projectsByName[selectedProjectName];
+            if (project && project.id && selectedProjectName === project.name) {
+              // Direct navigation for exact matches
+              window.location.href = `/projects/${project.id}`;
+              return;
+            }
+          }
+          
+          // For all other cases (partial matches, no matches, or any text), submit the form
+          if (form) {
+            // Use a small timeout to ensure the input value is properly set
+            setTimeout(() => {
+              form.submit();
+            }, 50);
+          }
+        },
+        tNoResults: function() { 
+          return 'No projects found';
+        },
+        tStatusQueryTooShort: function(minQueryLength) {
+          return `Type in ${minQueryLength} or more characters for results`;
+        }
+      });
+      
+      const form = document.querySelector('form[method="GET"]');
+      
+      // Handle form submission for search functionality
+      if (form) {
+        formSubmitHandler = function(event) {
+          const searchInput = document.querySelector('#search');
+          
+          // If search input is empty, redirect to insights page
+          if (searchInput && !searchInput.value.trim()) {
+            event.preventDefault();
+            window.location.href = '/insights';
+            return;
+          }
+          
+          // If search input has value, allow normal form submission
+          // No need to prevent default - let the form submit normally with GET parameters
+        };
+        
+        form.addEventListener('submit', formSubmitHandler);
+      }
+      
+      // Add fallback Enter key handler after autocomplete is initialized
+      setTimeout(() => {
+        const searchInputElement = document.querySelector('#search');
+        if (searchInputElement) {
+          searchInputElement.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+              event.preventDefault(); // Prevent default to avoid double submission
+              // Submit the form after a small delay
+              setTimeout(() => {
+                if (this.value && this.value.trim()) {
+                  const form = document.querySelector('form[method="GET"]');
+                  if (form) {
+                    form.submit();
+                  }
+                }
+              }, 50);
+            }
+          });
+        }
+      }, 200); // Wait for autocomplete to be fully initialized
+    };
+
+    // Event listener setup
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', domContentLoadedHandler);
+    } else {
+      domContentLoadedHandler();
+    }
+
+    // Cleanup function
+    window.addEventListener('beforeunload', function() {
+      if (formSubmitHandler) {
+        const form = document.querySelector('form[method="GET"]');
+        if (form) {
+          form.removeEventListener('submit', formSubmitHandler);
+        }
+      }
+      
+      if (domContentLoadedHandler) {
+        document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
+      }
+    });
+  })();
+</script>
+{% endblock %} 

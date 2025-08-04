@@ -59,6 +59,55 @@ export const homeController = {
       // Throw a 500 error to trigger our professional error page
       throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
+  },
+
+  /**
+   * @param {import('@hapi/hapi').Request} request
+   * @param {import('@hapi/hapi').ResponseToolkit} h
+   */
+  insightsHandler: async (request, h) => {
+    const { notification } = request.query
+    const isAuthenticated = request.auth.isAuthenticated
+
+    try {
+      request.logger.info('Insights page - fetching projects with analytics')
+      const projects = await getProjects(request)
+
+      // No need to add mock data - the API now provides ProjectStatus with analytics
+      // Authenticated users see all projects (no TBC filtering needed for insights)
+      const visibleProjects = projects
+
+      // Get all project names for autocomplete
+      const projectNames = visibleProjects.map((project) => project.name)
+
+      // Filter projects if search term is provided
+      const search = request.query.search
+      const filteredProjects = search
+        ? visibleProjects.filter((project) =>
+            project.name.toLowerCase().includes(search.toLowerCase())
+          )
+        : visibleProjects
+
+      // Track search if provided
+      if (search) {
+        await trackProjectSearch(request, search, filteredProjects.length)
+      }
+
+      return h.view('home/insights', {
+        pageTitle: 'Project Insights | DDTS Assurance',
+        heading: 'Project Insights',
+        projects: filteredProjects,
+        searchTerm: search,
+        projectNames,
+        isAuthenticated,
+        notification
+      })
+    } catch (error) {
+      request.logger.error('Error fetching projects for insights page')
+
+      // Throw a 500 error to trigger our professional error page
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
+    }
   }
 }
 

@@ -2,6 +2,8 @@
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "status-tag.njk" import renderStatusTag %}
 
 {% block content %}
@@ -45,6 +47,54 @@
       {% endif %}
 
       {% if projects.length > 0 %}
+        <!-- Project Status Summary Card -->
+        <div class="govuk-!-margin-bottom-6">
+          <h2 class="govuk-heading-m">Project status overview</h2>
+          <div class="govuk-grid-row">
+            <div class="govuk-grid-column-one-half">
+              <div class="govuk-summary-card">
+                <div class="govuk-summary-card__title-wrapper">
+                  <h3 class="govuk-summary-card__title">Manual RAG status counts</h3>
+                </div>
+                <div class="govuk-summary-card__content">
+                  {{ govukSummaryList({
+                    rows: [
+                      {
+                        key: { html: renderStatusTag("RED") },
+                        value: { text: statusCounts.RED }
+                      } if statusCounts.RED > 0,
+                      {
+                        key: { html: renderStatusTag("AMBER") },
+                        value: { text: statusCounts.AMBER }
+                      } if statusCounts.AMBER > 0,
+                      {
+                        key: { html: renderStatusTag("GREEN") },
+                        value: { text: statusCounts.GREEN }
+                      } if statusCounts.GREEN > 0,
+                      {
+                        key: { html: renderStatusTag("GREEN_AMBER") },
+                        value: { text: statusCounts.GREEN_AMBER }
+                      } if statusCounts.GREEN_AMBER > 0,
+                      {
+                        key: { html: renderStatusTag("TBC") },
+                        value: { text: statusCounts.TBC }
+                      } if statusCounts.TBC > 0,
+                      {
+                        key: { text: "OTHER" },
+                        value: { text: statusCounts.OTHER }
+                      } if statusCounts.OTHER > 0
+                    ] | selectattr("key") | list,
+                    classes: "govuk-summary-list--no-border"
+                  }) }}
+                  
+                  {% if statusCounts.RED == 0 and statusCounts.AMBER == 0 and statusCounts.GREEN == 0 and statusCounts.GREEN_AMBER == 0 and statusCounts.TBC == 0 and statusCounts.OTHER == 0 %}
+                    <p class="govuk-body">No projects to display.</p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="govuk-table-container">
           <table class="govuk-table">
             <caption class="govuk-table__caption govuk-table__caption--m">
@@ -56,26 +106,65 @@
             </caption>
             <thead class="govuk-table__head">
               <tr class="govuk-table__row">
-                <th scope="col" class="govuk-table__header">Project name</th>
-                <th scope="col" class="govuk-table__header">Standards completed</th>
-                <th scope="col" class="govuk-table__header">All standards score</th>
-                <th scope="col" class="govuk-table__header">Completed standards score</th>
-                <th scope="col" class="govuk-table__header">Manual RAG</th>
-                <th scope="col" class="govuk-table__header">Calculated RAG</th>
-                <th scope="col" class="govuk-table__header">Lowest RAG</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="text">Project name</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">Standards completed</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">R</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">A</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">G</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">All standards score</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">Completed standards score</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="rag">Manual RAG</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="rag">Lowest RAG</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="date">Last updated</th>
               </tr>
             </thead>
             <tbody class="govuk-table__body">
               {% for project in projects %}
+                {% set redCount = 0 %}
+                {% set amberCount = 0 %}
+                {% set greenCount = 0 %}
+                {% if project.standardsSummary %}
+                  {% for standard in project.standardsSummary %}
+                    {% if standard.aggregatedStatus == 'RED' %}
+                      {% set redCount = redCount + 1 %}
+                    {% elif standard.aggregatedStatus == 'AMBER' %}
+                      {% set amberCount = amberCount + 1 %}
+                    {% elif standard.aggregatedStatus == 'GREEN' %}
+                      {% set greenCount = greenCount + 1 %}
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+                
                 <tr class="govuk-table__row">
                   <td class="govuk-table__cell">
                     <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
                   </td>
                   <td class="govuk-table__cell">
                     {% if project.projectStatus %}
-                      <strong>{{ project.projectStatus.numberOfStandardsCompleted }}</strong>/14
+                      {{ project.projectStatus.numberOfStandardsCompleted }}/14
                     {% else %}
                       <span class="govuk-hint">No data available</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell govuk-table__cell--numeric">
+                    {% if redCount > 0 %}
+                      {{ govukTag({ text: redCount, classes: "govuk-tag--red" }) }}
+                    {% else %}
+                      <span class="govuk-body-s">0</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell govuk-table__cell--numeric">
+                    {% if amberCount > 0 %}
+                      {{ govukTag({ text: amberCount, classes: "govuk-tag--yellow" }) }}
+                    {% else %}
+                      <span class="govuk-body-s">0</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell govuk-table__cell--numeric">
+                    {% if greenCount > 0 %}
+                      {{ govukTag({ text: greenCount, classes: "govuk-tag--green" }) }}
+                    {% else %}
+                      <span class="govuk-body-s">0</span>
                     {% endif %}
                   </td>
                   <td class="govuk-table__cell">
@@ -102,17 +191,17 @@
                     {{ renderStatusTag(project.status) }}
                   </td>
                   <td class="govuk-table__cell">
-                    {% if project.projectStatus and project.projectStatus.calculatedRag %}
-                      {{ renderStatusTag(project.projectStatus.calculatedRag) }}
+                    {% if project.projectStatus and project.projectStatus.lowestRag %}
+                      {{ renderStatusTag(project.projectStatus.lowestRag) }}
                     {% else %}
                       <span class="govuk-hint">No data</span>
                     {% endif %}
                   </td>
                   <td class="govuk-table__cell">
-                    {% if project.projectStatus and project.projectStatus.lowestRag %}
-                      {{ renderStatusTag(project.projectStatus.lowestRag) }}
+                    {% if project.lastUpdated %}
+                      <span class="govuk-body-s">{{ project.lastUpdated | formatDate }}</span>
                     {% else %}
-                      <span class="govuk-hint">No data</span>
+                      <span class="govuk-hint">No date</span>
                     {% endif %}
                   </td>
                 </tr>
@@ -152,6 +241,64 @@
     background-color: #1d70b8;
   }
   
+  /* Sortable table styles */
+  .sortable {
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+  }
+  
+  .sortable:hover {
+    background-color: #f3f2f1;
+  }
+  
+  .sortable::after {
+    content: '↕';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.5;
+    font-size: 12px;
+  }
+  
+  .sortable.sort-asc::after {
+    content: '↑';
+    opacity: 1;
+  }
+  
+  .sortable.sort-desc::after {
+    content: '↓';
+    opacity: 1;
+  }
+  
+  .sortable:focus {
+    outline: 3px solid #ffdd00;
+    outline-offset: 0;
+    box-shadow: inset 0 0 0 2px #0b0c0c;
+  }
+  
+  /* Consistent tag sizing for both single and stacked RAG tags */
+  .govuk-table .govuk-tag {
+    font-size: 12px;
+    padding: 3px 7px;
+    margin: 0;
+  }
+  
+  /* Fix for multiple RAG tags */
+  .app-tag-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-start;
+  }
+  
+  .app-tag-list .govuk-tag {
+    min-width: 50px;
+    text-align: center;
+    box-sizing: border-box;
+  }
+  
   @media (max-width: 768px) {
     .govuk-table__header,
     .govuk-table__cell {
@@ -163,6 +310,11 @@
       width: 40px;
       height: 8px;
     }
+    
+    .sortable::after {
+      right: 4px;
+      font-size: 10px;
+    }
   }
 </style>
 {% endblock %}
@@ -173,6 +325,137 @@
     // Store event handlers in variables for cleanup
     let formSubmitHandler = null;
     let domContentLoadedHandler = null;
+    let sortHandlers = [];
+
+    // Table sorting functionality
+    function initTableSort() {
+      const table = document.querySelector('.govuk-table');
+      if (!table) return;
+
+      const headers = table.querySelectorAll('.sortable');
+      
+      headers.forEach((header, index) => {
+        // Make headers keyboard accessible
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('role', 'button');
+        header.setAttribute('aria-label', `Sort by ${header.textContent.trim()}`);
+        
+        const clickHandler = (e) => sortTable(index, header);
+        const keyHandler = (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            sortTable(index, header);
+          }
+        };
+        
+        header.addEventListener('click', clickHandler);
+        header.addEventListener('keydown', keyHandler);
+        
+        // Store handlers for cleanup
+        sortHandlers.push({ element: header, click: clickHandler, key: keyHandler });
+      });
+    }
+
+    function sortTable(columnIndex, header) {
+      const table = document.querySelector('.govuk-table');
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const sortType = header.getAttribute('data-sort');
+      
+      // Determine sort direction
+      const currentSort = header.classList.contains('sort-asc') ? 'asc' : 
+                         header.classList.contains('sort-desc') ? 'desc' : '';
+      const newSort = currentSort === 'asc' ? 'desc' : 'asc';
+      
+      // Clear all sort classes
+      document.querySelectorAll('.sortable').forEach(h => {
+        h.classList.remove('sort-asc', 'sort-desc');
+        h.setAttribute('aria-label', `Sort by ${h.textContent.trim()}`);
+      });
+      
+      // Set new sort class and aria-label
+      header.classList.add(`sort-${newSort}`);
+      header.setAttribute('aria-label', `Sort by ${header.textContent.trim()} (${newSort}ending)`);
+      
+      // Sort rows
+      rows.sort((a, b) => {
+        const aVal = getCellValue(a, columnIndex, sortType);
+        const bVal = getCellValue(b, columnIndex, sortType);
+        
+        let result = 0;
+        if (sortType === 'number' || sortType === 'rag') {
+          // For numbers and RAG values (which return numeric sort orders)
+          result = parseFloat(aVal || 0) - parseFloat(bVal || 0);
+        } else if (sortType === 'date') {
+          const aDate = new Date(aVal || 0);
+          const bDate = new Date(bVal || 0);
+          result = aDate.getTime() - bDate.getTime();
+        } else {
+          result = (aVal || '').localeCompare(bVal || '');
+        }
+        
+        return newSort === 'desc' ? -result : result;
+      });
+      
+      // Reorder rows in DOM
+      rows.forEach(row => tbody.appendChild(row));
+    }
+
+    function getCellValue(row, columnIndex, sortType) {
+      const cell = row.children[columnIndex];
+      if (!cell) return '';
+      
+      // Handle different cell contents
+      if (sortType === 'number') {
+        // For progress bars and percentages
+        const percentMatch = cell.textContent.match(/(\d+(?:\.\d+)?)%/);
+        if (percentMatch) return percentMatch[1];
+        
+        // For fractions like "8/14"
+        const fractionMatch = cell.textContent.match(/(\d+)\/\d+/);
+        if (fractionMatch) return fractionMatch[1];
+        
+        // For plain numbers (tag content)
+        const numberMatch = cell.textContent.match(/\d+/);
+        if (numberMatch) return numberMatch[0];
+        
+        return '0';
+      } else if (sortType === 'date') {
+        // Extract date from cell, handle "No date" case
+        const dateText = cell.textContent.trim();
+        return dateText === 'No date' ? '' : dateText;
+      } else if (sortType === 'rag') {
+        // Special handling for RAG status sorting
+        const cellText = cell.textContent.trim().toUpperCase();
+        
+        // Map RAG values to sort order (lower numbers = higher priority when sorting)
+        // Scale: Red, Amber Red, Amber, Green Amber, Green, Pending
+        const ragOrder = {
+          'RED': 1,           // Worst
+          'AMBER_RED': 2,     // Second worst
+          'AMBER RED': 2,     // Handle both formats
+          'AMBER': 3, 
+          'GREEN_AMBER': 4,
+          'GREEN/AMBER': 4,   // Handle both formats
+          'GREEN AMBER': 4,
+          'GREEN': 5,         // Best
+          'PENDING': 6        // Not assessed
+        };
+        
+        // Find all RAG statuses in the cell text and return the highest priority (lowest number)
+        let lowestOrder = 999;
+        for (const [status, order] of Object.entries(ragOrder)) {
+          if (cellText.includes(status)) {
+            lowestOrder = Math.min(lowestOrder, order);
+          }
+        }
+        
+        return lowestOrder;
+      } else {
+        // For other text, get the visible text
+        return cell.textContent.trim();
+      }
+    }
 
     // Initialize autocomplete and form handling
     domContentLoadedHandler = function() {
@@ -274,6 +557,9 @@
           });
         }
       }, 200); // Wait for autocomplete to be fully initialized
+      
+      // Initialize table sorting
+      initTableSort();
     };
 
     // Event listener setup
@@ -285,12 +571,19 @@
 
     // Cleanup function
     window.addEventListener('beforeunload', function() {
+      // Clean up form handlers
       if (formSubmitHandler) {
         const form = document.querySelector('form[method="GET"]');
         if (form) {
           form.removeEventListener('submit', formSubmitHandler);
         }
       }
+      
+      // Clean up sort handlers
+      sortHandlers.forEach(handler => {
+        handler.element.removeEventListener('click', handler.click);
+        handler.element.removeEventListener('keydown', handler.key);
+      });
       
       if (domContentLoadedHandler) {
         document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);

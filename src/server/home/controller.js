@@ -91,9 +91,10 @@ export const homeController = {
       // Calculate status counts for summary card
       const statusCounts = {
         RED: 0,
+        AMBER_RED: 0,
         AMBER: 0,
-        GREEN: 0,
         GREEN_AMBER: 0,
+        GREEN: 0,
         TBC: 0,
         OTHER: 0
       }
@@ -113,7 +114,7 @@ export const homeController = {
       }
 
       return h.view('home/insights', {
-        pageTitle: 'Project Insights | DDTS Assurance',
+        pageTitle: 'Project Insights | Defra Digital Assurance',
         heading: 'Project Insights',
         projects: filteredProjects,
         statusCounts,

@@ -40,7 +40,7 @@ export const config = convict({
   serviceName: {
     doc: 'Applications Service Name',
     format: String,
-    default: 'DDTS Assurance'
+    default: 'Defra Digital Assurance'
   },
   root: {
     doc: 'Project root',

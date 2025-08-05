@@ -285,9 +285,10 @@ describe('Home Controller', () => {
           projects: expect.any(Array),
           statusCounts: expect.objectContaining({
             RED: expect.any(Number),
+            AMBER_RED: expect.any(Number),
             AMBER: expect.any(Number),
-            GREEN: expect.any(Number),
             GREEN_AMBER: expect.any(Number),
+            GREEN: expect.any(Number),
             TBC: expect.any(Number),
             OTHER: expect.any(Number)
           }),
@@ -304,9 +305,10 @@ describe('Home Controller', () => {
       // Based on sampleProjects: RED, AMBER, GREEN, TBC
       expect(viewArgs.statusCounts).toEqual({
         RED: 1,
+        AMBER_RED: 0,
         AMBER: 1,
-        GREEN: 1,
         GREEN_AMBER: 0,
+        GREEN: 1,
         TBC: 1,
         OTHER: 0
       })
@@ -360,9 +362,10 @@ describe('Home Controller', () => {
       // Should calculate status counts for filtered projects only
       expect(viewArgs.statusCounts).toEqual({
         RED: 1, // Project 1 has RED status
+        AMBER_RED: 0,
         AMBER: 0,
-        GREEN: 0,
         GREEN_AMBER: 0,
+        GREEN: 0,
         TBC: 0,
         OTHER: 0
       })
@@ -388,9 +391,10 @@ describe('Home Controller', () => {
       // Should still calculate status counts
       expect(viewArgs.statusCounts).toEqual({
         RED: 1,
+        AMBER_RED: 0,
         AMBER: 1,
-        GREEN: 1,
         GREEN_AMBER: 0,
+        GREEN: 1,
         TBC: 1,
         OTHER: 0
       })
@@ -431,9 +435,10 @@ describe('Home Controller', () => {
       // Should calculate status counts for the filtered project
       expect(viewArgs.statusCounts).toEqual({
         RED: 0,
+        AMBER_RED: 0,
         AMBER: 0,
-        GREEN: 1, // "Different Project" has GREEN status
         GREEN_AMBER: 0,
+        GREEN: 1, // "Different Project" has GREEN status
         TBC: 0,
         OTHER: 0
       })

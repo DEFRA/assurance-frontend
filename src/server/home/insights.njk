@@ -64,17 +64,21 @@
                         value: { text: statusCounts.RED }
                       } if statusCounts.RED > 0,
                       {
+                        key: { html: renderStatusTag("AMBER_RED") },
+                        value: { text: statusCounts.AMBER_RED }
+                      } if statusCounts.AMBER_RED > 0,
+                      {
                         key: { html: renderStatusTag("AMBER") },
                         value: { text: statusCounts.AMBER }
                       } if statusCounts.AMBER > 0,
                       {
-                        key: { html: renderStatusTag("GREEN") },
-                        value: { text: statusCounts.GREEN }
-                      } if statusCounts.GREEN > 0,
-                      {
                         key: { html: renderStatusTag("GREEN_AMBER") },
                         value: { text: statusCounts.GREEN_AMBER }
                       } if statusCounts.GREEN_AMBER > 0,
+                      {
+                        key: { html: renderStatusTag("GREEN") },
+                        value: { text: statusCounts.GREEN }
+                      } if statusCounts.GREEN > 0,
                       {
                         key: { html: renderStatusTag("TBC") },
                         value: { text: statusCounts.TBC }

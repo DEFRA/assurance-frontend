@@ -91,9 +91,10 @@ export const homeController = {
       // Calculate status counts for summary card
       const statusCounts = {
         RED: 0,
+        AMBER_RED: 0,
         AMBER: 0,
-        GREEN: 0,
         GREEN_AMBER: 0,
+        GREEN: 0,
         TBC: 0,
         OTHER: 0
       }

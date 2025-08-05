@@ -139,4 +139,4 @@ export const LOG_MESSAGES = {
   PROJECT_NOT_FOUND_FOR_DELETION: 'Project not found for deletion'
 }
 
-export const DDTS_ASSURANCE_SUFFIX = ' | DDTS Assurance'
+export const DDTS_ASSURANCE_SUFFIX = ' | Defra Digital Assurance'

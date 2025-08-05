@@ -369,7 +369,17 @@
       // Determine sort direction
       const currentSort = header.classList.contains('sort-asc') ? 'asc' : 
                          header.classList.contains('sort-desc') ? 'desc' : '';
-      const newSort = currentSort === 'asc' ? 'desc' : 'asc';
+      
+      // For RAG columns, default to ascending (worst statuses first: RED=1, PENDING=6)
+      // For other columns, default to ascending as normal
+      let newSort;
+      if (currentSort === '') {
+        // First click - for RAG columns, show worst first (ascending: 1,2,3,5,6)
+        newSort = 'asc';
+      } else {
+        // Subsequent clicks - toggle direction
+        newSort = currentSort === 'asc' ? 'desc' : 'asc';
+      }
       
       // Clear all sort classes
       document.querySelectorAll('.sortable').forEach(h => {
@@ -434,27 +444,31 @@
         
         // Map RAG values to sort order (lower numbers = higher priority when sorting)
         // Scale: Red, Amber Red, Amber, Green Amber, Green, Pending
-        const ragOrder = {
-          'RED': 1,           // Worst
-          'AMBER_RED': 2,     // Second worst
-          'AMBER RED': 2,     // Handle both formats
-          'AMBER': 3, 
-          'GREEN_AMBER': 4,
-          'GREEN/AMBER': 4,   // Handle both formats
-          'GREEN AMBER': 4,
-          'GREEN': 5,         // Best
-          'PENDING': 6        // Not assessed
-        };
+        // Use array to ensure we check most specific patterns first
+        // Scale: Pending (needs assessment), Red, Amber Red, Amber, Green Amber, Green
+        const ragMapping = [
+          { pattern: 'AMBERRED', order: 3 },      // Compound tag renders as concatenated text
+          { pattern: 'AMBER_RED', order: 3 },     // Third priority
+          { pattern: 'AMBER RED', order: 3 },     // Handle both formats
+          { pattern: 'GREENAMBER', order: 5 },    // Compound tag renders as concatenated text  
+          { pattern: 'GREEN_AMBER', order: 5 },   // Check this before "GREEN" and "AMBER"
+          { pattern: 'GREEN/AMBER', order: 5 },   // Handle both formats
+          { pattern: 'GREEN AMBER', order: 5 },
+          { pattern: 'PENDING', order: 1 },       // Highest priority - needs assessment
+          { pattern: 'RED', order: 2 },           // Second priority - assessed but failing
+          { pattern: 'AMBER', order: 4 },         // Check after compound patterns
+          { pattern: 'GREEN', order: 6 }          // Lowest priority - assessed and good
+        ];
         
-        // Find all RAG statuses in the cell text and return the highest priority (lowest number)
-        let lowestOrder = 999;
-        for (const [status, order] of Object.entries(ragOrder)) {
-          if (cellText.includes(status)) {
-            lowestOrder = Math.min(lowestOrder, order);
+        // Find the first matching pattern (most specific wins)
+        for (const mapping of ragMapping) {
+          if (cellText.includes(mapping.pattern)) {
+            return mapping.order;
           }
         }
         
-        return lowestOrder;
+        // Default for unrecognized patterns
+        return 999;
       } else {
         // For other text, get the visible text
         return cell.textContent.trim();

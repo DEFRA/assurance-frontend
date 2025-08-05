@@ -114,7 +114,7 @@ export const homeController = {
       }
 
       return h.view('home/insights', {
-        pageTitle: 'Project Insights | DDTS Assurance',
+        pageTitle: 'Project Insights | Defra Digital Assurance',
         heading: 'Project Insights',
         projects: filteredProjects,
         statusCounts,

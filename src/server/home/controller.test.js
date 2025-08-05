@@ -280,7 +280,7 @@ describe('Home Controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'home/insights',
         expect.objectContaining({
-          pageTitle: 'Project Insights | DDTS Assurance',
+          pageTitle: 'Project Insights | Defra Digital Assurance',
           heading: 'Project Insights',
           projects: expect.any(Array),
           statusCounts: expect.objectContaining({

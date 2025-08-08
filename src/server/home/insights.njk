@@ -4,6 +4,8 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
 {% from "status-tag.njk" import renderStatusTag %}
 
 {% block content %}
@@ -13,207 +15,354 @@
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
-      <form method="GET" action="/insights" class="govuk-!-margin-bottom-6">
-        <div class="govuk-grid-row">
-          <div class="govuk-grid-column-two-thirds">
-            <div class="govuk-form-group">
-              <label class="govuk-label govuk-label--s" for="search">
-                Search projects
-              </label>
-              <div id="search-container" class="govuk-!-margin-bottom-0"></div>
-            </div>
-          </div>
-          <div class="govuk-grid-column-one-third">
-            <div class="govuk-form-group govuk-!-margin-top-6">
-              {{ govukButton({
-                text: "Search",
-                type: "submit"
-              }) }}
-              
-              {% if searchTerm %}
-                <a href="/insights" class="govuk-link govuk-!-margin-left-3">Clear search</a>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </form>
-
-      {% if searchTerm %}
-        <h2 class="govuk-heading-m">Search results for: "{{ searchTerm }}"</h2>
-        {% if projects.length == 0 %}
-          <p class="govuk-body">No projects found matching your search.</p>
-          <p class="govuk-body"><a href="/insights" class="govuk-link">View all projects</a></p>
-        {% endif %}
-      {% endif %}
-
       {% if projects.length > 0 %}
-        <!-- Project Status Summary Card -->
-        <div class="govuk-!-margin-bottom-6">
-          <h2 class="govuk-heading-m">Project status overview</h2>
-          <div class="govuk-grid-row">
-            <div class="govuk-grid-column-one-half">
-              <div class="govuk-summary-card">
-                <div class="govuk-summary-card__title-wrapper">
-                  <h3 class="govuk-summary-card__title">Manual RAG status counts</h3>
-                </div>
-                <div class="govuk-summary-card__content">
-                  {{ govukSummaryList({
-                    rows: [
-                      {
-                        key: { html: renderStatusTag("RED") },
-                        value: { text: statusCounts.RED }
-                      } if statusCounts.RED > 0,
-                      {
-                        key: { html: renderStatusTag("AMBER_RED") },
-                        value: { text: statusCounts.AMBER_RED }
-                      } if statusCounts.AMBER_RED > 0,
-                      {
-                        key: { html: renderStatusTag("AMBER") },
-                        value: { text: statusCounts.AMBER }
-                      } if statusCounts.AMBER > 0,
-                      {
-                        key: { html: renderStatusTag("GREEN_AMBER") },
-                        value: { text: statusCounts.GREEN_AMBER }
-                      } if statusCounts.GREEN_AMBER > 0,
-                      {
-                        key: { html: renderStatusTag("GREEN") },
-                        value: { text: statusCounts.GREEN }
-                      } if statusCounts.GREEN > 0,
-                      {
-                        key: { html: renderStatusTag("TBC") },
-                        value: { text: statusCounts.TBC }
-                      } if statusCounts.TBC > 0,
-                      {
-                        key: { text: "OTHER" },
-                        value: { text: statusCounts.OTHER }
-                      } if statusCounts.OTHER > 0
-                    ] | selectattr("key") | list,
-                    classes: "govuk-summary-list--no-border"
-                  }) }}
-                  
-                  {% if statusCounts.RED == 0 and statusCounts.AMBER == 0 and statusCounts.GREEN == 0 and statusCounts.GREEN_AMBER == 0 and statusCounts.TBC == 0 and statusCounts.OTHER == 0 %}
-                    <p class="govuk-body">No projects to display.</p>
-                  {% endif %}
+        <!-- Insights Tabs -->
+        {% set analyticsContent %}
+          <!-- Project Status Summary Card -->
+          <div class="govuk-!-margin-bottom-6">
+            <h2 class="govuk-heading-m">Project status overview</h2>
+            <div class="govuk-grid-row">
+              <div class="govuk-grid-column-one-half">
+                <div class="govuk-summary-card">
+                  <div class="govuk-summary-card__title-wrapper">
+                    <h3 class="govuk-summary-card__title">Manual RAG status counts</h3>
+                  </div>
+                  <div class="govuk-summary-card__content">
+                    {{ govukSummaryList({
+                      rows: [
+                        {
+                          key: { html: renderStatusTag("RED") },
+                          value: { text: statusCounts.RED }
+                        } if statusCounts.RED > 0,
+                        {
+                          key: { html: renderStatusTag("AMBER_RED") },
+                          value: { text: statusCounts.AMBER_RED }
+                        } if statusCounts.AMBER_RED > 0,
+                        {
+                          key: { html: renderStatusTag("AMBER") },
+                          value: { text: statusCounts.AMBER }
+                        } if statusCounts.AMBER > 0,
+                        {
+                          key: { html: renderStatusTag("GREEN_AMBER") },
+                          value: { text: statusCounts.GREEN_AMBER }
+                        } if statusCounts.GREEN_AMBER > 0,
+                        {
+                          key: { html: renderStatusTag("GREEN") },
+                          value: { text: statusCounts.GREEN }
+                        } if statusCounts.GREEN > 0,
+                        {
+                          key: { html: renderStatusTag("TBC") },
+                          value: { text: statusCounts.TBC }
+                        } if statusCounts.TBC > 0,
+                        {
+                          key: { text: "OTHER" },
+                          value: { text: statusCounts.OTHER }
+                        } if statusCounts.OTHER > 0
+                      ] | selectattr("key") | list,
+                      classes: "govuk-summary-list--no-border"
+                    }) }}
+                    
+                    {% if statusCounts.RED == 0 and statusCounts.AMBER == 0 and statusCounts.GREEN == 0 and statusCounts.GREEN_AMBER == 0 and statusCounts.TBC == 0 and statusCounts.OTHER == 0 %}
+                      <p class="govuk-body">No projects to display.</p>
+                    {% endif %}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="govuk-table-container">
-          <table class="govuk-table">
-            <caption class="govuk-table__caption govuk-table__caption--m">
-              {% if searchTerm %}
-                Search results - Project insights and analytics
-              {% else %}
+
+          <div class="govuk-table-container">
+            <table class="govuk-table">
+              <caption class="govuk-table__caption govuk-table__caption--m">
                 Project insights and analytics
-              {% endif %}
-            </caption>
-            <thead class="govuk-table__head">
-              <tr class="govuk-table__row">
-                <th scope="col" class="govuk-table__header sortable" data-sort="text">Project name</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">Standards completed</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">R</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">A</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">G</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">All standards score</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">Completed standards score</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="rag">Manual RAG</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="rag">Lowest RAG</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="date">Last updated</th>
-              </tr>
-            </thead>
-            <tbody class="govuk-table__body">
-              {% for project in projects %}
-                {% set redCount = 0 %}
-                {% set amberCount = 0 %}
-                {% set greenCount = 0 %}
-                {% if project.standardsSummary %}
-                  {% for standard in project.standardsSummary %}
-                    {% if standard.aggregatedStatus == 'RED' %}
-                      {% set redCount = redCount + 1 %}
-                    {% elif standard.aggregatedStatus == 'AMBER' %}
-                      {% set amberCount = amberCount + 1 %}
-                    {% elif standard.aggregatedStatus == 'GREEN' %}
-                      {% set greenCount = greenCount + 1 %}
-                    {% endif %}
-                  {% endfor %}
-                {% endif %}
-                
+              </caption>
+              <thead class="govuk-table__head">
                 <tr class="govuk-table__row">
-                  <td class="govuk-table__cell">
-                    <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
-                  </td>
-                  <td class="govuk-table__cell">
-                    {% if project.projectStatus %}
-                      {{ project.projectStatus.numberOfStandardsCompleted }}/14
-                    {% else %}
-                      <span class="govuk-hint">No data available</span>
-                    {% endif %}
-                  </td>
-                  <td class="govuk-table__cell govuk-table__cell--numeric">
-                    {% if redCount > 0 %}
-                      {{ govukTag({ text: redCount, classes: "govuk-tag--red" }) }}
-                    {% else %}
-                      <span class="govuk-body-s">0</span>
-                    {% endif %}
-                  </td>
-                  <td class="govuk-table__cell govuk-table__cell--numeric">
-                    {% if amberCount > 0 %}
-                      {{ govukTag({ text: amberCount, classes: "govuk-tag--yellow" }) }}
-                    {% else %}
-                      <span class="govuk-body-s">0</span>
-                    {% endif %}
-                  </td>
-                  <td class="govuk-table__cell govuk-table__cell--numeric">
-                    {% if greenCount > 0 %}
-                      {{ govukTag({ text: greenCount, classes: "govuk-tag--green" }) }}
-                    {% else %}
-                      <span class="govuk-body-s">0</span>
-                    {% endif %}
-                  </td>
-                  <td class="govuk-table__cell">
-                    {% if project.projectStatus %}
-                      <div class="progress-bar">
-                        <div class="progress-bar__fill" style="width: {{ project.projectStatus.percentageAcrossAllStandards }}%"></div>
-                      </div>
-                      <span class="govuk-body-s">{{ project.projectStatus.percentageAcrossAllStandards }}%</span>
-                    {% else %}
-                      <span class="govuk-hint">No data</span>
-                    {% endif %}
-                  </td>
-                  <td class="govuk-table__cell">
-                    {% if project.projectStatus %}
-                      <div class="progress-bar">
-                        <div class="progress-bar__fill progress-bar__fill--quality" style="width: {{ project.projectStatus.percentageAcrossCompletedStandards }}%"></div>
-                      </div>
-                      <span class="govuk-body-s">{{ project.projectStatus.percentageAcrossCompletedStandards }}%</span>
-                    {% else %}
-                      <span class="govuk-hint">No data</span>
-                    {% endif %}
-                  </td>
-                  <td class="govuk-table__cell">
-                    {{ renderStatusTag(project.status) }}
-                  </td>
-                  <td class="govuk-table__cell">
-                    {% if project.projectStatus and project.projectStatus.lowestRag %}
-                      {{ renderStatusTag(project.projectStatus.lowestRag) }}
-                    {% else %}
-                      <span class="govuk-hint">No data</span>
-                    {% endif %}
-                  </td>
-                  <td class="govuk-table__cell">
-                    {% if project.lastUpdated %}
-                      <span class="govuk-body-s">{{ project.lastUpdated | formatDate }}</span>
-                    {% else %}
-                      <span class="govuk-hint">No date</span>
-                    {% endif %}
-                  </td>
+                  <th scope="col" class="govuk-table__header sortable" data-sort="text">Project name</th>
+                  <th scope="col" class="govuk-table__header sortable" data-sort="number">Standards completed</th>
+                  <th scope="col" class="govuk-table__header sortable" data-sort="number">R</th>
+                  <th scope="col" class="govuk-table__header sortable" data-sort="number">A</th>
+                  <th scope="col" class="govuk-table__header sortable" data-sort="number">G</th>
+                  <th scope="col" class="govuk-table__header sortable" data-sort="number">All standards score</th>
+                  <th scope="col" class="govuk-table__header sortable" data-sort="number">Completed standards score</th>
+                  <th scope="col" class="govuk-table__header sortable" data-sort="rag">Manual RAG</th>
+                  <th scope="col" class="govuk-table__header sortable" data-sort="rag">Lowest RAG</th>
+                  <th scope="col" class="govuk-table__header sortable" data-sort="date">Last updated</th>
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% elif not searchTerm %}
+              </thead>
+              <tbody class="govuk-table__body">
+                {% for project in projects %}
+                  {% set redCount = 0 %}
+                  {% set amberCount = 0 %}
+                  {% set greenCount = 0 %}
+                  {% if project.standardsSummary %}
+                    {% for standard in project.standardsSummary %}
+                      {% if standard.aggregatedStatus == 'RED' %}
+                        {% set redCount = redCount + 1 %}
+                      {% elif standard.aggregatedStatus == 'AMBER' %}
+                        {% set amberCount = amberCount + 1 %}
+                      {% elif standard.aggregatedStatus == 'GREEN' %}
+                        {% set greenCount = greenCount + 1 %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                  
+                  <tr class="govuk-table__row">
+                    <td class="govuk-table__cell">
+                      <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
+                    </td>
+                    <td class="govuk-table__cell">
+                      {% if project.projectStatus %}
+                        {{ project.projectStatus.numberOfStandardsCompleted }}/14
+                      {% else %}
+                        <span class="govuk-hint">No data available</span>
+                      {% endif %}
+                    </td>
+                    <td class="govuk-table__cell govuk-table__cell--numeric">
+                      {% if redCount > 0 %}
+                        {{ govukTag({ text: redCount, classes: "govuk-tag--red" }) }}
+                      {% else %}
+                        <span class="govuk-body-s">0</span>
+                      {% endif %}
+                    </td>
+                    <td class="govuk-table__cell govuk-table__cell--numeric">
+                      {% if amberCount > 0 %}
+                        {{ govukTag({ text: amberCount, classes: "govuk-tag--yellow" }) }}
+                      {% else %}
+                        <span class="govuk-body-s">0</span>
+                      {% endif %}
+                    </td>
+                    <td class="govuk-table__cell govuk-table__cell--numeric">
+                      {% if greenCount > 0 %}
+                        {{ govukTag({ text: greenCount, classes: "govuk-tag--green" }) }}
+                      {% else %}
+                        <span class="govuk-body-s">0</span>
+                      {% endif %}
+                    </td>
+                    <td class="govuk-table__cell">
+                      {% if project.projectStatus %}
+                        <div class="progress-bar">
+                          <div class="progress-bar__fill" style="width: {{ project.projectStatus.percentageAcrossAllStandards }}%"></div>
+                        </div>
+                        <span class="govuk-body-s">{{ project.projectStatus.percentageAcrossAllStandards }}%</span>
+                      {% else %}
+                        <span class="govuk-hint">No data</span>
+                      {% endif %}
+                    </td>
+                    <td class="govuk-table__cell">
+                      {% if project.projectStatus %}
+                        <div class="progress-bar">
+                          <div class="progress-bar__fill progress-bar__fill--quality" style="width: {{ project.projectStatus.percentageAcrossCompletedStandards }}%"></div>
+                        </div>
+                        <span class="govuk-body-s">{{ project.projectStatus.percentageAcrossCompletedStandards }}%</span>
+                      {% else %}
+                        <span class="govuk-hint">No data</span>
+                      {% endif %}
+                    </td>
+                    <td class="govuk-table__cell">
+                      {{ renderStatusTag(project.status) }}
+                    </td>
+                    <td class="govuk-table__cell">
+                      {% if project.projectStatus and project.projectStatus.lowestRag %}
+                        {{ renderStatusTag(project.projectStatus.lowestRag) }}
+                      {% else %}
+                        <span class="govuk-hint">No data</span>
+                      {% endif %}
+                    </td>
+                    <td class="govuk-table__cell">
+                      {% if project.lastUpdated %}
+                        <span class="govuk-body-s">{{ project.lastUpdated | formatDate }}</span>
+                      {% else %}
+                        <span class="govuk-hint">No date</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endset %}
+
+        {% set projectChangesContent %}
+          {% if projectChangesByProject %}
+            {% for projectId, projectData in projectChangesByProject %}
+              <div class="govuk-!-margin-bottom-6">
+                {% call govukDetails({
+                  summaryText: projectData.projectName + " (" + (projectData.changes | length) + " changes)"
+                }) %}
+                  <div class="timeline">
+                    {% for change in projectData.changes %}
+                      <div class="timeline__event">
+                        <h3 class="timeline__event-title govuk-heading-s">
+                          {{ change.timestamp | formatDate('d MMM yy') }}
+                        </h3>
+                        
+                        <div class="timeline__event-content">
+                          {% if change.changes.status %}
+                            <p class="govuk-body govuk-!-margin-bottom-2">
+                              <strong>Delivery status updated:</strong> {{ renderStatusTag(change.changes.status.to) }}
+                            </p>
+                          {% endif %}
+                          
+                          {% if change.changes.name %}
+                            <p class="govuk-body govuk-!-margin-bottom-2">
+                              <strong>Project name updated:</strong> {{ change.changes.name.to }}
+                            </p>
+                          {% endif %}
+                          
+                          {% if change.changes.phase %}
+                            <p class="govuk-body govuk-!-margin-bottom-2">
+                              <strong>Phase updated:</strong> {{ change.changes.phase.to }}
+                            </p>
+                          {% endif %}
+                          
+                          {% if change.changes.commentary and change.changes.commentary.to %}
+                            {% set displayCommentary = change.changes.commentary.to %}
+                            {% if "Path to green:" in displayCommentary %}
+                              {% set parts = displayCommentary.split("Path to green:") %}
+                              {% set issue = parts[0] | trim if parts[0] else "" %}
+                              {% set path = parts[1] | trim if parts[1] else "" %}
+                              
+                              {% if issue and path %}
+                                {% set displayCommentary = (issue + "\r\n\r\n" + path) | trim %}
+                              {% elif issue %}
+                                {% set displayCommentary = issue | trim %}
+                              {% elif path %}
+                                {% set displayCommentary = path | trim %}
+                              {% endif %}
+                            {% else %}
+                              {% set displayCommentary = displayCommentary | trim %}
+                            {% endif %}
+                            <div style="white-space: pre-wrap;" class="govuk-!-margin-bottom-2">{{ displayCommentary }}</div>
+                          {% endif %}
+                          
+                          {% if change.changes.tags %}
+                            <p class="govuk-body govuk-!-margin-bottom-2">
+                              <strong>Tags updated</strong>
+                            </p>
+                          {% endif %}
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                  <p class="govuk-!-margin-top-4">
+                    <a href="/projects/{{ projectId }}#engagement" class="govuk-link">View full project timeline</a>
+                  </p>
+                {% endcall %}
+              </div>
+            {% endfor %}
+          {% elif projects and projects.length > 0 %}
+            <p class="govuk-body">No recent project changes found. This could mean:</p>
+            <ul class="govuk-list govuk-list--bullet">
+              <li>No changes have been made to projects recently</li>
+              <li>The project history API is not returning data</li>
+              <li>Projects exist but have no recorded history</li>
+            </ul>
+            <p class="govuk-body">Available projects: {{ projects.length }}</p>
+          {% else %}
+            <p class="govuk-body">No projects available to check for changes.</p>
+          {% endif %}
+        {% endset %}
+
+        {% set serviceChangesContent %}
+          {% if serviceStandardChangesByProject %}
+            {% for projectId, projectData in serviceStandardChangesByProject %}
+              <div class="govuk-!-margin-bottom-6">
+                <h3 class="govuk-heading-s">
+                  <a href="/projects/{{ projectId }}" class="govuk-link">{{ projectData.projectName }}</a>
+                </h3>
+                
+                {% for standardKey, standardData in projectData.standardChanges %}
+                  {% call govukDetails({
+                    summaryText: (standardData.standardId | replace("standard-", "")) + " - " + (standardData.professionId | replace("-", " ") | title)
+                  }) %}
+                    <div class="timeline">
+                      {% for change in standardData.changes %}
+                        <div class="timeline__event">
+                          <h3 class="timeline__event-title govuk-heading-s">
+                            {{ change.timestamp | formatDate('d MMM yy') }}
+                          </h3>
+                          
+                          <div class="timeline__event-content">
+                            {% if change.changes.status %}
+                              <p class="govuk-body govuk-!-margin-bottom-2">
+                                <strong>Assessment status updated:</strong> {{ renderStatusTag(change.changes.status.to) }}
+                              </p>
+                            {% endif %}
+                            
+                            {% if change.changes.commentary and change.changes.commentary.to %}
+                              {% set displayCommentary = change.changes.commentary.to %}
+                              {% if "Path to green:" in displayCommentary %}
+                                {% set parts = displayCommentary.split("Path to green:") %}
+                                {% set issue = parts[0] | trim if parts[0] else "" %}
+                                {% set path = parts[1] | trim if parts[1] else "" %}
+                                
+                                {% if issue and path %}
+                                  {% set displayCommentary = (issue + "\r\n\r\n" + path) | trim %}
+                                {% elif issue %}
+                                  {% set displayCommentary = issue | trim %}
+                                {% elif path %}
+                                  {% set displayCommentary = path | trim %}
+                                {% endif %}
+                              {% else %}
+                                {% set displayCommentary = displayCommentary | trim %}
+                              {% endif %}
+                              
+                              {% if displayCommentary %}
+                                <div style="white-space: pre-wrap;" class="govuk-!-margin-bottom-2">{{ displayCommentary }}</div>
+                              {% endif %}
+                            {% endif %}
+                          </div>
+                        </div>
+                      {% endfor %}
+                    </div>
+                    <p class="govuk-!-margin-top-4">
+                      <a href="/projects/{{ projectId }}/standards/{{ standardData.standardId }}/professions/{{ standardData.professionId }}/history" class="govuk-link">View full assessment history</a>
+                    </p>
+                  {% endcall %}
+                {% endfor %}
+              </div>
+            {% endfor %}
+          {% elif projects and projects.length > 0 %}
+            <p class="govuk-body">No recent service standard changes found. This could mean:</p>
+            <ul class="govuk-list govuk-list--bullet">
+              <li>No assessment changes have been made recently</li>
+              <li>The assessment history API is not returning data</li>
+              <li>Projects exist but have no recorded assessment history</li>
+            </ul>
+            <p class="govuk-body">Available projects: {{ projects.length }}</p>
+          {% else %}
+            <p class="govuk-body">No projects available to check for service standard changes.</p>
+          {% endif %}
+        {% endset %}
+
+        {{ govukTabs({
+          items: [
+            {
+              label: "Project analytics",
+              id: "analytics",
+              panel: {
+                html: analyticsContent
+              }
+            },
+            {
+              label: "Project changes",
+              id: "project-changes", 
+              panel: {
+                html: projectChangesContent
+              }
+            },
+            {
+              label: "Service standard changes",
+              id: "service-changes",
+              panel: {
+                html: serviceChangesContent
+              }
+            }
+          ]
+        }) }}
+
+      {% else %}
         <p class="govuk-body">No projects available.</p>
       {% endif %}
     </div>
@@ -243,6 +392,54 @@
   
   .progress-bar__fill--quality {
     background-color: #1d70b8;
+  }
+  
+  /* Timeline styles */
+  .timeline {
+    border-left: 3px solid #b1b4b6;
+    margin-left: 20px;
+    padding-left: 30px;
+  }
+  
+  .timeline__event {
+    position: relative;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f3f2f1;
+  }
+  
+  .timeline__event:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+  
+  .timeline__event::before {
+    content: '';
+    position: absolute;
+    left: -39px;
+    top: 8px;
+    width: 12px;
+    height: 12px;
+    background-color: #1d70b8;
+    border-radius: 50%;
+    border: 3px solid #ffffff;
+  }
+  
+  .timeline__event-title {
+    margin: 0 0 10px 0;
+    font-size: 19px;
+    font-weight: 700;
+  }
+  
+  .timeline__event-content {
+    margin-top: 10px;
+  }
+  
+  /* Ensure status tags render inline properly */
+  .timeline__event-content .govuk-tag {
+    display: inline-block;
+    vertical-align: baseline;
+    margin: 0 2px;
   }
   
   /* Sortable table styles */
@@ -319,6 +516,21 @@
       right: 4px;
       font-size: 10px;
     }
+    
+    .timeline {
+      margin-left: 15px;
+      padding-left: 20px;
+    }
+    
+    .timeline__event::before {
+      left: -29px;
+      width: 10px;
+      height: 10px;
+    }
+    
+    .timeline__event-title {
+      font-size: 16px;
+    }
   }
 </style>
 {% endblock %}
@@ -327,7 +539,6 @@
 <script>
   (function() {
     // Store event handlers in variables for cleanup
-    let formSubmitHandler = null;
     let domContentLoadedHandler = null;
     let sortHandlers = [];
 
@@ -475,108 +686,8 @@
       }
     }
 
-    // Initialize autocomplete and form handling
+    // Initialize table sorting
     domContentLoadedHandler = function() {
-      // Create a source array with project names and IDs for easy lookup
-      const projects = {{ projects | dump | safe }};
-      const projectsById = {};
-      const projectsByName = {};
-      
-      // Create lookup maps for faster access
-      projects.forEach(project => {
-        projectsById[project.id] = project;
-        projectsByName[project.name] = project;
-      });
-      
-      // Create a list of project names for the autocomplete
-      const projectNames = projects.map(project => project.name);
-      
-      // Initialize the GOV.UK accessible autocomplete
-      accessibleAutocomplete({
-        element: document.querySelector('#search-container'),
-        id: 'search',
-        name: 'search',
-        defaultValue: '{{ searchTerm }}',
-        source: projectNames,
-        placeholder: 'Start typing to search',
-        autoselect: false,
-        confirmOnBlur: false,
-        showNoOptionsFound: true,
-        minLength: 2,
-        displayMenu: 'overlay',
-        onConfirm: function(selectedProjectName) {
-          // Always submit the form when a value is confirmed (either by selection or Enter)
-          const form = document.querySelector('form[method="GET"]');
-          
-          if (selectedProjectName && selectedProjectName.trim()) {
-            // Check if this is an exact project match for direct navigation
-            const project = projectsByName[selectedProjectName];
-            if (project && project.id && selectedProjectName === project.name) {
-              // Direct navigation for exact matches
-              window.location.href = `/projects/${project.id}`;
-              return;
-            }
-          }
-          
-          // For all other cases (partial matches, no matches, or any text), submit the form
-          if (form) {
-            // Use a small timeout to ensure the input value is properly set
-            setTimeout(() => {
-              form.submit();
-            }, 50);
-          }
-        },
-        tNoResults: function() { 
-          return 'No projects found';
-        },
-        tStatusQueryTooShort: function(minQueryLength) {
-          return `Type in ${minQueryLength} or more characters for results`;
-        }
-      });
-      
-      const form = document.querySelector('form[method="GET"]');
-      
-      // Handle form submission for search functionality
-      if (form) {
-        formSubmitHandler = function(event) {
-          const searchInput = document.querySelector('#search');
-          
-          // If search input is empty, redirect to insights page
-          if (searchInput && !searchInput.value.trim()) {
-            event.preventDefault();
-            window.location.href = '/insights';
-            return;
-          }
-          
-          // If search input has value, allow normal form submission
-          // No need to prevent default - let the form submit normally with GET parameters
-        };
-        
-        form.addEventListener('submit', formSubmitHandler);
-      }
-      
-      // Add fallback Enter key handler after autocomplete is initialized
-      setTimeout(() => {
-        const searchInputElement = document.querySelector('#search');
-        if (searchInputElement) {
-          searchInputElement.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter') {
-              event.preventDefault(); // Prevent default to avoid double submission
-              // Submit the form after a small delay
-              setTimeout(() => {
-                if (this.value && this.value.trim()) {
-                  const form = document.querySelector('form[method="GET"]');
-                  if (form) {
-                    form.submit();
-                  }
-                }
-              }, 50);
-            }
-          });
-        }
-      }, 200); // Wait for autocomplete to be fully initialized
-      
-      // Initialize table sorting
       initTableSort();
     };
 
@@ -589,14 +700,6 @@
 
     // Cleanup function
     window.addEventListener('beforeunload', function() {
-      // Clean up form handlers
-      if (formSubmitHandler) {
-        const form = document.querySelector('form[method="GET"]');
-        if (form) {
-          form.removeEventListener('submit', formSubmitHandler);
-        }
-      }
-      
       // Clean up sort handlers
       sortHandlers.forEach(handler => {
         handler.element.removeEventListener('click', handler.click);

@@ -2,6 +2,8 @@ import { homeController } from './controller.js'
 
 // Mocks
 const mockGetProjects = jest.fn()
+const mockGetProjectHistory = jest.fn()
+const mockGetAssessmentHistory = jest.fn()
 const mockLogger = {
   info: jest.fn(),
   error: jest.fn(),
@@ -11,7 +13,9 @@ const mockLogger = {
 
 // Mock dependencies
 jest.mock('~/src/server/services/projects.js', () => ({
-  getProjects: (...args) => mockGetProjects(...args)
+  getProjects: (...args) => mockGetProjects(...args),
+  getProjectHistory: (...args) => mockGetProjectHistory(...args),
+  getAssessmentHistory: (...args) => mockGetAssessmentHistory(...args)
 }))
 
 jest.mock('~/src/server/common/helpers/analytics.js', () => ({
@@ -41,28 +45,54 @@ describe('Home Controller', () => {
       name: 'Project 1',
       status: 'RED',
       lastUpdated: '2023-01-01',
-      tags: ['Portfolio: Future Farming', 'Type: Development']
+      tags: ['Portfolio: Future Farming', 'Type: Development'],
+      standardsSummary: [
+        {
+          standardId: 'standard-1',
+          professions: [
+            { professionId: 'architecture' },
+            { professionId: 'user-research' }
+          ]
+        },
+        {
+          standardId: 'standard-2',
+          professions: [{ professionId: 'architecture' }]
+        }
+      ]
     },
     {
       id: 'project-2',
       name: 'Project 2',
       status: 'AMBER',
       lastUpdated: '2023-01-02',
-      tags: ['Portfolio: Environmental Protection']
+      tags: ['Portfolio: Environmental Protection'],
+      standardsSummary: [
+        {
+          standardId: 'standard-1',
+          professions: [{ professionId: 'architecture' }]
+        }
+      ]
     },
     {
       id: 'project-3',
       name: 'Different Project',
       status: 'GREEN',
       lastUpdated: '2023-01-03',
-      tags: ['Portfolio: Other']
+      tags: ['Portfolio: Other'],
+      standardsSummary: []
     },
     {
       id: 'project-4',
       name: 'TBC Project',
       status: 'TBC',
       lastUpdated: '2023-01-04',
-      tags: ['Portfolio: Future Farming', 'Type: Development']
+      tags: ['Portfolio: Future Farming', 'Type: Development'],
+      standardsSummary: [
+        {
+          standardId: 'standard-3',
+          professions: [{ professionId: 'user-research' }]
+        }
+      ]
     }
   ]
 
@@ -89,8 +119,10 @@ describe('Home Controller', () => {
       logger: mockLogger
     }
 
-    // Default mock implementation
+    // Default mock implementations
     mockGetProjects.mockResolvedValue(sampleProjects)
+    mockGetProjectHistory.mockResolvedValue([])
+    mockGetAssessmentHistory.mockResolvedValue([])
   })
 
   afterAll(() => {
@@ -283,6 +315,8 @@ describe('Home Controller', () => {
           pageTitle: 'Project Insights | Defra Digital Assurance',
           heading: 'Project Insights',
           projects: expect.any(Array),
+          projectChangesByProject: expect.any(Object),
+          serviceStandardChangesByProject: expect.any(Object),
           statusCounts: expect.objectContaining({
             RED: expect.any(Number),
             AMBER_RED: expect.any(Number),
@@ -330,24 +364,25 @@ describe('Home Controller', () => {
       })
     })
 
-    it('should filter projects by name when search term is provided', async () => {
+    it('should return all projects regardless of search term (search not supported on insights)', async () => {
       // Arrange
       const projectsWithStatus = sampleProjects.map((project) => ({
         ...project,
         projectStatus: {
-          numberOfStandardsCompleted: 5,
-          percentageAcrossAllStandards: 35.71,
-          percentageAcrossCompletedStandards: 80.0,
-          calculatedRag: 'GREEN',
-          lowestRag: 'GREEN'
+          numberOfStandardsCompleted: 3,
+          percentageAcrossAllStandards: 21.43,
+          percentageAcrossCompletedStandards: 66.67,
+          calculatedRag: 'AMBER',
+          lowestRag: 'RED'
         },
         standardsSummary: [
-          { standardId: 'std-1', aggregatedStatus: 'GREEN' },
-          { standardId: 'std-2', aggregatedStatus: 'GREEN' }
+          { standardId: 'std-1', aggregatedStatus: 'RED' },
+          { standardId: 'std-2', aggregatedStatus: 'AMBER' },
+          { standardId: 'std-3', aggregatedStatus: 'AMBER' }
         ]
       }))
       mockGetProjects.mockResolvedValue(projectsWithStatus)
-      mockRequest.query = { search: 'Project 1' }
+      mockRequest.query = { search: 'Different' }
 
       // Act
       await homeController.insightsHandler(mockRequest, mockH)
@@ -355,24 +390,25 @@ describe('Home Controller', () => {
       // Assert
       const viewArgs = mockH.view.mock.calls[0][1]
 
-      expect(viewArgs.projects).toHaveLength(1)
-      expect(viewArgs.projects[0].name).toBe('Project 1')
-      expect(viewArgs.searchTerm).toBe('Project 1')
+      // Search is not supported on insights page - should show all projects
+      expect(viewArgs.projects).toHaveLength(4)
+      expect(viewArgs.projects.map((p) => p.name)).toEqual([
+        'Project 1',
+        'Project 2',
+        'Different Project',
+        'TBC Project'
+      ])
 
-      // Should calculate status counts for filtered projects only
+      // Should calculate status counts for all projects, not just filtered ones
       expect(viewArgs.statusCounts).toEqual({
         RED: 1, // Project 1 has RED status
         AMBER_RED: 0,
-        AMBER: 0,
+        AMBER: 1, // Project 2 has AMBER status
         GREEN_AMBER: 0,
-        GREEN: 0,
-        TBC: 0,
+        GREEN: 1, // Different Project has GREEN status
+        TBC: 1, // TBC Project has TBC status
         OTHER: 0
       })
-
-      // Should have ProjectStatus data
-      expect(viewArgs.projects[0]).toHaveProperty('projectStatus')
-      expect(viewArgs.projects[0].projectStatus).toHaveProperty('lowestRag')
     })
 
     it('should handle projects without ProjectStatus gracefully', async () => {
@@ -403,47 +439,6 @@ describe('Home Controller', () => {
       expect(viewArgs.projects[0]).not.toHaveProperty('projectStatus')
     })
 
-    it('should handle search correctly', async () => {
-      // Arrange
-      const projectsWithStatus = sampleProjects.map((project) => ({
-        ...project,
-        projectStatus: {
-          numberOfStandardsCompleted: 3,
-          percentageAcrossAllStandards: 21.43,
-          percentageAcrossCompletedStandards: 66.67,
-          calculatedRag: 'AMBER',
-          lowestRag: 'RED'
-        },
-        standardsSummary: [
-          { standardId: 'std-1', aggregatedStatus: 'RED' },
-          { standardId: 'std-2', aggregatedStatus: 'AMBER' },
-          { standardId: 'std-3', aggregatedStatus: 'AMBER' }
-        ]
-      }))
-      mockGetProjects.mockResolvedValue(projectsWithStatus)
-      mockRequest.query = { search: 'Different' }
-
-      // Act
-      await homeController.insightsHandler(mockRequest, mockH)
-
-      // Assert
-      const viewArgs = mockH.view.mock.calls[0][1]
-
-      expect(viewArgs.projects).toHaveLength(1)
-      expect(viewArgs.projects[0].name).toBe('Different Project')
-
-      // Should calculate status counts for the filtered project
-      expect(viewArgs.statusCounts).toEqual({
-        RED: 0,
-        AMBER_RED: 0,
-        AMBER: 0,
-        GREEN_AMBER: 0,
-        GREEN: 1, // "Different Project" has GREEN status
-        TBC: 0,
-        OTHER: 0
-      })
-    })
-
     describe('error handling', () => {
       it('should throw Boom error when API fails', async () => {
         // Arrange
@@ -457,6 +452,345 @@ describe('Home Controller', () => {
         expect(mockLogger.error).toHaveBeenCalledWith(
           'Error fetching projects for insights page'
         )
+      })
+
+      it('should handle project history fetch failures gracefully', async () => {
+        // Arrange
+        mockGetProjects.mockResolvedValue(sampleProjects)
+        mockGetProjectHistory.mockRejectedValue(new Error('History API error'))
+        mockGetAssessmentHistory.mockResolvedValue([])
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        expect(viewArgs.projectChangesByProject).toEqual({})
+        // The error is now caught and logged at the fetchAllProjectHistory level
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          expect.stringMatching(/Error fetching project history for project/),
+          expect.any(Error)
+        )
+      })
+
+      it('should handle assessment history fetch failures gracefully', async () => {
+        // Arrange
+        mockGetProjects.mockResolvedValue(sampleProjects)
+        mockGetProjectHistory.mockResolvedValue([])
+        mockGetAssessmentHistory.mockRejectedValue(
+          new Error('Assessment API error')
+        )
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        expect(viewArgs.serviceStandardChangesByProject).toEqual({})
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          expect.stringMatching(/Error fetching assessment history/),
+          expect.any(Error)
+        )
+      })
+
+      it('should handle empty project history gracefully', async () => {
+        // Arrange
+        mockGetProjects.mockResolvedValue(sampleProjects)
+        mockGetProjectHistory.mockResolvedValue([])
+        mockGetAssessmentHistory.mockResolvedValue([])
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        expect(viewArgs.projectChangesByProject).toEqual({})
+        expect(viewArgs.serviceStandardChangesByProject).toEqual({})
+      })
+
+      it('should handle projects with no standards summary', async () => {
+        // Arrange
+        const projectsWithoutStandards = [
+          {
+            id: 'project-1',
+            name: 'Project 1',
+            status: 'RED',
+            standardsSummary: []
+          }
+        ]
+        mockGetProjects.mockResolvedValue(projectsWithoutStandards)
+        mockGetProjectHistory.mockResolvedValue([])
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        expect(viewArgs.projects).toEqual(projectsWithoutStandards)
+        expect(viewArgs.serviceStandardChangesByProject).toEqual({})
+      })
+
+      it('should handle malformed history entries', async () => {
+        // Arrange
+        const malformedHistory = [
+          { id: '1', timestamp: '2024-01-01' }, // No changes
+          { id: '2', timestamp: '2024-01-02', changes: {} }, // Empty changes
+          {
+            id: '3',
+            timestamp: '2024-01-03',
+            changes: { status: { from: 'RED', to: 'GREEN' } }
+          } // Valid
+        ]
+        mockGetProjects.mockResolvedValue(sampleProjects)
+        mockGetProjectHistory.mockResolvedValue(malformedHistory)
+        mockGetAssessmentHistory.mockResolvedValue([])
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        // Should only process the valid entry
+        Object.values(viewArgs.projectChangesByProject).forEach((project) => {
+          expect(project.changes).toHaveLength(1)
+          expect(project.changes[0].changes.status).toEqual({
+            from: 'RED',
+            to: 'GREEN'
+          })
+        })
+      })
+
+      it('should handle mixed valid and invalid status values', async () => {
+        // Arrange
+        const projectsWithMixedStatuses = [
+          { id: '1', name: 'Project 1', status: 'RED' },
+          { id: '2', name: 'Project 2', status: 'INVALID_STATUS' },
+          { id: '3', name: 'Project 3', status: null },
+          { id: '4', name: 'Project 4', status: 'GREEN' }
+        ]
+        mockGetProjects.mockResolvedValue(projectsWithMixedStatuses)
+        mockGetProjectHistory.mockResolvedValue([])
+        mockGetAssessmentHistory.mockResolvedValue([])
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        expect(viewArgs.statusCounts).toEqual({
+          RED: 1,
+          AMBER_RED: 0,
+          AMBER: 0,
+          GREEN_AMBER: 0,
+          GREEN: 1,
+          TBC: 0,
+          OTHER: 2 // INVALID_STATUS and null
+        })
+      })
+
+      it('should properly limit timeline entries to 2 most recent', async () => {
+        // Arrange
+        const multipleHistoryEntries = [
+          {
+            id: '1',
+            timestamp: '2024-01-01T10:00:00Z',
+            changes: { status: { from: 'RED', to: 'AMBER' } }
+          },
+          {
+            id: '2',
+            timestamp: '2024-01-02T10:00:00Z',
+            changes: { status: { from: 'AMBER', to: 'GREEN' } }
+          },
+          {
+            id: '3',
+            timestamp: '2024-01-03T10:00:00Z',
+            changes: { commentary: { to: 'Updated comment' } }
+          },
+          {
+            id: '4',
+            timestamp: '2024-01-04T10:00:00Z',
+            changes: { name: { from: 'Old Name', to: 'New Name' } }
+          },
+          {
+            id: '5',
+            timestamp: '2024-01-05T10:00:00Z',
+            changes: { phase: { from: 'Alpha', to: 'Beta' } }
+          }
+        ]
+        mockGetProjects.mockResolvedValue(sampleProjects.slice(0, 1)) // Just one project
+        mockGetProjectHistory.mockResolvedValue(multipleHistoryEntries)
+        mockGetAssessmentHistory.mockResolvedValue([])
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        const projectChanges = Object.values(
+          viewArgs.projectChangesByProject
+        )[0]
+        expect(projectChanges.changes).toHaveLength(2)
+        // Should be the 2 most recent (latest first)
+        expect(projectChanges.changes[0].changes.phase).toEqual({
+          from: 'Alpha',
+          to: 'Beta'
+        })
+        expect(projectChanges.changes[1].changes.name).toEqual({
+          from: 'Old Name',
+          to: 'New Name'
+        })
+      })
+
+      it('should handle assessment history with missing changes', async () => {
+        // Arrange
+        const assessmentHistoryWithMissingChanges = [
+          { id: '1', timestamp: '2024-01-01T10:00:00Z' }, // No changes
+          { id: '2', timestamp: '2024-01-02T10:00:00Z', changes: null }, // Null changes
+          {
+            id: '3',
+            timestamp: '2024-01-03T10:00:00Z',
+            changes: { status: { from: 'RED', to: 'GREEN' } }
+          } // Valid
+        ]
+        mockGetProjects.mockResolvedValue(sampleProjects.slice(0, 1))
+        mockGetProjectHistory.mockResolvedValue([])
+        mockGetAssessmentHistory.mockResolvedValue(
+          assessmentHistoryWithMissingChanges
+        )
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        const serviceStandardChanges = Object.values(
+          viewArgs.serviceStandardChangesByProject
+        )[0]
+
+        // Should have service standard changes
+        expect(serviceStandardChanges).toBeDefined()
+
+        const standardChanges = Object.values(
+          serviceStandardChanges.standardChanges
+        )[0]
+        expect(standardChanges.changes).toHaveLength(1)
+        expect(standardChanges.changes[0].changes.status).toEqual({
+          from: 'RED',
+          to: 'GREEN'
+        })
+      })
+
+      it('should handle projects with standards but no professions', async () => {
+        // Arrange
+        const projectWithStandardsNoProfessions = [
+          {
+            id: 'project-1',
+            name: 'Project 1',
+            status: 'RED',
+            standardsSummary: [
+              {
+                standardId: 'standard-1',
+                professions: [] // Empty professions array
+              },
+              {
+                standardId: 'standard-2'
+                // Missing professions property
+              }
+            ]
+          }
+        ]
+        mockGetProjects.mockResolvedValue(projectWithStandardsNoProfessions)
+        mockGetProjectHistory.mockResolvedValue([])
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        expect(viewArgs.serviceStandardChangesByProject).toEqual({})
+      })
+
+      it('should handle complex timeline entries with all change types', async () => {
+        // Arrange
+        const complexHistoryEntry = {
+          id: 'complex-1',
+          timestamp: '2024-01-01T10:00:00Z',
+          changedBy: 'test-user',
+          changes: {
+            status: { from: 'RED', to: 'GREEN' },
+            commentary: { to: 'New commentary' },
+            name: { from: 'Old Project', to: 'New Project' },
+            phase: { from: 'Alpha', to: 'Beta' },
+            tags: { from: ['old-tag'], to: ['new-tag'] }
+          }
+        }
+        mockGetProjects.mockResolvedValue(sampleProjects.slice(0, 1))
+        mockGetProjectHistory.mockResolvedValue([complexHistoryEntry])
+        mockGetAssessmentHistory.mockResolvedValue([])
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        const projectChanges = Object.values(
+          viewArgs.projectChangesByProject
+        )[0]
+        expect(projectChanges.changes).toHaveLength(1)
+
+        const change = projectChanges.changes[0]
+        expect(change.changes.status).toEqual({ from: 'RED', to: 'GREEN' })
+        expect(change.changes.commentary).toEqual({ to: 'New commentary' })
+        expect(change.changes.name).toEqual({
+          from: 'Old Project',
+          to: 'New Project'
+        })
+        expect(change.changes.phase).toEqual({ from: 'Alpha', to: 'Beta' })
+        expect(change.changes.tags).toEqual({
+          from: ['old-tag'],
+          to: ['new-tag']
+        })
+        expect(change.changedBy).toBe('test-user')
+      })
+
+      it('should handle assessment history with both status and commentary changes', async () => {
+        // Arrange
+        const assessmentWithBothChanges = [
+          {
+            id: 'assessment-1',
+            timestamp: '2024-01-01T10:00:00Z',
+            changedBy: 'assessor',
+            changes: {
+              status: { from: 'RED', to: 'AMBER' },
+              commentary: { to: 'Assessment updated with new findings' }
+            }
+          }
+        ]
+        mockGetProjects.mockResolvedValue(sampleProjects.slice(0, 1))
+        mockGetProjectHistory.mockResolvedValue([])
+        mockGetAssessmentHistory.mockResolvedValue(assessmentWithBothChanges)
+
+        // Act
+        await homeController.insightsHandler(mockRequest, mockH)
+
+        // Assert
+        const viewArgs = mockH.view.mock.calls[0][1]
+        const serviceStandardChanges = Object.values(
+          viewArgs.serviceStandardChangesByProject
+        )[0]
+        expect(serviceStandardChanges).toBeDefined()
+
+        const standardChanges = Object.values(
+          serviceStandardChanges.standardChanges
+        )[0]
+        expect(standardChanges.changes).toHaveLength(1)
+
+        const change = standardChanges.changes[0]
+        expect(change.changes.status).toEqual({ from: 'RED', to: 'AMBER' })
+        expect(change.changes.commentary).toEqual({
+          to: 'Assessment updated with new findings'
+        })
+        expect(change.changedBy).toBe('assessor')
       })
     })
   })

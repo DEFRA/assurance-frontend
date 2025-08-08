@@ -46,7 +46,9 @@ const calculateStatusCounts = (projects) => {
  * @returns {object|null} Processed timeline entry or null
  */
 const processProjectHistoryEntry = (entry) => {
-  if (!entry.changes) return null
+  if (!entry.changes) {
+    return null
+  }
 
   const hasChanges =
     entry.changes.name ||
@@ -55,7 +57,9 @@ const processProjectHistoryEntry = (entry) => {
     entry.changes.phase ||
     entry.changes.tags
 
-  if (!hasChanges) return null
+  if (!hasChanges) {
+    return null
+  }
 
   return {
     id: entry.id || entry.timestamp,
@@ -71,7 +75,9 @@ const processProjectHistoryEntry = (entry) => {
  * @returns {Array} Processed timeline entries
  */
 const processProjectLevelChanges = (history) => {
-  if (!history || history.length === 0) return []
+  if (!history || history.length === 0) {
+    return []
+  }
 
   const projectLevelChanges = history
     .map(processProjectHistoryEntry)
@@ -114,7 +120,9 @@ const processAssessmentHistoryEntry = (entry, standardId, professionId) => {
  * @returns {Array} Processed timeline entries
  */
 const processAssessmentHistory = (history, standardId, professionId) => {
-  if (!history || history.length === 0) return []
+  if (!history || history.length === 0) {
+    return []
+  }
 
   const timelineEntries = history
     .map((entry) =>
@@ -208,7 +216,9 @@ const fetchSingleProjectAssessmentHistory = async (project, request) => {
   const assessmentPromises = []
 
   project.standardsSummary.forEach((standard) => {
-    if (!standard.professions || standard.professions.length === 0) return
+    if (!standard.professions || standard.professions.length === 0) {
+      return
+    }
 
     standard.professions.forEach((profession) => {
       const promise = fetchAssessmentHistoryForStandard({

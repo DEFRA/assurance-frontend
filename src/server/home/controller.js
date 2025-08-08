@@ -72,7 +72,7 @@ const processProjectHistoryEntry = (entry) => {
 /**
  * Process project level changes from history
  * @param {Array} history - Project history array
- * @returns {Array} Processed timeline entries
+ * @returns {Array} Processed timeline entries (max 2 most recent events)
  */
 const processProjectLevelChanges = (history) => {
   if (!history || history.length === 0) {
@@ -117,7 +117,7 @@ const processAssessmentHistoryEntry = (entry, standardId, professionId) => {
  * @param {Array} history - Assessment history array
  * @param {string} standardId - Standard ID
  * @param {string} professionId - Profession ID
- * @returns {Array} Processed timeline entries
+ * @returns {Array} Processed timeline entries (max 2 most recent events)
  */
 const processAssessmentHistory = (history, standardId, professionId) => {
   if (!history || history.length === 0) {
@@ -310,9 +310,9 @@ const groupServiceStandardChanges = (assessmentHistoryResults) => {
 
 /**
  * Fetch all project and assessment history
- * @param {Array} projects - Array of projects
+ * @param {Array} projects - Array of projects (pre-filtered by backend for recent activity)
  * @param {object} request - Hapi request object
- * @returns {Promise<object>} Combined history data
+ * @returns {Promise<object>} Combined history data (max 2 events per project/standard)
  */
 const fetchAllProjectHistory = async (projects, request) => {
   request.logger.info('Fetching project history for timeline views')
@@ -336,7 +336,7 @@ const fetchAllProjectHistory = async (projects, request) => {
   )
 
   request.logger.info(
-    `Grouped changes: ${Object.keys(projectChangesByProject).length} projects with project changes, ${Object.keys(serviceStandardChangesByProject).length} projects with service standard changes (limited to 2 most recent events per project/standard)`
+    `Grouped changes: ${Object.keys(projectChangesByProject).length} projects with project changes, ${Object.keys(serviceStandardChangesByProject).length} projects with service standard changes (backend filtered for recent activity, max 2 events per project/standard)`
   )
 
   return {
@@ -408,11 +408,13 @@ export const homeController = {
 
     try {
       request.logger.info('Insights page - fetching projects with analytics')
-      const projects = await getProjects(request)
+
+      // Fetch ALL projects for the analytics tab (comprehensive view)
+      const allProjects = await getProjects(request)
 
       // No need to add mock data - the API now provides ProjectStatus with analytics
       // Authenticated users see all projects (no TBC filtering needed for insights)
-      const visibleProjects = projects
+      const visibleProjects = allProjects
 
       // Get all project names for autocomplete
       const projectNames = visibleProjects.map((project) => project.name)
@@ -420,16 +422,30 @@ export const homeController = {
       // No search filtering for insights page - show all projects
       const filteredProjects = visibleProjects
 
-      // Calculate status counts for summary card
+      // Calculate status counts for summary card (using ALL projects)
       const statusCounts = calculateStatusCounts(filteredProjects)
 
-      // Fetch project history for project changes and service standard changes
+      // For timeline views, fetch only projects that were updated in the last 7 days
       let projectChangesByProject = {}
       let serviceStandardChangesByProject = {}
 
       try {
+        // Calculate date 7 days ago for timeline filtering
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        const startDate = sevenDaysAgo.toISOString().split('T')[0] // Format as YYYY-MM-DD
+
+        // Fetch only projects with recent changes for timeline views
+        const recentlyChangedProjects = await getProjects(request, {
+          startDate
+        })
+
+        request.logger.info(
+          `Found ${recentlyChangedProjects.length} projects with changes in last 7 days (out of ${allProjects.length} total projects)`
+        )
+
         const historyData = await fetchAllProjectHistory(
-          filteredProjects,
+          recentlyChangedProjects,
           request
         )
         projectChangesByProject = historyData.projectChangesByProject
@@ -443,9 +459,9 @@ export const homeController = {
       return h.view('home/insights', {
         pageTitle: 'Project Insights | Defra Digital Assurance',
         heading: 'Project Insights',
-        projects: filteredProjects,
-        projectChangesByProject,
-        serviceStandardChangesByProject,
+        projects: filteredProjects, // ALL projects for analytics
+        projectChangesByProject, // Only recent changes
+        serviceStandardChangesByProject, // Only recent changes
         statusCounts,
         projectNames,
         isAuthenticated,

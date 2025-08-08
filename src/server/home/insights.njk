@@ -18,169 +18,169 @@
       {% if projects.length > 0 %}
         <!-- Insights Tabs -->
         {% set analyticsContent %}
-          <!-- Project Status Summary Card -->
-          <div class="govuk-!-margin-bottom-6">
-            <h2 class="govuk-heading-m">Project status overview</h2>
-            <div class="govuk-grid-row">
-              <div class="govuk-grid-column-one-half">
-                <div class="govuk-summary-card">
-                  <div class="govuk-summary-card__title-wrapper">
-                    <h3 class="govuk-summary-card__title">Manual RAG status counts</h3>
-                  </div>
-                  <div class="govuk-summary-card__content">
-                    {{ govukSummaryList({
-                      rows: [
-                        {
-                          key: { html: renderStatusTag("RED") },
-                          value: { text: statusCounts.RED }
-                        } if statusCounts.RED > 0,
-                        {
-                          key: { html: renderStatusTag("AMBER_RED") },
-                          value: { text: statusCounts.AMBER_RED }
-                        } if statusCounts.AMBER_RED > 0,
-                        {
-                          key: { html: renderStatusTag("AMBER") },
-                          value: { text: statusCounts.AMBER }
-                        } if statusCounts.AMBER > 0,
-                        {
-                          key: { html: renderStatusTag("GREEN_AMBER") },
-                          value: { text: statusCounts.GREEN_AMBER }
-                        } if statusCounts.GREEN_AMBER > 0,
-                        {
-                          key: { html: renderStatusTag("GREEN") },
-                          value: { text: statusCounts.GREEN }
-                        } if statusCounts.GREEN > 0,
-                        {
-                          key: { html: renderStatusTag("TBC") },
-                          value: { text: statusCounts.TBC }
-                        } if statusCounts.TBC > 0,
-                        {
-                          key: { text: "OTHER" },
-                          value: { text: statusCounts.OTHER }
-                        } if statusCounts.OTHER > 0
-                      ] | selectattr("key") | list,
-                      classes: "govuk-summary-list--no-border"
-                    }) }}
-                    
-                    {% if statusCounts.RED == 0 and statusCounts.AMBER == 0 and statusCounts.GREEN == 0 and statusCounts.GREEN_AMBER == 0 and statusCounts.TBC == 0 and statusCounts.OTHER == 0 %}
-                      <p class="govuk-body">No projects to display.</p>
-                    {% endif %}
-                  </div>
+        <!-- Project Status Summary Card -->
+        <div class="govuk-!-margin-bottom-6">
+          <h2 class="govuk-heading-m">Project status overview</h2>
+          <div class="govuk-grid-row">
+            <div class="govuk-grid-column-one-half">
+              <div class="govuk-summary-card">
+                <div class="govuk-summary-card__title-wrapper">
+                  <h3 class="govuk-summary-card__title">Manual RAG status counts</h3>
+                </div>
+                <div class="govuk-summary-card__content">
+                  {{ govukSummaryList({
+                    rows: [
+                      {
+                        key: { html: renderStatusTag("RED") },
+                        value: { text: statusCounts.RED }
+                      } if statusCounts.RED > 0,
+                      {
+                        key: { html: renderStatusTag("AMBER_RED") },
+                        value: { text: statusCounts.AMBER_RED }
+                      } if statusCounts.AMBER_RED > 0,
+                      {
+                        key: { html: renderStatusTag("AMBER") },
+                        value: { text: statusCounts.AMBER }
+                      } if statusCounts.AMBER > 0,
+                      {
+                        key: { html: renderStatusTag("GREEN_AMBER") },
+                        value: { text: statusCounts.GREEN_AMBER }
+                      } if statusCounts.GREEN_AMBER > 0,
+                      {
+                        key: { html: renderStatusTag("GREEN") },
+                        value: { text: statusCounts.GREEN }
+                      } if statusCounts.GREEN > 0,
+                      {
+                        key: { html: renderStatusTag("TBC") },
+                        value: { text: statusCounts.TBC }
+                      } if statusCounts.TBC > 0,
+                      {
+                        key: { text: "OTHER" },
+                        value: { text: statusCounts.OTHER }
+                      } if statusCounts.OTHER > 0
+                    ] | selectattr("key") | list,
+                    classes: "govuk-summary-list--no-border"
+                  }) }}
+                  
+                  {% if statusCounts.RED == 0 and statusCounts.AMBER == 0 and statusCounts.GREEN == 0 and statusCounts.GREEN_AMBER == 0 and statusCounts.TBC == 0 and statusCounts.OTHER == 0 %}
+                    <p class="govuk-body">No projects to display.</p>
+                  {% endif %}
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="govuk-table-container">
-            <table class="govuk-table">
-              <caption class="govuk-table__caption govuk-table__caption--m">
+        <div class="govuk-table-container">
+          <table class="govuk-table">
+            <caption class="govuk-table__caption govuk-table__caption--m">
                 Project insights and analytics
-              </caption>
-              <thead class="govuk-table__head">
+            </caption>
+            <thead class="govuk-table__head">
+              <tr class="govuk-table__row">
+                <th scope="col" class="govuk-table__header sortable" data-sort="text">Project name</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">Standards completed</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">R</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">A</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">G</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">All standards score</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="number">Completed standards score</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="rag">Manual RAG</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="rag">Lowest RAG</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort="date">Last updated</th>
+              </tr>
+            </thead>
+            <tbody class="govuk-table__body">
+              {% for project in projects %}
+                {% set redCount = 0 %}
+                {% set amberCount = 0 %}
+                {% set greenCount = 0 %}
+                {% if project.standardsSummary %}
+                  {% for standard in project.standardsSummary %}
+                    {% if standard.aggregatedStatus == 'RED' %}
+                      {% set redCount = redCount + 1 %}
+                    {% elif standard.aggregatedStatus == 'AMBER' %}
+                      {% set amberCount = amberCount + 1 %}
+                    {% elif standard.aggregatedStatus == 'GREEN' %}
+                      {% set greenCount = greenCount + 1 %}
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+                
                 <tr class="govuk-table__row">
-                  <th scope="col" class="govuk-table__header sortable" data-sort="text">Project name</th>
-                  <th scope="col" class="govuk-table__header sortable" data-sort="number">Standards completed</th>
-                  <th scope="col" class="govuk-table__header sortable" data-sort="number">R</th>
-                  <th scope="col" class="govuk-table__header sortable" data-sort="number">A</th>
-                  <th scope="col" class="govuk-table__header sortable" data-sort="number">G</th>
-                  <th scope="col" class="govuk-table__header sortable" data-sort="number">All standards score</th>
-                  <th scope="col" class="govuk-table__header sortable" data-sort="number">Completed standards score</th>
-                  <th scope="col" class="govuk-table__header sortable" data-sort="rag">Manual RAG</th>
-                  <th scope="col" class="govuk-table__header sortable" data-sort="rag">Lowest RAG</th>
-                  <th scope="col" class="govuk-table__header sortable" data-sort="date">Last updated</th>
+                  <td class="govuk-table__cell">
+                    <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if project.projectStatus %}
+                      {{ project.projectStatus.numberOfStandardsCompleted }}/14
+                    {% else %}
+                      <span class="govuk-hint">No data available</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell govuk-table__cell--numeric">
+                    {% if redCount > 0 %}
+                      {{ govukTag({ text: redCount, classes: "govuk-tag--red" }) }}
+                    {% else %}
+                      <span class="govuk-body-s">0</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell govuk-table__cell--numeric">
+                    {% if amberCount > 0 %}
+                      {{ govukTag({ text: amberCount, classes: "govuk-tag--yellow" }) }}
+                    {% else %}
+                      <span class="govuk-body-s">0</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell govuk-table__cell--numeric">
+                    {% if greenCount > 0 %}
+                      {{ govukTag({ text: greenCount, classes: "govuk-tag--green" }) }}
+                    {% else %}
+                      <span class="govuk-body-s">0</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if project.projectStatus %}
+                      <div class="progress-bar">
+                        <div class="progress-bar__fill" style="width: {{ project.projectStatus.percentageAcrossAllStandards }}%"></div>
+                      </div>
+                      <span class="govuk-body-s">{{ project.projectStatus.percentageAcrossAllStandards }}%</span>
+                    {% else %}
+                      <span class="govuk-hint">No data</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if project.projectStatus %}
+                      <div class="progress-bar">
+                        <div class="progress-bar__fill progress-bar__fill--quality" style="width: {{ project.projectStatus.percentageAcrossCompletedStandards }}%"></div>
+                      </div>
+                      <span class="govuk-body-s">{{ project.projectStatus.percentageAcrossCompletedStandards }}%</span>
+                    {% else %}
+                      <span class="govuk-hint">No data</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {{ renderStatusTag(project.status) }}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if project.projectStatus and project.projectStatus.lowestRag %}
+                      {{ renderStatusTag(project.projectStatus.lowestRag) }}
+                    {% else %}
+                      <span class="govuk-hint">No data</span>
+                    {% endif %}
+                  </td>
+                  <td class="govuk-table__cell">
+                    {% if project.lastUpdated %}
+                      <span class="govuk-body-s">{{ project.lastUpdated | formatDate }}</span>
+                    {% else %}
+                      <span class="govuk-hint">No date</span>
+                    {% endif %}
+                  </td>
                 </tr>
-              </thead>
-              <tbody class="govuk-table__body">
-                {% for project in projects %}
-                  {% set redCount = 0 %}
-                  {% set amberCount = 0 %}
-                  {% set greenCount = 0 %}
-                  {% if project.standardsSummary %}
-                    {% for standard in project.standardsSummary %}
-                      {% if standard.aggregatedStatus == 'RED' %}
-                        {% set redCount = redCount + 1 %}
-                      {% elif standard.aggregatedStatus == 'AMBER' %}
-                        {% set amberCount = amberCount + 1 %}
-                      {% elif standard.aggregatedStatus == 'GREEN' %}
-                        {% set greenCount = greenCount + 1 %}
-                      {% endif %}
-                    {% endfor %}
-                  {% endif %}
-                  
-                  <tr class="govuk-table__row">
-                    <td class="govuk-table__cell">
-                      <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
-                    </td>
-                    <td class="govuk-table__cell">
-                      {% if project.projectStatus %}
-                        {{ project.projectStatus.numberOfStandardsCompleted }}/14
-                      {% else %}
-                        <span class="govuk-hint">No data available</span>
-                      {% endif %}
-                    </td>
-                    <td class="govuk-table__cell govuk-table__cell--numeric">
-                      {% if redCount > 0 %}
-                        {{ govukTag({ text: redCount, classes: "govuk-tag--red" }) }}
-                      {% else %}
-                        <span class="govuk-body-s">0</span>
-                      {% endif %}
-                    </td>
-                    <td class="govuk-table__cell govuk-table__cell--numeric">
-                      {% if amberCount > 0 %}
-                        {{ govukTag({ text: amberCount, classes: "govuk-tag--yellow" }) }}
-                      {% else %}
-                        <span class="govuk-body-s">0</span>
-                      {% endif %}
-                    </td>
-                    <td class="govuk-table__cell govuk-table__cell--numeric">
-                      {% if greenCount > 0 %}
-                        {{ govukTag({ text: greenCount, classes: "govuk-tag--green" }) }}
-                      {% else %}
-                        <span class="govuk-body-s">0</span>
-                      {% endif %}
-                    </td>
-                    <td class="govuk-table__cell">
-                      {% if project.projectStatus %}
-                        <div class="progress-bar">
-                          <div class="progress-bar__fill" style="width: {{ project.projectStatus.percentageAcrossAllStandards }}%"></div>
-                        </div>
-                        <span class="govuk-body-s">{{ project.projectStatus.percentageAcrossAllStandards }}%</span>
-                      {% else %}
-                        <span class="govuk-hint">No data</span>
-                      {% endif %}
-                    </td>
-                    <td class="govuk-table__cell">
-                      {% if project.projectStatus %}
-                        <div class="progress-bar">
-                          <div class="progress-bar__fill progress-bar__fill--quality" style="width: {{ project.projectStatus.percentageAcrossCompletedStandards }}%"></div>
-                        </div>
-                        <span class="govuk-body-s">{{ project.projectStatus.percentageAcrossCompletedStandards }}%</span>
-                      {% else %}
-                        <span class="govuk-hint">No data</span>
-                      {% endif %}
-                    </td>
-                    <td class="govuk-table__cell">
-                      {{ renderStatusTag(project.status) }}
-                    </td>
-                    <td class="govuk-table__cell">
-                      {% if project.projectStatus and project.projectStatus.lowestRag %}
-                        {{ renderStatusTag(project.projectStatus.lowestRag) }}
-                      {% else %}
-                        <span class="govuk-hint">No data</span>
-                      {% endif %}
-                    </td>
-                    <td class="govuk-table__cell">
-                      {% if project.lastUpdated %}
-                        <span class="govuk-body-s">{{ project.lastUpdated | formatDate }}</span>
-                      {% else %}
-                        <span class="govuk-hint">No date</span>
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
         {% endset %}
 
         {% set projectChangesContent %}

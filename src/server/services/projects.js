@@ -18,11 +18,28 @@ const SUPPRESS_HISTORY_QUERY = '?suppressHistory=true'
 const API_VERSION_KEY = 'api.version'
 const API_BASE_PREFIX = '/api'
 
-export async function getProjects(request) {
+export async function getProjects(request, options = {}) {
   try {
     const apiVersion = config.get(API_VERSION_KEY)
     const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
-    logger.info({ endpoint }, 'Fetching projects from API')
+
+    // Build query parameters if provided
+    const queryParams = new URLSearchParams()
+    if (options.startDate) {
+      queryParams.append('start_date', options.startDate)
+    }
+    if (options.endDate) {
+      queryParams.append('end_date', options.endDate)
+    }
+    if (options.tag) {
+      queryParams.append('tag', options.tag)
+    }
+
+    const fullEndpoint = queryParams.toString()
+      ? `${endpoint}?${queryParams.toString()}`
+      : endpoint
+
+    logger.info({ endpoint: fullEndpoint }, 'Fetching projects from API')
 
     let data
     // ALWAYS use authenticated fetcher if request is provided
@@ -31,11 +48,11 @@ export async function getProjects(request) {
         `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for projects API`
       )
       const authedFetch = authedFetchJsonDecorator(request)
-      data = await authedFetch(endpoint)
+      data = await authedFetch(fullEndpoint)
     } else {
       // Fall back to unauthenticated fetcher only if no request context
       logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
-      data = await fetcher(endpoint)
+      data = await fetcher(fullEndpoint)
     }
 
     // Handle case where data is null, undefined, or not an array

@@ -2,6 +2,8 @@ import { homeController } from './controller.js'
 
 // Mocks
 const mockGetProjects = jest.fn()
+const mockGetProjectHistory = jest.fn()
+const mockGetAssessmentHistory = jest.fn()
 const mockLogger = {
   info: jest.fn(),
   error: jest.fn(),
@@ -11,7 +13,9 @@ const mockLogger = {
 
 // Mock dependencies
 jest.mock('~/src/server/services/projects.js', () => ({
-  getProjects: (...args) => mockGetProjects(...args)
+  getProjects: (...args) => mockGetProjects(...args),
+  getProjectHistory: (...args) => mockGetProjectHistory(...args),
+  getAssessmentHistory: (...args) => mockGetAssessmentHistory(...args)
 }))
 
 jest.mock('~/src/server/common/helpers/analytics.js', () => ({
@@ -41,28 +45,54 @@ describe('Home Controller', () => {
       name: 'Project 1',
       status: 'RED',
       lastUpdated: '2023-01-01',
-      tags: ['Portfolio: Future Farming', 'Type: Development']
+      tags: ['Portfolio: Future Farming', 'Type: Development'],
+      standardsSummary: [
+        {
+          standardId: 'standard-1',
+          professions: [
+            { professionId: 'architecture' },
+            { professionId: 'user-research' }
+          ]
+        },
+        {
+          standardId: 'standard-2',
+          professions: [{ professionId: 'architecture' }]
+        }
+      ]
     },
     {
       id: 'project-2',
       name: 'Project 2',
       status: 'AMBER',
       lastUpdated: '2023-01-02',
-      tags: ['Portfolio: Environmental Protection']
+      tags: ['Portfolio: Environmental Protection'],
+      standardsSummary: [
+        {
+          standardId: 'standard-1',
+          professions: [{ professionId: 'architecture' }]
+        }
+      ]
     },
     {
       id: 'project-3',
       name: 'Different Project',
       status: 'GREEN',
       lastUpdated: '2023-01-03',
-      tags: ['Portfolio: Other']
+      tags: ['Portfolio: Other'],
+      standardsSummary: []
     },
     {
       id: 'project-4',
       name: 'TBC Project',
       status: 'TBC',
       lastUpdated: '2023-01-04',
-      tags: ['Portfolio: Future Farming', 'Type: Development']
+      tags: ['Portfolio: Future Farming', 'Type: Development'],
+      standardsSummary: [
+        {
+          standardId: 'standard-3',
+          professions: [{ professionId: 'user-research' }]
+        }
+      ]
     }
   ]
 
@@ -89,8 +119,10 @@ describe('Home Controller', () => {
       logger: mockLogger
     }
 
-    // Default mock implementation
+    // Default mock implementations
     mockGetProjects.mockResolvedValue(sampleProjects)
+    mockGetProjectHistory.mockResolvedValue([])
+    mockGetAssessmentHistory.mockResolvedValue([])
   })
 
   afterAll(() => {
@@ -283,6 +315,8 @@ describe('Home Controller', () => {
           pageTitle: 'Project Insights | Defra Digital Assurance',
           heading: 'Project Insights',
           projects: expect.any(Array),
+          projectChangesByProject: expect.any(Object),
+          serviceStandardChangesByProject: expect.any(Object),
           statusCounts: expect.objectContaining({
             RED: expect.any(Number),
             AMBER_RED: expect.any(Number),
@@ -330,24 +364,25 @@ describe('Home Controller', () => {
       })
     })
 
-    it('should filter projects by name when search term is provided', async () => {
+    it('should return all projects regardless of search term (search not supported on insights)', async () => {
       // Arrange
       const projectsWithStatus = sampleProjects.map((project) => ({
         ...project,
         projectStatus: {
-          numberOfStandardsCompleted: 5,
-          percentageAcrossAllStandards: 35.71,
-          percentageAcrossCompletedStandards: 80.0,
-          calculatedRag: 'GREEN',
-          lowestRag: 'GREEN'
+          numberOfStandardsCompleted: 3,
+          percentageAcrossAllStandards: 21.43,
+          percentageAcrossCompletedStandards: 66.67,
+          calculatedRag: 'AMBER',
+          lowestRag: 'RED'
         },
         standardsSummary: [
-          { standardId: 'std-1', aggregatedStatus: 'GREEN' },
-          { standardId: 'std-2', aggregatedStatus: 'GREEN' }
+          { standardId: 'std-1', aggregatedStatus: 'RED' },
+          { standardId: 'std-2', aggregatedStatus: 'AMBER' },
+          { standardId: 'std-3', aggregatedStatus: 'AMBER' }
         ]
       }))
       mockGetProjects.mockResolvedValue(projectsWithStatus)
-      mockRequest.query = { search: 'Project 1' }
+      mockRequest.query = { search: 'Different' }
 
       // Act
       await homeController.insightsHandler(mockRequest, mockH)
@@ -355,24 +390,25 @@ describe('Home Controller', () => {
       // Assert
       const viewArgs = mockH.view.mock.calls[0][1]
 
-      expect(viewArgs.projects).toHaveLength(1)
-      expect(viewArgs.projects[0].name).toBe('Project 1')
-      expect(viewArgs.searchTerm).toBe('Project 1')
+      // Search is not supported on insights page - should show all projects
+      expect(viewArgs.projects).toHaveLength(4)
+      expect(viewArgs.projects.map((p) => p.name)).toEqual([
+        'Project 1',
+        'Project 2',
+        'Different Project',
+        'TBC Project'
+      ])
 
-      // Should calculate status counts for filtered projects only
+      // Should calculate status counts for all projects, not just filtered ones
       expect(viewArgs.statusCounts).toEqual({
         RED: 1, // Project 1 has RED status
         AMBER_RED: 0,
-        AMBER: 0,
+        AMBER: 1, // Project 2 has AMBER status
         GREEN_AMBER: 0,
-        GREEN: 0,
-        TBC: 0,
+        GREEN: 1, // Different Project has GREEN status
+        TBC: 1, // TBC Project has TBC status
         OTHER: 0
       })
-
-      // Should have ProjectStatus data
-      expect(viewArgs.projects[0]).toHaveProperty('projectStatus')
-      expect(viewArgs.projects[0].projectStatus).toHaveProperty('lowestRag')
     })
 
     it('should handle projects without ProjectStatus gracefully', async () => {
@@ -401,47 +437,6 @@ describe('Home Controller', () => {
 
       // Projects should not have ProjectStatus in this test scenario
       expect(viewArgs.projects[0]).not.toHaveProperty('projectStatus')
-    })
-
-    it('should handle search correctly', async () => {
-      // Arrange
-      const projectsWithStatus = sampleProjects.map((project) => ({
-        ...project,
-        projectStatus: {
-          numberOfStandardsCompleted: 3,
-          percentageAcrossAllStandards: 21.43,
-          percentageAcrossCompletedStandards: 66.67,
-          calculatedRag: 'AMBER',
-          lowestRag: 'RED'
-        },
-        standardsSummary: [
-          { standardId: 'std-1', aggregatedStatus: 'RED' },
-          { standardId: 'std-2', aggregatedStatus: 'AMBER' },
-          { standardId: 'std-3', aggregatedStatus: 'AMBER' }
-        ]
-      }))
-      mockGetProjects.mockResolvedValue(projectsWithStatus)
-      mockRequest.query = { search: 'Different' }
-
-      // Act
-      await homeController.insightsHandler(mockRequest, mockH)
-
-      // Assert
-      const viewArgs = mockH.view.mock.calls[0][1]
-
-      expect(viewArgs.projects).toHaveLength(1)
-      expect(viewArgs.projects[0].name).toBe('Different Project')
-
-      // Should calculate status counts for the filtered project
-      expect(viewArgs.statusCounts).toEqual({
-        RED: 0,
-        AMBER_RED: 0,
-        AMBER: 0,
-        GREEN_AMBER: 0,
-        GREEN: 1, // "Different Project" has GREEN status
-        TBC: 0,
-        OTHER: 0
-      })
     })
 
     describe('error handling', () => {

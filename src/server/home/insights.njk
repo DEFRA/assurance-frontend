@@ -18,6 +18,59 @@
       {% if projects.length > 0 %}
         <!-- Insights Tabs -->
         {% set analyticsContent %}
+          <!-- Project Status Summary Card -->
+          <div class="govuk-!-margin-bottom-6">
+            <h2 class="govuk-heading-m">Project status overview</h2>
+            <div class="govuk-grid-row">
+              <div class="govuk-grid-column-one-half">
+                <div class="govuk-summary-card">
+                  <div class="govuk-summary-card__title-wrapper">
+                    <h3 class="govuk-summary-card__title">Manual RAG status counts</h3>
+                  </div>
+                  <div class="govuk-summary-card__content">
+                    {{ govukSummaryList({
+                      rows: [
+                        {
+                          key: { html: renderStatusTag("RED") },
+                          value: { text: statusCounts.RED }
+                        } if statusCounts.RED > 0,
+                        {
+                          key: { html: renderStatusTag("AMBER_RED") },
+                          value: { text: statusCounts.AMBER_RED }
+                        } if statusCounts.AMBER_RED > 0,
+                        {
+                          key: { html: renderStatusTag("AMBER") },
+                          value: { text: statusCounts.AMBER }
+                        } if statusCounts.AMBER > 0,
+                        {
+                          key: { html: renderStatusTag("GREEN_AMBER") },
+                          value: { text: statusCounts.GREEN_AMBER }
+                        } if statusCounts.GREEN_AMBER > 0,
+                        {
+                          key: { html: renderStatusTag("GREEN") },
+                          value: { text: statusCounts.GREEN }
+                        } if statusCounts.GREEN > 0,
+                        {
+                          key: { html: renderStatusTag("TBC") },
+                          value: { text: statusCounts.TBC }
+                        } if statusCounts.TBC > 0,
+                        {
+                          key: { text: "OTHER" },
+                          value: { text: statusCounts.OTHER }
+                        } if statusCounts.OTHER > 0
+                      ] | selectattr("key") | list,
+                      classes: "govuk-summary-list--no-border"
+                    }) }}
+                    
+                    {% if statusCounts.RED == 0 and statusCounts.AMBER == 0 and statusCounts.GREEN == 0 and statusCounts.GREEN_AMBER == 0 and statusCounts.TBC == 0 and statusCounts.OTHER == 0 %}
+                      <p class="govuk-body">No projects to display.</p>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="govuk-table-container">
             <table class="govuk-table">
               <caption class="govuk-table__caption govuk-table__caption--m">

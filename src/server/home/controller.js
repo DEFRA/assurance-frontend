@@ -433,7 +433,8 @@ export const homeController = {
         // Calculate date 7 days ago for timeline filtering
         const sevenDaysAgo = new Date()
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-        const startDate = sevenDaysAgo.toISOString().split('T')[0] // Format as YYYY-MM-DD
+        sevenDaysAgo.setHours(0, 0, 0, 0) // Set to start of day
+        const startDate = sevenDaysAgo.toISOString() // Full ISO format: 2024-01-15T00:00:00.000Z
 
         // Fetch only projects with recent changes for timeline views
         const recentlyChangedProjects = await getProjects(request, {

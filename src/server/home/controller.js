@@ -72,9 +72,10 @@ const processProjectHistoryEntry = (entry) => {
 /**
  * Process project level changes from history
  * @param {Array} history - Project history array
- * @returns {Array} Processed timeline entries (max 2 most recent events)
+ * @param {Date} sinceDate - Only include changes after this date
+ * @returns {Array} Processed timeline entries (max 2 most recent events from the specified period)
  */
-const processProjectLevelChanges = (history) => {
+const processProjectLevelChanges = (history, sinceDate) => {
   if (!history || history.length === 0) {
     return []
   }
@@ -82,6 +83,11 @@ const processProjectLevelChanges = (history) => {
   const projectLevelChanges = history
     .map(processProjectHistoryEntry)
     .filter(Boolean)
+    // Filter to only changes within the specified time period
+    .filter((entry) => {
+      const entryDate = new Date(entry.timestamp)
+      return entryDate >= sinceDate
+    })
 
   // Sort by timestamp and limit to most recent 2 events
   projectLevelChanges.sort(
@@ -117,9 +123,15 @@ const processAssessmentHistoryEntry = (entry, standardId, professionId) => {
  * @param {Array} history - Assessment history array
  * @param {string} standardId - Standard ID
  * @param {string} professionId - Profession ID
- * @returns {Array} Processed timeline entries (max 2 most recent events)
+ * @param {Date} sinceDate - Only include changes after this date
+ * @returns {Array} Processed timeline entries (max 2 most recent events from the specified period)
  */
-const processAssessmentHistory = (history, standardId, professionId) => {
+const processAssessmentHistory = (
+  history,
+  standardId,
+  professionId,
+  sinceDate
+) => {
   if (!history || history.length === 0) {
     return []
   }
@@ -129,6 +141,11 @@ const processAssessmentHistory = (history, standardId, professionId) => {
       processAssessmentHistoryEntry(entry, standardId, professionId)
     )
     .filter(Boolean)
+    // Filter to only changes within the specified time period
+    .filter((entry) => {
+      const entryDate = new Date(entry.timestamp)
+      return entryDate >= sinceDate
+    })
 
   // Sort by timestamp and limit to most recent 2 events per standard
   timelineEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
@@ -139,12 +156,13 @@ const processAssessmentHistory = (history, standardId, professionId) => {
  * Fetch project history for a single project
  * @param {object} project - Project object
  * @param {object} request - Hapi request object
+ * @param {Date} sinceDate - Only include changes after this date
  * @returns {Promise<object>} Project history result
  */
-const fetchSingleProjectHistory = async (project, request) => {
+const fetchSingleProjectHistory = async (project, request, sinceDate) => {
   try {
     const history = await getProjectHistory(project.id, request)
-    const changes = processProjectLevelChanges(history)
+    const changes = processProjectLevelChanges(history, sinceDate)
 
     return {
       projectId: project.id,
@@ -171,13 +189,15 @@ const fetchSingleProjectHistory = async (project, request) => {
  * @param {string} params.standardId - Standard ID
  * @param {string} params.professionId - Profession ID
  * @param {object} params.request - Hapi request object
+ * @param {Date} params.sinceDate - Only include changes after this date
  * @returns {Promise<Array>} Assessment history entries
  */
 const fetchAssessmentHistoryForStandard = async ({
   projectId,
   standardId,
   professionId,
-  request
+  request,
+  sinceDate
 }) => {
   try {
     const history = await getAssessmentHistory(
@@ -186,7 +206,12 @@ const fetchAssessmentHistoryForStandard = async ({
       professionId,
       request
     )
-    return processAssessmentHistory(history, standardId, professionId)
+    return processAssessmentHistory(
+      history,
+      standardId,
+      professionId,
+      sinceDate
+    )
   } catch (error) {
     request.logger.warn(
       `Error fetching assessment history for ${projectId}/${standardId}/${professionId}:`,
@@ -200,9 +225,14 @@ const fetchAssessmentHistoryForStandard = async ({
  * Fetch assessment history for a single project
  * @param {object} project - Project object
  * @param {object} request - Hapi request object
+ * @param {Date} sinceDate - Only include changes after this date
  * @returns {Promise<object>} Assessment history result
  */
-const fetchSingleProjectAssessmentHistory = async (project, request) => {
+const fetchSingleProjectAssessmentHistory = async (
+  project,
+  request,
+  sinceDate
+) => {
   const assessmentChangesByStandard = {}
 
   if (!project.standardsSummary || project.standardsSummary.length === 0) {
@@ -225,7 +255,8 @@ const fetchSingleProjectAssessmentHistory = async (project, request) => {
         projectId: project.id,
         standardId: standard.standardId,
         professionId: profession.professionId,
-        request
+        request,
+        sinceDate
       }).then((entries) => {
         if (entries.length > 0) {
           const standardKey = `${standard.standardId}-${profession.professionId}`
@@ -312,17 +343,18 @@ const groupServiceStandardChanges = (assessmentHistoryResults) => {
  * Fetch all project and assessment history
  * @param {Array} projects - Array of projects (pre-filtered by backend for recent activity)
  * @param {object} request - Hapi request object
- * @returns {Promise<object>} Combined history data (max 2 events per project/standard)
+ * @param {Date} sinceDate - Only include changes after this date
+ * @returns {Promise<object>} Combined history data (max 2 events per project/standard from the specified period)
  */
-const fetchAllProjectHistory = async (projects, request) => {
+const fetchAllProjectHistory = async (projects, request, sinceDate) => {
   request.logger.info('Fetching project history for timeline views')
 
   const historyPromises = projects.map((project) =>
-    fetchSingleProjectHistory(project, request)
+    fetchSingleProjectHistory(project, request, sinceDate)
   )
 
   const assessmentHistoryPromises = projects.map((project) =>
-    fetchSingleProjectAssessmentHistory(project, request)
+    fetchSingleProjectAssessmentHistory(project, request, sinceDate)
   )
 
   const [projectHistoryResults, assessmentHistoryResults] = await Promise.all([
@@ -336,7 +368,7 @@ const fetchAllProjectHistory = async (projects, request) => {
   )
 
   request.logger.info(
-    `Grouped changes: ${Object.keys(projectChangesByProject).length} projects with project changes, ${Object.keys(serviceStandardChangesByProject).length} projects with service standard changes (backend filtered for recent activity, max 2 events per project/standard)`
+    `Grouped changes: ${Object.keys(projectChangesByProject).length} projects with project changes, ${Object.keys(serviceStandardChangesByProject).length} projects with service standard changes (filtered to last 7 days, max 2 events per project/standard)`
   )
 
   return {
@@ -442,12 +474,13 @@ export const homeController = {
         })
 
         request.logger.info(
-          `Found ${recentlyChangedProjects.length} projects with changes in last 7 days (out of ${allProjects.length} total projects)`
+          `Found ${recentlyChangedProjects.length} projects with activity in last 7 days (out of ${allProjects.length} total projects). Now filtering their history to only show changes from this period.`
         )
 
         const historyData = await fetchAllProjectHistory(
           recentlyChangedProjects,
-          request
+          request,
+          sevenDaysAgo
         )
         projectChangesByProject = historyData.projectChangesByProject
         serviceStandardChangesByProject =

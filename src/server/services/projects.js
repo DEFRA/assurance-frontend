@@ -62,6 +62,7 @@ export async function getProjects(request, options = {}) {
     }
 
     logger.info({ count: data.length }, 'Projects retrieved successfully')
+
     if (data.length > 0) {
       logger.info(
         {

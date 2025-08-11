@@ -531,13 +531,27 @@ describe('Home Controller', () => {
       })
 
       it('should handle malformed history entries', async () => {
-        // Arrange
+        // Arrange - Use recent dates that will pass the 7-day filter
+        const now = new Date()
         const malformedHistory = [
-          { id: '1', timestamp: '2024-01-01' }, // No changes
-          { id: '2', timestamp: '2024-01-02', changes: {} }, // Empty changes
+          {
+            id: '1',
+            timestamp: new Date(
+              now.getTime() - 3 * 24 * 60 * 60 * 1000
+            ).toISOString()
+          }, // No changes
+          {
+            id: '2',
+            timestamp: new Date(
+              now.getTime() - 2 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            changes: {}
+          }, // Empty changes
           {
             id: '3',
-            timestamp: '2024-01-03',
+            timestamp: new Date(
+              now.getTime() - 1 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 1 day ago
             changes: { status: { from: 'RED', to: 'GREEN' } }
           } // Valid
         ]
@@ -589,31 +603,42 @@ describe('Home Controller', () => {
       })
 
       it('should properly limit timeline entries to 2 most recent', async () => {
-        // Arrange
+        // Arrange - Use recent dates that will pass the 7-day filter
+        const now = new Date()
         const multipleHistoryEntries = [
           {
             id: '1',
-            timestamp: '2024-01-01T10:00:00Z',
+            timestamp: new Date(
+              now.getTime() - 5 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 5 days ago
             changes: { status: { from: 'RED', to: 'AMBER' } }
           },
           {
             id: '2',
-            timestamp: '2024-01-02T10:00:00Z',
+            timestamp: new Date(
+              now.getTime() - 4 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 4 days ago
             changes: { status: { from: 'AMBER', to: 'GREEN' } }
           },
           {
             id: '3',
-            timestamp: '2024-01-03T10:00:00Z',
+            timestamp: new Date(
+              now.getTime() - 3 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 3 days ago
             changes: { commentary: { to: 'Updated comment' } }
           },
           {
             id: '4',
-            timestamp: '2024-01-04T10:00:00Z',
+            timestamp: new Date(
+              now.getTime() - 2 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 2 days ago
             changes: { name: { from: 'Old Name', to: 'New Name' } }
           },
           {
             id: '5',
-            timestamp: '2024-01-05T10:00:00Z',
+            timestamp: new Date(
+              now.getTime() - 1 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 1 day ago
             changes: { phase: { from: 'Alpha', to: 'Beta' } }
           }
         ]
@@ -642,13 +667,27 @@ describe('Home Controller', () => {
       })
 
       it('should handle assessment history with missing changes', async () => {
-        // Arrange
+        // Arrange - Use recent dates that will pass the 7-day filter
+        const now = new Date()
         const assessmentHistoryWithMissingChanges = [
-          { id: '1', timestamp: '2024-01-01T10:00:00Z' }, // No changes
-          { id: '2', timestamp: '2024-01-02T10:00:00Z', changes: null }, // Null changes
+          {
+            id: '1',
+            timestamp: new Date(
+              now.getTime() - 3 * 24 * 60 * 60 * 1000
+            ).toISOString()
+          }, // No changes
+          {
+            id: '2',
+            timestamp: new Date(
+              now.getTime() - 2 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            changes: null
+          }, // Null changes
           {
             id: '3',
-            timestamp: '2024-01-03T10:00:00Z',
+            timestamp: new Date(
+              now.getTime() - 1 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 1 day ago
             changes: { status: { from: 'RED', to: 'GREEN' } }
           } // Valid
         ]
@@ -711,10 +750,13 @@ describe('Home Controller', () => {
       })
 
       it('should handle complex timeline entries with all change types', async () => {
-        // Arrange
+        // Arrange - Use recent date that will pass the 7-day filter
+        const now = new Date()
         const complexHistoryEntry = {
           id: 'complex-1',
-          timestamp: '2024-01-01T10:00:00Z',
+          timestamp: new Date(
+            now.getTime() - 1 * 24 * 60 * 60 * 1000
+          ).toISOString(), // 1 day ago
           changedBy: 'test-user',
           changes: {
             status: { from: 'RED', to: 'GREEN' },
@@ -754,11 +796,14 @@ describe('Home Controller', () => {
       })
 
       it('should handle assessment history with both status and commentary changes', async () => {
-        // Arrange
+        // Arrange - Use recent date that will pass the 7-day filter
+        const now = new Date()
         const assessmentWithBothChanges = [
           {
             id: 'assessment-1',
-            timestamp: '2024-01-01T10:00:00Z',
+            timestamp: new Date(
+              now.getTime() - 1 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 1 day ago
             changedBy: 'assessor',
             changes: {
               status: { from: 'RED', to: 'AMBER' },

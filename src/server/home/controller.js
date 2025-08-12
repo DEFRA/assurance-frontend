@@ -73,27 +73,53 @@ const processProjectHistoryEntry = (entry) => {
  * Process project level changes from history
  * @param {Array} history - Project history array
  * @param {Date} sinceDate - Only include changes after this date
- * @returns {Array} Processed timeline entries (max 2 most recent events from the specified period)
+ * @returns {Array} Processed timeline entries (max 2 most recent events from the specified period, plus previous change for context)
  */
 const processProjectLevelChanges = (history, sinceDate) => {
   if (!history || history.length === 0) {
     return []
   }
 
-  const projectLevelChanges = history
+  // First, process all entries and sort by timestamp (newest first)
+  const allProcessedEntries = history
     .map(processProjectHistoryEntry)
     .filter(Boolean)
-    // Filter to only changes within the specified time period
-    .filter((entry) => {
-      const entryDate = new Date(entry.timestamp)
-      return entryDate >= sinceDate
-    })
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 
-  // Sort by timestamp and limit to most recent 2 events
-  projectLevelChanges.sort(
-    (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-  )
-  return projectLevelChanges.slice(0, 2)
+  // Find entries within the date range
+  const recentEntries = allProcessedEntries.filter((entry) => {
+    const entryDate = new Date(entry.timestamp)
+    return entryDate >= sinceDate
+  })
+
+  // If we have recent entries, also include the immediate previous entry for context
+  // (even if it's outside the 7-day window)
+  const result = []
+
+  if (recentEntries.length > 0) {
+    // Add the recent entries (max 2)
+    result.push(...recentEntries.slice(0, 2))
+
+    // Find the entry that immediately precedes our oldest recent entry
+    const oldestRecentEntry = recentEntries[recentEntries.length - 1]
+    const oldestRecentIndex = allProcessedEntries.findIndex(
+      (entry) => entry.id === oldestRecentEntry.id
+    )
+
+    // If there's a previous entry and we don't already have 2 entries, include it for context
+    if (
+      oldestRecentIndex + 1 < allProcessedEntries.length &&
+      result.length < 2
+    ) {
+      const previousEntry = allProcessedEntries[oldestRecentIndex + 1]
+      result.push(previousEntry)
+    }
+  }
+
+  // Return entries sorted by timestamp (newest first), max 2 total
+  return result
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 2)
 }
 
 /**
@@ -124,7 +150,7 @@ const processAssessmentHistoryEntry = (entry, standardId, professionId) => {
  * @param {string} standardId - Standard ID
  * @param {string} professionId - Profession ID
  * @param {Date} sinceDate - Only include changes after this date
- * @returns {Array} Processed timeline entries (max 2 most recent events from the specified period)
+ * @returns {Array} Processed timeline entries (max 2 most recent events from the specified period, plus previous change for context)
  */
 const processAssessmentHistory = (
   history,
@@ -136,20 +162,48 @@ const processAssessmentHistory = (
     return []
   }
 
-  const timelineEntries = history
+  // First, process all entries and sort by timestamp (newest first)
+  const allProcessedEntries = history
     .map((entry) =>
       processAssessmentHistoryEntry(entry, standardId, professionId)
     )
     .filter(Boolean)
-    // Filter to only changes within the specified time period
-    .filter((entry) => {
-      const entryDate = new Date(entry.timestamp)
-      return entryDate >= sinceDate
-    })
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 
-  // Sort by timestamp and limit to most recent 2 events per standard
-  timelineEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-  return timelineEntries.slice(0, 2)
+  // Find entries within the date range
+  const recentEntries = allProcessedEntries.filter((entry) => {
+    const entryDate = new Date(entry.timestamp)
+    return entryDate >= sinceDate
+  })
+
+  // If we have recent entries, also include the immediate previous entry for context
+  // (even if it's outside the 7-day window)
+  const result = []
+
+  if (recentEntries.length > 0) {
+    // Add the recent entries (max 2)
+    result.push(...recentEntries.slice(0, 2))
+
+    // Find the entry that immediately precedes our oldest recent entry
+    const oldestRecentEntry = recentEntries[recentEntries.length - 1]
+    const oldestRecentIndex = allProcessedEntries.findIndex(
+      (entry) => entry.id === oldestRecentEntry.id
+    )
+
+    // If there's a previous entry and we don't already have 2 entries, include it for context
+    if (
+      oldestRecentIndex + 1 < allProcessedEntries.length &&
+      result.length < 2
+    ) {
+      const previousEntry = allProcessedEntries[oldestRecentIndex + 1]
+      result.push(previousEntry)
+    }
+  }
+
+  // Return entries sorted by timestamp (newest first), max 2 total
+  return result
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 2)
 }
 
 /**
@@ -368,7 +422,7 @@ const fetchAllProjectHistory = async (projects, request, sinceDate) => {
   )
 
   request.logger.info(
-    `Grouped changes: ${Object.keys(projectChangesByProject).length} projects with project changes, ${Object.keys(serviceStandardChangesByProject).length} projects with service standard changes (filtered to last 7 days, max 2 events per project/standard)`
+    `Grouped changes: ${Object.keys(projectChangesByProject).length} projects with project changes, ${Object.keys(serviceStandardChangesByProject).length} projects with service standard changes (recent changes with context, max 2 events per project/standard)`
   )
 
   return {
@@ -474,7 +528,7 @@ export const homeController = {
         })
 
         request.logger.info(
-          `Found ${recentlyChangedProjects.length} projects with activity in last 7 days (out of ${allProjects.length} total projects). Now filtering their history to only show changes from this period.`
+          `Found ${recentlyChangedProjects.length} projects with activity in last 7 days (out of ${allProjects.length} total projects). Fetching their recent changes plus previous changes for context.`
         )
 
         const historyData = await fetchAllProjectHistory(

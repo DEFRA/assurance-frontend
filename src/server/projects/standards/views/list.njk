@@ -38,6 +38,9 @@
                   {% if standard.status === 'RED' %}govuk-tag--red
                   {% elif standard.status === 'AMBER' %}govuk-tag--yellow
                   {% elif standard.status === 'GREEN' %}govuk-tag--green
+                  {% elif standard.status === 'PENDING' %}govuk-tag--blue
+                  {% elif standard.status === 'TBC' %}govuk-tag--grey
+                  {% elif standard.status === 'EXCLUDED' %}govuk-tag--grey
                   {% endif %}">
                   {{ standard.status }}
                 </strong>

@@ -21,9 +21,13 @@
   {% elif status == 'GREEN' %}
     <strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong>
   {% elif status == 'TBC' %}
-    <strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>
+    <strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
+  {% elif status == 'PENDING' %}
+    <strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
+  {% elif status == 'EXCLUDED' %}
+    <strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">EXCLUDED</strong>
   {% else %}
-    <strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>
+    <strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
   {% endif %}
 {% endmacro %}
 
@@ -76,7 +80,7 @@
             <div class="govuk-summary-list__row">
               <dt class="govuk-summary-list__key">Pending</dt>
               <dd class="govuk-summary-list__value">
-                <strong class="govuk-tag govuk-tag--grey">{{ summaryCounts.PENDING }}</strong>
+                <strong class="govuk-tag govuk-tag--blue">{{ summaryCounts.PENDING }}</strong>
               </dd>
             </div>
           </dl>

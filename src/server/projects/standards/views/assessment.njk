@@ -123,33 +123,7 @@
             text: "Service Standard status",
             classes: "govuk-label--m"
           },
-          items: [
-            {
-              value: "",
-              text: "Choose status",
-              selected: not (selectedValues and selectedValues.status)
-            },
-            {
-              value: "RED",
-              text: "Red",
-              selected: selectedValues and selectedValues.status === "RED"
-            },
-            {
-              value: "AMBER",
-              text: "Amber", 
-              selected: selectedValues and selectedValues.status === "AMBER"
-            },
-            {
-              value: "GREEN",
-              text: "Green",
-              selected: selectedValues and selectedValues.status === "GREEN"
-            },
-            {
-              value: "TBC",
-              text: "Pending",
-              selected: selectedValues and selectedValues.status === "TBC"
-            }
-          ],
+          items: statusOptions,
           value: selectedValues.status if selectedValues else ""
         }) }}
 
@@ -398,6 +372,9 @@
     function updateStandardsDropdown() {
       const selectedProfession = professionSelect.value;
       
+      // Store the currently selected standard before clearing
+      const currentSelectedStandard = standardSelect.value;
+      
       // Clear current options
       standardSelect.innerHTML = '<option value="">Choose a service standard</option>';
       
@@ -444,13 +421,19 @@
         standardSelect.appendChild(option);
       }
       
+      // Restore the previously selected standard if it's still available
+      if (currentSelectedStandard && filteredStandards.some(standard => standard.id === currentSelectedStandard)) {
+        standardSelect.value = currentSelectedStandard;
+        // Update help text and other UI elements for the restored selection
+        updateStandardHelp(currentSelectedStandard);
+      }
+      
       // Update help section and check for current assessment
-      updateStandardHelp(standardSelect.value);
-              if (standardSelect.value) {
-          fetchCurrentAssessment(selectedProfession, standardSelect.value);
-        } else {
-          clearFormFields();
-        }
+      if (standardSelect.value) {
+        fetchCurrentAssessment(selectedProfession, standardSelect.value);
+      } else {
+        clearFormFields();
+      }
     }
 
     // Function to show/hide commentary fields based on status

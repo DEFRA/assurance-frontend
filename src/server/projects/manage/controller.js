@@ -33,7 +33,9 @@ const STATUS_OPTIONS = [
   { value: STATUS.AMBER, text: STATUS_LABEL[STATUS.AMBER] },
   { value: STATUS.AMBER_RED, text: STATUS_LABEL[STATUS.AMBER_RED] },
   { value: STATUS.RED, text: STATUS_LABEL[STATUS.RED] },
-  { value: STATUS.TBC, text: STATUS_LABEL[STATUS.TBC] }
+  { value: STATUS.PENDING, text: STATUS_LABEL[STATUS.PENDING] },
+  { value: STATUS.EXCLUDED, text: STATUS_LABEL[STATUS.EXCLUDED] }
+  // TBC removed from dropdown options - users should select PENDING instead
 ]
 
 // Extracted constants for duplicated literals

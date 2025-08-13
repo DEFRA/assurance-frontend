@@ -7,7 +7,9 @@
     'AMBER': 'govuk-tag--yellow',
     'AMBER_RED': 'govuk-tag--yellow govuk-tag--red',
     'RED': 'govuk-tag--red',
-    'TBC': 'govuk-tag--grey'
+    'TBC': 'govuk-tag--blue',
+    'PENDING': 'govuk-tag--blue',
+    'EXCLUDED': 'govuk-tag--grey'
   } %}
   {% set labelMap = {
     'GREEN': 'Green',
@@ -15,7 +17,9 @@
     'AMBER': 'Amber',
     'AMBER_RED': 'Amber Red',
     'RED': 'Red',
-    'TBC': 'Pending'
+    'TBC': 'Pending',
+    'PENDING': 'Pending',
+    'EXCLUDED': 'Excluded'
   } %}
   
   {% if statusClassMap|length > 0 %}
@@ -34,10 +38,14 @@
   {%- elif status == 'GREEN_AMBER' -%}
 <span class="app-tag-list"><strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong><strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong></span>
   {%- elif status == 'TBC' -%}
-<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>
+<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
+  {%- elif status == 'PENDING' -%}
+<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
+  {%- elif status == 'EXCLUDED' -%}
+<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">EXCLUDED</strong>
   {%- elif classMap[status] and effectiveLabelMap[status] -%}
 <strong class="govuk-tag {{ classMap[status] }} govuk-tag--uppercase">{{ effectiveLabelMap[status] }}</strong>
   {%- else -%}
-<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>
+<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
   {%- endif -%}
 {%- endmacro %}

@@ -344,6 +344,8 @@ describe('Home Controller', () => {
         GREEN_AMBER: 0,
         GREEN: 1,
         TBC: 1,
+        PENDING: 0, // New status
+        EXCLUDED: 0, // New status
         OTHER: 0
       })
 
@@ -405,8 +407,10 @@ describe('Home Controller', () => {
         AMBER_RED: 0,
         AMBER: 1, // Project 2 has AMBER status
         GREEN_AMBER: 0,
-        GREEN: 1, // Different Project has GREEN status
-        TBC: 1, // TBC Project has TBC status
+        GREEN: 1, // Project 3 has GREEN status
+        TBC: 1, // Project 4 has TBC status
+        PENDING: 0, // New status
+        EXCLUDED: 0, // New status
         OTHER: 0
       })
     })
@@ -432,6 +436,8 @@ describe('Home Controller', () => {
         GREEN_AMBER: 0,
         GREEN: 1,
         TBC: 1,
+        PENDING: 0, // New status
+        EXCLUDED: 0, // New status
         OTHER: 0
       })
 
@@ -598,6 +604,8 @@ describe('Home Controller', () => {
           GREEN_AMBER: 0,
           GREEN: 1,
           TBC: 0,
+          PENDING: 0, // New status
+          EXCLUDED: 0, // New status
           OTHER: 2 // INVALID_STATUS and null
         })
       })

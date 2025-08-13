@@ -65,13 +65,13 @@
           {% else %}
             <p class="govuk-body-l">
               <strong>Compliance confidence:</strong> 
-              {{ renderStatusTag('NOT_ASSESSED') }}
+              {{ renderStatusTag('PENDING') }}
             </p>
           {% endif %}
           
           {% if isAdmin %}
             <p class="govuk-body govuk-!-margin-top-4">
-              <a href="/projects/{{ project.id }}/assessment" class="govuk-link">Add service standard update</a>
+              <a href="/projects/{{ project.id }}/assessment?standardId={{ standard.id }}" class="govuk-link">Add service standard update</a>
             </p>
           {% endif %}
         </div>
@@ -158,7 +158,7 @@
               rows: [
                 {
                   key: { text: "Compliance confidence" },
-                  value: { html: renderStatusTag(assessment.status or 'NOT_UPDATED') }
+                  value: { html: renderStatusTag(assessment.status or 'PENDING') }
                 },
                 {
                   key: { text: "Commentary" },

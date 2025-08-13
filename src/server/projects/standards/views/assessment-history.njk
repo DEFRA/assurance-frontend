@@ -131,7 +131,7 @@
         {% if isAdmin %}
           {{ govukButton({
             text: "Add new update",
-            href: "/projects/" + project.id + "/assessment",
+            href: "/projects/" + project.id + "/assessment?standardId=" + standard.id + "&professionId=" + profession.id,
             classes: "govuk-button--secondary"
           }) }}
         {% endif %}

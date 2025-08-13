@@ -382,15 +382,19 @@ function createAssessmentScreenView(
   existingAssessment,
   isEditMode
 ) {
-  // Transform data for dropdowns - pre-select values if editing
+  // Transform data for dropdowns - pre-select values if editing or pre-selecting
   const professionItems = createProfessionItems(
     professions,
     selectedValues.professionId
   )
 
-  // Filter standards based on selected profession and project phase if editing
+  // Filter standards based on selected profession and project phase if editing OR if profession is pre-selected
   let filteredStandards = serviceStandards || []
-  if (isEditMode && selectedValues.professionId && project.phase) {
+  if (
+    (isEditMode || selectedValues.professionId) &&
+    selectedValues.professionId &&
+    project.phase
+  ) {
     filteredStandards = filterStandardsByProfessionAndPhase(
       serviceStandards,
       project.phase,
@@ -739,18 +743,35 @@ export const standardsController = {
         return createProjectNotFoundView(h)
       }
 
-      // Handle edit mode logic
-      const editResult = await handleEditModeLogic(
-        isEditMode,
-        id,
-        standardId,
-        professionId,
-        request,
-        h
-      )
+      let selectedValues = {}
+      let existingAssessment = null
 
-      if (editResult.redirect) {
-        return editResult.redirect
+      if (isEditMode) {
+        // Handle edit mode logic
+        const editResult = await handleEditModeLogic(
+          isEditMode,
+          id,
+          standardId,
+          professionId,
+          request,
+          h
+        )
+
+        if (editResult.redirect) {
+          return editResult.redirect
+        }
+
+        selectedValues = editResult.selectedValues ?? {}
+        existingAssessment = editResult.existingAssessment
+      } else {
+        // For add mode, pre-select from query parameters if provided
+        selectedValues = {}
+        if (standardId) {
+          selectedValues.standardId = standardId
+        }
+        if (professionId) {
+          selectedValues.professionId = professionId
+        }
       }
 
       // Prepare view data
@@ -759,8 +780,8 @@ export const standardsController = {
         project,
         professions,
         serviceStandards,
-        editResult.selectedValues ?? {},
-        editResult.existingAssessment,
+        selectedValues,
+        existingAssessment,
         isEditMode
       )
     } catch (error) {

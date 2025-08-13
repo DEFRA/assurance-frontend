@@ -14,7 +14,9 @@ function createStatusTagHTML(status) {
     AMBER: 'govuk-tag--yellow',
     AMBER_RED: 'govuk-tag--yellow govuk-tag--red',
     RED: 'govuk-tag--red',
-    TBC: 'govuk-tag--grey'
+    TBC: 'govuk-tag--grey',
+    PENDING: 'govuk-tag',
+    EXCLUDED: 'govuk-tag--grey'
   }
 
   const statusLabelMap = {
@@ -23,7 +25,9 @@ function createStatusTagHTML(status) {
     AMBER: 'AMBER',
     AMBER_RED: 'AMBER',
     RED: 'RED',
-    TBC: 'PENDING' // Display TBC as PENDING in UI
+    TBC: 'PENDING', // Display TBC as PENDING in UI
+    PENDING: 'PENDING',
+    EXCLUDED: 'EXCLUDED'
   }
 
   if (status === 'AMBER_RED') {
@@ -38,10 +42,14 @@ function createStatusTagHTML(status) {
     </span>`
   } else if (status === 'TBC') {
     return `<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>`
+  } else if (status === 'PENDING') {
+    return `<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>`
+  } else if (status === 'EXCLUDED') {
+    return `<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">EXCLUDED</strong>`
   } else if (statusClassMap[status] && statusLabelMap[status]) {
     return `<strong class="govuk-tag ${statusClassMap[status]} govuk-tag--uppercase">${statusLabelMap[status]}</strong>`
   } else {
-    return `<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">TBC</strong>`
+    return `<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>`
   }
 }
 

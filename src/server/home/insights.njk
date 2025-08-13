@@ -51,6 +51,14 @@
                         value: { text: statusCounts.GREEN }
                       } if statusCounts.GREEN > 0,
                       {
+                        key: { html: renderStatusTag("PENDING") },
+                        value: { text: statusCounts.PENDING }
+                      } if statusCounts.PENDING > 0,
+                      {
+                        key: { html: renderStatusTag("EXCLUDED") },
+                        value: { text: statusCounts.EXCLUDED }
+                      } if statusCounts.EXCLUDED > 0,
+                      {
                         key: { html: renderStatusTag("TBC") },
                         value: { text: statusCounts.TBC }
                       } if statusCounts.TBC > 0,
@@ -62,7 +70,7 @@
                     classes: "govuk-summary-list--no-border"
                   }) }}
                   
-                  {% if statusCounts.RED == 0 and statusCounts.AMBER == 0 and statusCounts.GREEN == 0 and statusCounts.GREEN_AMBER == 0 and statusCounts.TBC == 0 and statusCounts.OTHER == 0 %}
+                  {% if statusCounts.RED == 0 and statusCounts.AMBER_RED == 0 and statusCounts.AMBER == 0 and statusCounts.GREEN_AMBER == 0 and statusCounts.GREEN == 0 and statusCounts.PENDING == 0 and statusCounts.EXCLUDED == 0 and statusCounts.TBC == 0 and statusCounts.OTHER == 0 %}
                     <p class="govuk-body">No projects to display.</p>
                   {% endif %}
                 </div>

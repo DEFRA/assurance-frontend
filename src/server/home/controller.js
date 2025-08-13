@@ -25,6 +25,8 @@ const calculateStatusCounts = (projects) => {
     GREEN_AMBER: 0,
     GREEN: 0,
     TBC: 0,
+    PENDING: 0, // New explicit pending status
+    EXCLUDED: 0, // New excluded status
     OTHER: 0
   }
 

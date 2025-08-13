@@ -40,7 +40,9 @@ describe('Add Project controller', () => {
         { value: 'AMBER', text: 'Amber' },
         { value: 'AMBER_RED', text: 'Amber Red' },
         { value: 'RED', text: 'Red' },
-        { value: 'TBC', text: 'Pending' }
+        { value: 'PENDING', text: 'Pending' },
+        { value: 'EXCLUDED', text: 'Excluded' }
+        // TBC removed from dropdown - users should select PENDING instead
       ]
 
       const expectedPhaseOptions = [

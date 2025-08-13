@@ -23,6 +23,9 @@
                     {% if change.changes.status.to === 'RED' %}govuk-tag--red
                     {% elif change.changes.status.to === 'AMBER' %}govuk-tag--yellow
                     {% elif change.changes.status.to === 'GREEN' %}govuk-tag--green
+                    {% elif change.changes.status.to === 'PENDING' %}govuk-tag--blue
+                    {% elif change.changes.status.to === 'TBC' %}govuk-tag--grey
+                    {% elif change.changes.status.to === 'EXCLUDED' %}govuk-tag--grey
                     {% endif %}">
                     {{ change.changes.status.to }}
                   </strong>

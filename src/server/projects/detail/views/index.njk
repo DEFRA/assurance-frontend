@@ -133,9 +133,9 @@
                   </td>
                   <td class="govuk-table__cell">
                     {% if standardSummary %}
-                      {{ renderStatusTag(standardSummary.aggregatedStatus or 'NOT_ASSESSED') }}
+                      {{ renderStatusTag(standardSummary.aggregatedStatus or 'PENDING') }}
                     {% else %}
-                      {{ renderStatusTag('NOT_ASSESSED') }}
+                      {{ renderStatusTag('PENDING') }}
                     {% endif %}
                   </td>
                 </tr>

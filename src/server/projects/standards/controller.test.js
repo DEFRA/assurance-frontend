@@ -489,6 +489,80 @@ describe('Standards Controller', () => {
       expect(typeof result.code).toBe('function')
     })
 
+    test('should pre-select values from query parameters in add mode', async () => {
+      // Arrange
+      mockRequest.query = {
+        standardId: 'std-2',
+        professionId: 'prof-2'
+      }
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        expect.objectContaining({
+          selectedValues: expect.objectContaining({
+            standardId: 'std-2',
+            professionId: 'prof-2'
+          }),
+          isEditMode: false
+        })
+      )
+    })
+
+    test('should pre-select only standardId when only standardId provided in query', async () => {
+      // Arrange
+      mockRequest.query = {
+        standardId: 'std-1'
+      }
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        expect.objectContaining({
+          selectedValues: expect.objectContaining({
+            standardId: 'std-1'
+          }),
+          isEditMode: false
+        })
+      )
+    })
+
+    test('should pre-select only professionId when only professionId provided in query', async () => {
+      // Arrange
+      mockRequest.query = {
+        professionId: 'prof-1'
+      }
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        expect.objectContaining({
+          selectedValues: expect.objectContaining({
+            professionId: 'prof-1'
+          }),
+          isEditMode: false
+        })
+      )
+    })
+
     test('should return 404 when project not found', async () => {
       // Arrange
       getProjectById.mockResolvedValue(null)
@@ -1048,6 +1122,38 @@ describe('Standards Controller', () => {
       )
     })
 
+    test('should handle error when project returns null during error recovery', async () => {
+      // Arrange
+      const mockPayload = {
+        professionId: 'prof-1',
+        standardId: 'std-1',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+
+      // First call succeeds but updateAssessment fails
+      // Second call for error recovery returns null
+      getProjectById
+        .mockResolvedValueOnce(mockProject)
+        .mockResolvedValueOnce(null) // Project returns null during error recovery
+
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      updateAssessment.mockRejectedValue(new Error('Update failed'))
+
+      const mockRequest = {
+        params: { id: '1' },
+        payload: mockPayload,
+        logger: { error: jest.fn(), info: jest.fn() }
+      }
+
+      // Act & Assert
+      await expect(
+        standardsController.postAssessmentScreen(mockRequest, mockH)
+      ).rejects.toMatchObject({
+        isBoom: true
+      })
+    })
+
     test('should handle edit mode successfully with replaceAssessment', async () => {
       // Arrange
       mockRequest.query = { edit: 'true' }
@@ -1294,6 +1400,23 @@ describe('Standards Controller', () => {
       )
       expect(result).toHaveProperty('code')
       expect(typeof result.code).toBe('function')
+    })
+
+    test('should return 404 when project not found in getArchiveAssessment', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(null)
+
+      // Act
+      const result = await standardsController.getArchiveAssessment(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith('projects/not-found', {
+        pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
+      })
+      expect(result).toBe('view-with-code-response')
     })
 
     test('should redirect when history entry not found', async () => {
@@ -1546,6 +1669,208 @@ describe('Standards Controller', () => {
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/projects/1/standards/1/professions/prof-1/history?notification=Failed to archive assessment entry'
       )
+    })
+  })
+
+  describe('Additional edge cases for better coverage', () => {
+    test('should handle validation when no selected standard found', async () => {
+      // Arrange
+      mockRequest.payload = {
+        professionId: 'prof-1',
+        standardId: 'non-existent-standard',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue([]) // No standards
+      getProfessions.mockResolvedValue(mockProfessions)
+
+      // Act
+      await standardsController.postAssessmentScreen(mockRequest, mockH)
+
+      // Assert - should not validate profession-standard combination when no standard found
+      expect(mockH.view).toHaveBeenCalled()
+    })
+
+    test('should handle validation when project has no phase', async () => {
+      // Arrange
+      const projectWithoutPhase = { ...mockProject, phase: null }
+      mockRequest.payload = {
+        professionId: 'prof-1',
+        standardId: 'std-1',
+        status: 'GREEN',
+        commentary: 'Test'
+      }
+      getProjectById.mockResolvedValue(projectWithoutPhase)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      updateAssessment.mockResolvedValue({})
+
+      // Act
+      const result = await standardsController.postAssessmentScreen(
+        mockRequest,
+        mockH
+      )
+
+      // Assert - should skip profession-standard validation when no phase
+      expect(updateAssessment).toHaveBeenCalled()
+      expect(result).toBe('redirect-response')
+    })
+
+    test('should handle null professions in createProfessionItems helper', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(null)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        expect.objectContaining({
+          professionItems: [{ value: '', text: 'Choose a profession' }]
+        })
+      )
+    })
+
+    test('should handle null standards in createStandardItems helper', async () => {
+      // Arrange
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(null)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        expect.objectContaining({
+          standardItems: [{ value: '', text: 'Choose a service standard' }]
+        })
+      )
+    })
+
+    test('should handle empty commentary in assessment payload', async () => {
+      // Arrange
+      mockRequest.payload = {
+        professionId: 'prof-1',
+        standardId: 'std-1',
+        status: 'GREEN',
+        commentary: null // Null commentary
+      }
+      getProjectById.mockResolvedValue(mockProject)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      updateAssessment.mockResolvedValue({})
+
+      // Act
+      const result = await standardsController.postAssessmentScreen(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(updateAssessment).toHaveBeenCalledWith(
+        'project-123',
+        'std-1',
+        'prof-1',
+        { status: 'GREEN', commentary: '' }, // Should default to empty string
+        mockRequest
+      )
+      expect(result).toBe('redirect-response')
+    })
+
+    test('should handle assessment with undefined commentary in edit mode', async () => {
+      // Arrange
+      mockRequest.query = {
+        edit: 'true',
+        standardId: 'std-1',
+        professionId: 'prof-1'
+      }
+      const mockExistingAssessment = {
+        status: 'AMBER',
+        commentary: undefined // Undefined commentary
+      }
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+      getAssessment.mockResolvedValue(mockExistingAssessment)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        expect.objectContaining({
+          selectedValues: expect.objectContaining({
+            commentary: '' // Should default to empty string
+          })
+        })
+      )
+    })
+
+    test('should handle project with missing phase in createAssessmentViewData', async () => {
+      // Arrange
+      const projectWithoutPhase = { ...mockProject, phase: undefined }
+      getProjectById.mockResolvedValue(projectWithoutPhase)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        expect.objectContaining({
+          projectPhase: '' // Should default to empty string
+        })
+      )
+    })
+
+    test('should handle non-edit mode in getAssessmentScreen', async () => {
+      // Arrange
+      mockRequest.query = {} // No edit mode
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
+
+      // Act
+      await standardsController.getAssessmentScreen(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.view).toHaveBeenCalledWith(
+        VIEW_TEMPLATES.PROJECTS_STANDARDS_ASSESSMENT,
+        expect.objectContaining({
+          isEditMode: false,
+          selectedValues: {},
+          existingAssessment: null
+        })
+      )
+    })
+
+    test('should use PROJECT_ASSESSMENT_HISTORY route pattern in redirects', async () => {
+      // This test ensures the ROUTE_PATTERNS.PROJECT_ASSESSMENT_HISTORY constant is used
+      // when redirects happen in postArchiveAssessment
+
+      // Arrange
+      archiveAssessmentHistoryEntry.mockResolvedValue({})
+
+      // Act
+      const result = await standardsController.postArchiveAssessment(
+        mockRequest,
+        mockH
+      )
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        expect.stringContaining(
+          '/projects/project-123/standards/std-1/professions/prof-1/history'
+        )
+      )
+      expect(result).toBe('redirect-response')
     })
   })
 

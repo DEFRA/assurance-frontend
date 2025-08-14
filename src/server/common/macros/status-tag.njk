@@ -1,51 +1,30 @@
 {# Shared macro for rendering RAG status tags using GOV.UK Design System patterns #}
-{% macro renderStatusTag(status, statusClassMap = {}, statusLabelMap = {}) -%}
-  {# Internal default mappings using GOV.UK Design System tag modifiers #}
-  {% set defaultClassMap = {
-    'GREEN': 'govuk-tag--green',
-    'GREEN_AMBER': 'govuk-tag--green govuk-tag--yellow',
-    'AMBER': 'govuk-tag--yellow',
-    'AMBER_RED': 'govuk-tag--yellow govuk-tag--red',
-    'RED': 'govuk-tag--red',
-    'TBC': 'govuk-tag--blue',
-    'PENDING': 'govuk-tag--blue',
-    'EXCLUDED': 'govuk-tag--grey'
-  } %}
-  {% set labelMap = {
-    'GREEN': 'Green',
-    'GREEN_AMBER': 'Green Amber', 
-    'AMBER': 'Amber',
-    'AMBER_RED': 'Amber Red',
-    'RED': 'Red',
-    'TBC': 'Pending',
-    'PENDING': 'Pending',
-    'EXCLUDED': 'Excluded'
-  } %}
+{% macro renderStatusTag(status) -%}
+  {# Centralized status rendering with sentence case labels #}
   
-  {% if statusClassMap|length > 0 %}
-    {% set classMap = statusClassMap %}
-  {% else %}
-    {% set classMap = defaultClassMap %}
-  {% endif %}
-  {% if statusLabelMap|length > 0 %}
-    {% set effectiveLabelMap = statusLabelMap %}
-  {% else %}
-    {% set effectiveLabelMap = labelMap %}
-  {% endif %}
-
   {%- if status == 'AMBER_RED' -%}
-<span class="app-tag-list"><strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong><strong class="govuk-tag govuk-tag--red govuk-tag--uppercase">RED</strong></span>
+    <span class="app-tag-list">
+      <strong class="govuk-tag govuk-tag--yellow">Amber</strong>
+      <strong class="govuk-tag govuk-tag--red">Red</strong>
+    </span>
   {%- elif status == 'GREEN_AMBER' -%}
-<span class="app-tag-list"><strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong><strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong></span>
+    <span class="app-tag-list">
+      <strong class="govuk-tag govuk-tag--green">Green</strong>
+      <strong class="govuk-tag govuk-tag--yellow">Amber</strong>
+    </span>
+  {%- elif status == 'RED' -%}
+    <strong class="govuk-tag govuk-tag--red">Red</strong>
+  {%- elif status == 'AMBER' -%}
+    <strong class="govuk-tag govuk-tag--yellow">Amber</strong>
+  {%- elif status == 'GREEN' -%}
+    <strong class="govuk-tag govuk-tag--green">Green</strong>
   {%- elif status == 'TBC' -%}
-<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
+    <strong class="govuk-tag govuk-tag--blue">Pending</strong>
   {%- elif status == 'PENDING' -%}
-<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
+    <strong class="govuk-tag govuk-tag--blue">Pending</strong>
   {%- elif status == 'EXCLUDED' -%}
-<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">EXCLUDED</strong>
-  {%- elif classMap[status] and effectiveLabelMap[status] -%}
-<strong class="govuk-tag {{ classMap[status] }} govuk-tag--uppercase">{{ effectiveLabelMap[status] }}</strong>
+    <strong class="govuk-tag govuk-tag--grey">Excluded</strong>
   {%- else -%}
-<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
+    <strong class="govuk-tag govuk-tag--blue">Pending</strong>
   {%- endif -%}
 {%- endmacro %}

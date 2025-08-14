@@ -522,7 +522,7 @@ export const adminController = {
       // Update with new values while preserving existing data
       const updatedStandard = {
         ...existingStandard,
-        name: name,
+        name,
         description: description || existingStandard.description,
         guidance: guidance || existingStandard.guidance,
         updatedAt: new Date().toISOString()

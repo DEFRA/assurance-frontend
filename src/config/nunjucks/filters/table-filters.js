@@ -14,8 +14,8 @@ function createStatusTagHTML(status) {
     AMBER: 'govuk-tag--yellow',
     AMBER_RED: 'govuk-tag--yellow govuk-tag--red',
     RED: 'govuk-tag--red',
-    TBC: 'govuk-tag--grey',
-    PENDING: 'govuk-tag',
+    TBC: 'govuk-tag--blue',
+    PENDING: 'govuk-tag--blue',
     EXCLUDED: 'govuk-tag--grey'
   }
 

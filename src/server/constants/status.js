@@ -43,7 +43,7 @@ export const STATUS_CLASS = {
   [STATUS.AMBER]: 'govuk-tag--yellow',
   [STATUS.AMBER_RED]: 'govuk-tag--yellow govuk-tag--red', // Will render as two tags in UI
   [STATUS.RED]: 'govuk-tag--red',
-  [STATUS.TBC]: 'govuk-tag--grey',
+  [STATUS.TBC]: 'govuk-tag--blue',
   [STATUS.PENDING]: 'govuk-tag--blue', // Explicit blue for pending items
   [STATUS.EXCLUDED]: 'govuk-tag--grey' // Grey for excluded items
 }

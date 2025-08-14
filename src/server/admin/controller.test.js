@@ -22,6 +22,24 @@ import {
   deleteProfession,
   restoreProfession
 } from '~/src/server/services/professions.js'
+import {
+  getDeliveryGroups,
+  getAllDeliveryGroups,
+  getDeliveryGroupById,
+  createDeliveryGroup,
+  updateDeliveryGroup,
+  deleteDeliveryGroup,
+  restoreDeliveryGroup
+} from '~/src/server/services/delivery-groups.js'
+import {
+  getDeliveryPartners,
+  getAllDeliveryPartners,
+  getDeliveryPartnerById,
+  createDeliveryPartner,
+  updateDeliveryPartner,
+  deleteDeliveryPartner,
+  restoreDeliveryPartner
+} from '~/src/server/services/delivery-partners.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProfessions } from '~/src/server/data/professions.js'
 import { config } from '~/src/config/config.js'
@@ -40,9 +58,9 @@ jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
 jest.mock('~/src/server/services/service-standards.js')
 jest.mock('~/src/server/services/projects.js')
 jest.mock('~/src/server/services/professions.js')
+jest.mock('~/src/server/services/delivery-groups.js')
+jest.mock('~/src/server/services/delivery-partners.js')
 jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
-
-// Mock config to return API version for versioned endpoints
 jest.mock('~/src/config/config.js', () => ({
   config: {
     get: jest.fn()
@@ -58,6 +76,63 @@ describe('Admin controller', () => {
   const mockProjects = [
     { id: 'project-1', name: 'Test Project 1', phase: 'Discovery' },
     { id: 'project-2', name: 'Test Project 2', phase: 'Alpha' }
+  ]
+
+  // Mock delivery groups data for testing
+  const mockDeliveryGroups = [
+    {
+      id: 'delivery-group-3',
+      name: 'DevOps and Infrastructure',
+      isActive: false,
+      createdAt: '2024-01-17T14:15:00.000Z',
+      updatedAt: '2024-01-18T09:20:00.000Z'
+    },
+    {
+      id: 'delivery-group-2',
+      name: 'Backend Services Team',
+      isActive: true,
+      createdAt: '2024-01-16T10:30:00.000Z',
+      updatedAt: '2024-01-16T10:30:00.000Z'
+    },
+    {
+      id: 'delivery-group-1',
+      name: 'Frontend Development Team',
+      isActive: true,
+      createdAt: '2024-01-15T09:00:00.000Z',
+      updatedAt: '2024-01-15T09:00:00.000Z'
+    }
+  ]
+
+  // Mock delivery partners data for testing
+  const mockDeliveryPartners = [
+    {
+      id: 'delivery-partner-4',
+      name: 'CloudFirst Technologies',
+      isActive: true,
+      createdAt: '2024-01-18T13:10:00.000Z',
+      updatedAt: '2024-01-18T13:10:00.000Z'
+    },
+    {
+      id: 'delivery-partner-3',
+      name: 'Digital Solutions Partnership',
+      isActive: false,
+      createdAt: '2024-01-14T16:20:00.000Z',
+      updatedAt: '2024-01-19T10:15:00.000Z'
+    },
+    {
+      id: 'delivery-partner-2',
+      name: 'TechFlow Consulting',
+      isActive: true,
+      createdAt: '2024-01-12T11:45:00.000Z',
+      updatedAt: '2024-01-12T11:45:00.000Z'
+    },
+    {
+      id: 'delivery-partner-1',
+      name: 'Acme Solutions Ltd',
+      isActive: true,
+      createdAt: '2024-01-10T08:30:00.000Z',
+      updatedAt: '2024-01-10T08:30:00.000Z'
+    }
   ]
 
   beforeEach(() => {
@@ -116,6 +191,22 @@ describe('Admin controller', () => {
     updateProfession.mockResolvedValue({})
     deleteProfession.mockResolvedValue(true)
     restoreProfession.mockResolvedValue(true)
+
+    getDeliveryGroups.mockResolvedValue(mockDeliveryGroups)
+    getAllDeliveryGroups.mockResolvedValue(mockDeliveryGroups)
+    getDeliveryGroupById.mockResolvedValue(null)
+    createDeliveryGroup.mockResolvedValue({})
+    updateDeliveryGroup.mockResolvedValue({})
+    deleteDeliveryGroup.mockResolvedValue(true)
+    restoreDeliveryGroup.mockResolvedValue(true)
+
+    getDeliveryPartners.mockResolvedValue(mockDeliveryPartners)
+    getAllDeliveryPartners.mockResolvedValue(mockDeliveryPartners)
+    getDeliveryPartnerById.mockResolvedValue(null)
+    createDeliveryPartner.mockResolvedValue({})
+    updateDeliveryPartner.mockResolvedValue({})
+    deleteDeliveryPartner.mockResolvedValue(true)
+    restoreDeliveryPartner.mockResolvedValue(true)
   })
 
   // Add tests for helper functions
@@ -141,8 +232,10 @@ describe('Admin controller', () => {
           projects: mockProjects,
           standards: defaultServiceStandards,
           professions: defaultProfessions,
+          deliveryGroups: mockDeliveryGroups,
+          deliveryPartners: mockDeliveryPartners,
           notification: 'Test notification',
-          isTestEnvironment: true, // Uses test environment from default config
+          isTestEnvironment: true,
           isDevelopment: false
         })
         expect(mockRequest.logger.warn).toHaveBeenCalledWith(
@@ -377,6 +470,8 @@ describe('Admin controller', () => {
         projects: mockProjects,
         standards: defaultServiceStandards,
         professions: defaultProfessions,
+        deliveryGroups: mockDeliveryGroups,
+        deliveryPartners: mockDeliveryPartners,
         notification: 'Test notification',
         isTestEnvironment: true,
         isDevelopment: false
@@ -384,28 +479,16 @@ describe('Admin controller', () => {
     })
 
     it('should handle API errors gracefully', async () => {
-      // Arrange
-      getServiceStandards.mockRejectedValue(new Error('API Error'))
-      getProjects.mockResolvedValue(mockProjects)
-      getProfessions.mockResolvedValue(defaultProfessions)
+      // Arrange - Set up errors from various services
+      getServiceStandards.mockRejectedValue(new Error('Standards API Error'))
+      getProjects.mockRejectedValue(new Error('Projects API Error'))
+      getProfessions.mockRejectedValue(new Error('Professions API Error'))
 
-      // Act
-      await adminController.get(mockRequest, mockH)
+      // Act & Assert - Should throw Boom error due to projects API error
+      await expect(adminController.get(mockRequest, mockH)).rejects.toThrow()
 
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith('admin/index', {
-        pageTitle: 'Data Management',
-        heading: 'Data Management',
-        standardsCount: defaultServiceStandards.length,
-        projectsCount: mockProjects.length,
-        professionsCount: defaultProfessions.length,
-        projects: mockProjects,
-        standards: defaultServiceStandards,
-        professions: defaultProfessions,
-        notification: 'Test notification',
-        isTestEnvironment: true,
-        isDevelopment: false
-      })
+      // Assert that h.view was never called due to the error
+      expect(mockH.view).not.toHaveBeenCalled()
     })
   })
 

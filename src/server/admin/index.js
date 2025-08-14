@@ -228,6 +228,106 @@ export const admin = {
             },
             pre: [{ method: requireRole('admin') }]
           }
+        },
+
+        // Delivery Groups routes
+        {
+          method: 'POST',
+          path: '/admin/delivery-groups/create',
+          handler: adminController.createDeliveryGroup,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/delivery-groups/update',
+          handler: adminController.updateDeliveryGroup,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/delivery-groups/{id}/archive',
+          handler: adminController.archiveDeliveryGroup,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/delivery-groups/{id}/restore',
+          handler: adminController.restoreDeliveryGroup,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+
+        // Delivery Partners routes
+        {
+          method: 'POST',
+          path: '/admin/delivery-partners/create',
+          handler: adminController.createDeliveryPartner,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/delivery-partners/update',
+          handler: adminController.updateDeliveryPartner,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/delivery-partners/{id}/archive',
+          handler: adminController.archiveDeliveryPartner,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/admin/delivery-partners/{id}/restore',
+          handler: adminController.restoreDeliveryPartner,
+          options: {
+            auth: {
+              strategy: 'session',
+              mode: 'required'
+            },
+            pre: [{ method: requireRole('admin') }]
+          }
         }
       ]
 

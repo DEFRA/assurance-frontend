@@ -4,6 +4,13 @@ import { readFileSync } from 'node:fs'
 import { config } from '~/src/config/config.js'
 import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { navigation } from '~/src/server/common/helpers/navigation.js'
+import {
+  STATUS,
+  STATUS_LABEL,
+  STATUS_CLASS,
+  PROJECT_STATUS,
+  SERVICE_STANDARD_STATUS
+} from '~/src/server/constants/status.js'
 
 const assetPath = config.get('assetPath')
 const manifestPath = path.join(
@@ -34,6 +41,13 @@ export function context() {
       }
     ],
     navigation,
+
+    // Status constants available in all templates
+    STATUS,
+    STATUS_LABEL,
+    STATUS_CLASS,
+    PROJECT_STATUS,
+    SERVICE_STANDARD_STATUS,
 
     /**
      * @param {string} asset

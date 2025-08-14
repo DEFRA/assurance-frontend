@@ -6,30 +6,7 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "govuk/components/details/macro.njk" import govukDetails %}
-
-{% macro renderStatusTag(status) %}
-  {% if status == 'AMBER_RED' %}
-    <strong class="govuk-tag govuk-tag--red govuk-tag--uppercase">RED</strong>
-    <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
-  {% elif status == 'GREEN_AMBER' %}
-    <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
-    <strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong>
-  {% elif status == 'RED' %}
-    <strong class="govuk-tag govuk-tag--red govuk-tag--uppercase">RED</strong>
-  {% elif status == 'AMBER' %}
-    <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
-  {% elif status == 'GREEN' %}
-    <strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong>
-  {% elif status == 'TBC' %}
-    <strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
-  {% elif status == 'PENDING' %}
-    <strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
-  {% elif status == 'EXCLUDED' %}
-    <strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">EXCLUDED</strong>
-  {% else %}
-    <strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>
-  {% endif %}
-{% endmacro %}
+{% from "status-tag.njk" import renderStatusTag %}
 
 {% block beforeContent %}
   <nav aria-label="Back navigation">

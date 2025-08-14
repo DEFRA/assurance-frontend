@@ -63,10 +63,7 @@
               </p>
             {% endif %}
           {% else %}
-            <p class="govuk-body-l">
-              <strong>Compliance confidence:</strong> 
-              {{ renderStatusTag('PENDING') }}
-            </p>
+            {{ renderStatusTag('PENDING') }}
           {% endif %}
           
           {% if isAdmin %}

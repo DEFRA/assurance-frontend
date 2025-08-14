@@ -2,54 +2,36 @@
  * Table row filters for GOV.UK table components
  */
 
+import {
+  STATUS,
+  STATUS_LABEL,
+  STATUS_CLASS
+} from '~/src/server/constants/status.js'
+
 /**
  * Create status tag HTML for JavaScript contexts
  * @param {string} status - Status value
  * @returns {string} HTML string for status tag
  */
 function createStatusTagHTML(status) {
-  const statusClassMap = {
-    GREEN: 'govuk-tag--green',
-    GREEN_AMBER: 'govuk-tag--green govuk-tag--yellow',
-    AMBER: 'govuk-tag--yellow',
-    AMBER_RED: 'govuk-tag--yellow govuk-tag--red',
-    RED: 'govuk-tag--red',
-    TBC: 'govuk-tag--blue',
-    PENDING: 'govuk-tag--blue',
-    EXCLUDED: 'govuk-tag--grey'
-  }
-
-  const statusLabelMap = {
-    GREEN: 'GREEN',
-    GREEN_AMBER: 'GREEN',
-    AMBER: 'AMBER',
-    AMBER_RED: 'AMBER',
-    RED: 'RED',
-    TBC: 'PENDING', // Display TBC as PENDING in UI
-    PENDING: 'PENDING',
-    EXCLUDED: 'EXCLUDED'
-  }
-
-  if (status === 'AMBER_RED') {
+  // Handle compound statuses first
+  if (status === STATUS.AMBER_RED) {
     return `<span class="app-tag-list">
-      <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
-      <strong class="govuk-tag govuk-tag--red govuk-tag--uppercase">RED</strong>
+      <strong class="govuk-tag govuk-tag--yellow">${STATUS_LABEL[STATUS.AMBER]}</strong>
+      <strong class="govuk-tag govuk-tag--red">${STATUS_LABEL[STATUS.RED]}</strong>
     </span>`
-  } else if (status === 'GREEN_AMBER') {
+  } else if (status === STATUS.GREEN_AMBER) {
     return `<span class="app-tag-list">
-      <strong class="govuk-tag govuk-tag--green govuk-tag--uppercase">GREEN</strong>
-      <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
+      <strong class="govuk-tag govuk-tag--green">${STATUS_LABEL[STATUS.GREEN]}</strong>
+      <strong class="govuk-tag govuk-tag--yellow">${STATUS_LABEL[STATUS.AMBER]}</strong>
     </span>`
-  } else if (status === 'TBC') {
-    return `<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>`
-  } else if (status === 'PENDING') {
-    return `<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>`
-  } else if (status === 'EXCLUDED') {
-    return `<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">EXCLUDED</strong>`
-  } else if (statusClassMap[status] && statusLabelMap[status]) {
-    return `<strong class="govuk-tag ${statusClassMap[status]} govuk-tag--uppercase">${statusLabelMap[status]}</strong>`
+  } else if (status === STATUS.TBC) {
+    return `<strong class="govuk-tag ${STATUS_CLASS[STATUS.TBC]}">${STATUS_LABEL[STATUS.TBC]}</strong>`
+  } else if (STATUS_CLASS[status] && STATUS_LABEL[status]) {
+    return `<strong class="govuk-tag ${STATUS_CLASS[status]}">${STATUS_LABEL[status]}</strong>`
   } else {
-    return `<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>`
+    // Default to PENDING for unknown statuses
+    return `<strong class="govuk-tag ${STATUS_CLASS[STATUS.PENDING]}">${STATUS_LABEL[STATUS.PENDING]}</strong>`
   }
 }
 

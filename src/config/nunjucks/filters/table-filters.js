@@ -41,7 +41,7 @@ function createStatusTagHTML(status) {
       <strong class="govuk-tag govuk-tag--yellow govuk-tag--uppercase">AMBER</strong>
     </span>`
   } else if (status === 'TBC') {
-    return `<strong class="govuk-tag govuk-tag--grey govuk-tag--uppercase">PENDING</strong>`
+    return `<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>`
   } else if (status === 'PENDING') {
     return `<strong class="govuk-tag govuk-tag--blue govuk-tag--uppercase">PENDING</strong>`
   } else if (status === 'EXCLUDED') {

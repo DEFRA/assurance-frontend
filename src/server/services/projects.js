@@ -18,60 +18,84 @@ const SUPPRESS_HISTORY_QUERY = '?suppressHistory=true'
 const API_VERSION_KEY = 'api.version'
 const API_BASE_PREFIX = '/api'
 
+// Helper functions to reduce complexity
+const buildQueryParams = (options) => {
+  const queryParams = new URLSearchParams()
+  if (options.startDate) {
+    queryParams.append('start_date', options.startDate)
+  }
+  if (options.endDate) {
+    queryParams.append('end_date', options.endDate)
+  }
+  if (options.tag) {
+    queryParams.append('tag', options.tag)
+  }
+  return queryParams
+}
+
+const buildFullEndpoint = (endpoint, queryParams) => {
+  return queryParams.toString()
+    ? `${endpoint}?${queryParams.toString()}`
+    : endpoint
+}
+
+const fetchProjectsData = async (fullEndpoint, request) => {
+  let data
+  // ALWAYS use authenticated fetcher if request is provided
+  if (request) {
+    logger.info(
+      `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for projects API`
+    )
+    const authedFetch = authedFetchJsonDecorator(request)
+    data = await authedFetch(fullEndpoint)
+  } else {
+    // Fall back to unauthenticated fetcher only if no request context
+    logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
+    data = await fetcher(fullEndpoint)
+  }
+  return data
+}
+
+const validateProjectsData = (data) => {
+  // Handle case where data is null, undefined, or not an array
+  if (!data || !Array.isArray(data)) {
+    logger.warn('Invalid data returned from API', { data })
+    return []
+  }
+  return data
+}
+
+const logDeliveryPartnerWarning = (options) => {
+  // TODO: Delivery partner filtering should be handled by backend
+  // Note: Backend needs to support deliveryPartnerIds query parameters
+  // For now, delivery partner filtering is disabled until backend endpoints are available
+  if (options.deliveryPartnerIds && options.deliveryPartnerIds.length > 0) {
+    logger.warn(
+      { deliveryPartnerIds: options.deliveryPartnerIds },
+      'Delivery partner filtering requested but not yet supported by backend - ignoring filter'
+    )
+  }
+}
+
 export async function getProjects(request, options = {}) {
   try {
     const apiVersion = config.get(API_VERSION_KEY)
     const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
 
     // Build query parameters if provided
-    const queryParams = new URLSearchParams()
-    if (options.startDate) {
-      queryParams.append('start_date', options.startDate)
-    }
-    if (options.endDate) {
-      queryParams.append('end_date', options.endDate)
-    }
-    if (options.tag) {
-      queryParams.append('tag', options.tag)
-    }
-    // Note: deliveryPartnerIds filtering is handled client-side for now
-    // as it requires mock data relationships
-
-    const fullEndpoint = queryParams.toString()
-      ? `${endpoint}?${queryParams.toString()}`
-      : endpoint
+    const queryParams = buildQueryParams(options)
+    const fullEndpoint = buildFullEndpoint(endpoint, queryParams)
 
     logger.info({ endpoint: fullEndpoint }, 'Fetching projects from API')
 
-    let data
-    // ALWAYS use authenticated fetcher if request is provided
-    if (request) {
-      logger.info(
-        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for projects API`
-      )
-      const authedFetch = authedFetchJsonDecorator(request)
-      data = await authedFetch(fullEndpoint)
-    } else {
-      // Fall back to unauthenticated fetcher only if no request context
-      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
-      data = await fetcher(fullEndpoint)
-    }
+    // Fetch the data using appropriate fetcher
+    const rawData = await fetchProjectsData(fullEndpoint, request)
 
-    // Handle case where data is null, undefined, or not an array
-    if (!data || !Array.isArray(data)) {
-      logger.warn('Invalid data returned from API', { data })
-      return []
-    }
+    // Validate and clean the data
+    const data = validateProjectsData(rawData)
 
-    // TODO: Delivery partner filtering should be handled by backend
-    // Note: Backend needs to support deliveryPartnerIds query parameters
-    // For now, delivery partner filtering is disabled until backend endpoints are available
-    if (options.deliveryPartnerIds && options.deliveryPartnerIds.length > 0) {
-      logger.warn(
-        { deliveryPartnerIds: options.deliveryPartnerIds },
-        'Delivery partner filtering requested but not yet supported by backend - ignoring filter'
-      )
-    }
+    // Log warning about unsupported delivery partner filtering
+    logDeliveryPartnerWarning(options)
 
     logger.info({ count: data.length }, 'Projects retrieved successfully')
 

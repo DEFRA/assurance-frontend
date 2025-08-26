@@ -110,7 +110,7 @@ export async function getAllDeliveryPartners(request) {
     }
 
     // Sort by created date (newest first) - includes both active and inactive
-    const sortedPartners = data.sort(
+    const sortedPartners = data.toSorted(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     )
 

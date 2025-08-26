@@ -2508,3 +2508,140 @@ describe('replaceProjectStatus', () => {
     ).rejects.toThrow('Update failed')
   })
 })
+
+// Additional tests for improved coverage
+describe('getProjects edge cases and options', () => {
+  let mockAuthedFetch
+  let mockRequest
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+
+    // Create mock authed fetch
+    mockAuthedFetch = jest.fn()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    // Create mock request
+    mockRequest = {
+      logger: mockLogger
+    }
+  })
+
+  test('should handle all query parameter options', async () => {
+    // Arrange
+    const options = {
+      startDate: '2023-01-01',
+      endDate: '2023-12-31',
+      tag: 'important'
+    }
+    const mockProjects = [{ id: 'test-project', name: 'Test Project' }]
+    mockAuthedFetch.mockResolvedValue(mockProjects)
+
+    // Act
+    const result = await getProjects(mockRequest, options)
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/api/v1.0/projects?start_date=2023-01-01&end_date=2023-12-31&tag=important'
+    )
+    expect(result).toEqual(mockProjects)
+  })
+
+  test('should handle delivery partner filtering warning', async () => {
+    // Arrange
+    const options = {
+      deliveryPartnerIds: ['partner-1', 'partner-2']
+    }
+    const mockProjects = [{ id: 'test-project', name: 'Test Project' }]
+    mockAuthedFetch.mockResolvedValue(mockProjects)
+
+    // Act
+    const result = await getProjects(mockRequest, options)
+
+    // Assert
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      { deliveryPartnerIds: options.deliveryPartnerIds },
+      'Delivery partner filtering requested but not yet supported by backend - ignoring filter'
+    )
+    expect(result).toEqual(mockProjects)
+  })
+
+  test('should handle null data response', async () => {
+    // Arrange
+    mockAuthedFetch.mockResolvedValue(null)
+
+    // Act
+    const result = await getProjects(mockRequest)
+
+    // Assert
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'Invalid data returned from API',
+      { data: null }
+    )
+    expect(result).toEqual([])
+  })
+
+  test('should handle non-array data response', async () => {
+    // Arrange
+    const invalidData = { error: 'Something went wrong' }
+    mockAuthedFetch.mockResolvedValue(invalidData)
+
+    // Act
+    const result = await getProjects(mockRequest)
+
+    // Assert
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'Invalid data returned from API',
+      { data: invalidData }
+    )
+    expect(result).toEqual([])
+  })
+
+  test('should use unauthenticated fetcher when no request provided', async () => {
+    // Arrange
+    const mockProjects = [{ id: 'test-project', name: 'Test Project' }]
+    mockFetch.mockResolvedValue(mockProjects)
+
+    // Act
+    const result = await getProjects(null)
+
+    // Assert
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      '[API_AUTH] No request context provided, using unauthenticated fetcher'
+    )
+    expect(mockFetch).toHaveBeenCalledWith('/api/v1.0/projects')
+    expect(result).toEqual(mockProjects)
+  })
+
+  test('should handle empty options object', async () => {
+    // Arrange
+    const mockProjects = [{ id: 'test-project', name: 'Test Project' }]
+    mockAuthedFetch.mockResolvedValue(mockProjects)
+
+    // Act
+    const result = await getProjects(mockRequest, {})
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledWith('/api/v1.0/projects')
+    expect(result).toEqual(mockProjects)
+  })
+
+  test('should log project count when data returned', async () => {
+    // Arrange
+    const mockProjects = [
+      { id: 'project-1', name: 'Project 1' },
+      { id: 'project-2', name: 'Project 2' }
+    ]
+    mockAuthedFetch.mockResolvedValue(mockProjects)
+
+    // Act
+    const result = await getProjects(mockRequest)
+
+    // Assert
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      { count: 2 },
+      'Projects retrieved successfully'
+    )
+    expect(result).toEqual(mockProjects)
+  })
+})

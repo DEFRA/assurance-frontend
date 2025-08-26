@@ -688,8 +688,12 @@ export const adminController = {
       await updateDeliveryGroup(id, updateData, request)
 
       const updatedFields = []
-      if (name?.trim()) updatedFields.push('name')
-      if (lead?.trim()) updatedFields.push('lead')
+      if (name?.trim()) {
+        updatedFields.push('name')
+      }
+      if (lead?.trim()) {
+        updatedFields.push('lead')
+      }
 
       request.logger.info(
         { id, name, lead, updatedFields },

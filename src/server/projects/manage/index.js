@@ -66,6 +66,33 @@ export const manageRoutes = {
             auth: { strategy: 'session', mode: 'required' },
             pre: [{ method: requireRole('admin') }]
           }
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/manage/delivery-partners/add',
+          handler: manageController.getAddDeliveryPartner,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/manage/delivery-partners/add',
+          handler: manageController.postAddDeliveryPartner,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/manage/delivery-partners/{partnerId}/remove',
+          handler: manageController.removeDeliveryPartner,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
         }
       ])
     }

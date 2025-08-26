@@ -1,0 +1,93 @@
+{% extends "layouts/page.njk" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Projects",
+        href: "/"
+      },
+      {
+        text: project.name,
+        href: "/projects/" + project.id
+      },
+      {
+        text: "Manage project",
+        href: "/projects/" + project.id + "/manage"
+      },
+      {
+        text: "Update project details",
+        href: "/projects/" + project.id + "/manage/details"
+      },
+      {
+        text: "Add delivery partner"
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block content %}
+  <h1 class="govuk-heading-xl">Add a delivery partner</h1>
+  <h2 class="govuk-heading-l govuk-!-margin-bottom-6">{{ project.name }}</h2>
+  
+  {% if errorMessage %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: [
+        {
+          text: errorMessage,
+          href: "#partnerId"
+        }
+      ]
+    }) }}
+  {% endif %}
+
+  {% if availablePartners and availablePartners.length > 0 %}
+    <form method="POST" novalidate>
+      {{ govukRadios({
+        idPrefix: "partnerId",
+        name: "partnerId",
+        fieldset: {
+          legend: {
+            text: "Which delivery partner would you like to add?",
+            isPageHeading: false,
+            classes: "govuk-fieldset__legend--m"
+          }
+        },
+        items: partnerRadioItems,
+        value: values.partnerId,
+        errorMessage: errors.partnerId
+      }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({
+          text: "Save update"
+        }) }}
+
+        {{ govukButton({
+          text: "Cancel",
+          href: "/projects/" + project.id + "/manage/details",
+          classes: "govuk-button--secondary"
+        }) }}
+      </div>
+    </form>
+  {% else %}
+    {{ govukInsetText({
+      text: "There are no available delivery partners to add."
+    }) }}
+
+    <div class="govuk-button-group govuk-!-margin-top-4">
+      {{ govukButton({
+        text: "Back to project details",
+        href: "/projects/" + project.id + "/manage/details",
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
+  {% endif %}
+{% endblock %} 

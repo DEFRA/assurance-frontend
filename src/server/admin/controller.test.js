@@ -22,6 +22,24 @@ import {
   deleteProfession,
   restoreProfession
 } from '~/src/server/services/professions.js'
+import {
+  getDeliveryGroups,
+  getAllDeliveryGroups,
+  getDeliveryGroupById,
+  createDeliveryGroup,
+  updateDeliveryGroup,
+  deleteDeliveryGroup,
+  restoreDeliveryGroup
+} from '~/src/server/services/delivery-groups.js'
+import {
+  getDeliveryPartners,
+  getAllDeliveryPartners,
+  getDeliveryPartnerById,
+  createDeliveryPartner,
+  updateDeliveryPartner,
+  deleteDeliveryPartner,
+  restoreDeliveryPartner
+} from '~/src/server/services/delivery-partners.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProfessions } from '~/src/server/data/professions.js'
 import { config } from '~/src/config/config.js'
@@ -40,9 +58,9 @@ jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({
 jest.mock('~/src/server/services/service-standards.js')
 jest.mock('~/src/server/services/projects.js')
 jest.mock('~/src/server/services/professions.js')
+jest.mock('~/src/server/services/delivery-groups.js')
+jest.mock('~/src/server/services/delivery-partners.js')
 jest.mock('~/src/server/common/helpers/fetch/authed-fetch-json.js')
-
-// Mock config to return API version for versioned endpoints
 jest.mock('~/src/config/config.js', () => ({
   config: {
     get: jest.fn()
@@ -58,6 +76,63 @@ describe('Admin controller', () => {
   const mockProjects = [
     { id: 'project-1', name: 'Test Project 1', phase: 'Discovery' },
     { id: 'project-2', name: 'Test Project 2', phase: 'Alpha' }
+  ]
+
+  // Mock delivery groups data for testing
+  const mockDeliveryGroups = [
+    {
+      id: 'delivery-group-3',
+      name: 'DevOps and Infrastructure',
+      isActive: false,
+      createdAt: '2024-01-17T14:15:00.000Z',
+      updatedAt: '2024-01-18T09:20:00.000Z'
+    },
+    {
+      id: 'delivery-group-2',
+      name: 'Backend Services Team',
+      isActive: true,
+      createdAt: '2024-01-16T10:30:00.000Z',
+      updatedAt: '2024-01-16T10:30:00.000Z'
+    },
+    {
+      id: 'delivery-group-1',
+      name: 'Frontend Development Team',
+      isActive: true,
+      createdAt: '2024-01-15T09:00:00.000Z',
+      updatedAt: '2024-01-15T09:00:00.000Z'
+    }
+  ]
+
+  // Mock delivery partners data for testing
+  const mockDeliveryPartners = [
+    {
+      id: 'delivery-partner-4',
+      name: 'CloudFirst Technologies',
+      isActive: true,
+      createdAt: '2024-01-18T13:10:00.000Z',
+      updatedAt: '2024-01-18T13:10:00.000Z'
+    },
+    {
+      id: 'delivery-partner-3',
+      name: 'Digital Solutions Partnership',
+      isActive: false,
+      createdAt: '2024-01-14T16:20:00.000Z',
+      updatedAt: '2024-01-19T10:15:00.000Z'
+    },
+    {
+      id: 'delivery-partner-2',
+      name: 'TechFlow Consulting',
+      isActive: true,
+      createdAt: '2024-01-12T11:45:00.000Z',
+      updatedAt: '2024-01-12T11:45:00.000Z'
+    },
+    {
+      id: 'delivery-partner-1',
+      name: 'Acme Solutions Ltd',
+      isActive: true,
+      createdAt: '2024-01-10T08:30:00.000Z',
+      updatedAt: '2024-01-10T08:30:00.000Z'
+    }
   ]
 
   beforeEach(() => {
@@ -116,6 +191,22 @@ describe('Admin controller', () => {
     updateProfession.mockResolvedValue({})
     deleteProfession.mockResolvedValue(true)
     restoreProfession.mockResolvedValue(true)
+
+    getDeliveryGroups.mockResolvedValue(mockDeliveryGroups)
+    getAllDeliveryGroups.mockResolvedValue(mockDeliveryGroups)
+    getDeliveryGroupById.mockResolvedValue(null)
+    createDeliveryGroup.mockResolvedValue({})
+    updateDeliveryGroup.mockResolvedValue({})
+    deleteDeliveryGroup.mockResolvedValue(true)
+    restoreDeliveryGroup.mockResolvedValue(true)
+
+    getDeliveryPartners.mockResolvedValue(mockDeliveryPartners)
+    getAllDeliveryPartners.mockResolvedValue(mockDeliveryPartners)
+    getDeliveryPartnerById.mockResolvedValue(null)
+    createDeliveryPartner.mockResolvedValue({})
+    updateDeliveryPartner.mockResolvedValue({})
+    deleteDeliveryPartner.mockResolvedValue(true)
+    restoreDeliveryPartner.mockResolvedValue(true)
   })
 
   // Add tests for helper functions
@@ -141,8 +232,10 @@ describe('Admin controller', () => {
           projects: mockProjects,
           standards: defaultServiceStandards,
           professions: defaultProfessions,
+          deliveryGroups: mockDeliveryGroups,
+          deliveryPartners: mockDeliveryPartners,
           notification: 'Test notification',
-          isTestEnvironment: true, // Uses test environment from default config
+          isTestEnvironment: true,
           isDevelopment: false
         })
         expect(mockRequest.logger.warn).toHaveBeenCalledWith(
@@ -377,6 +470,8 @@ describe('Admin controller', () => {
         projects: mockProjects,
         standards: defaultServiceStandards,
         professions: defaultProfessions,
+        deliveryGroups: mockDeliveryGroups,
+        deliveryPartners: mockDeliveryPartners,
         notification: 'Test notification',
         isTestEnvironment: true,
         isDevelopment: false
@@ -384,28 +479,16 @@ describe('Admin controller', () => {
     })
 
     it('should handle API errors gracefully', async () => {
-      // Arrange
-      getServiceStandards.mockRejectedValue(new Error('API Error'))
-      getProjects.mockResolvedValue(mockProjects)
-      getProfessions.mockResolvedValue(defaultProfessions)
+      // Arrange - Set up errors from various services
+      getServiceStandards.mockRejectedValue(new Error('Standards API Error'))
+      getProjects.mockRejectedValue(new Error('Projects API Error'))
+      getProfessions.mockRejectedValue(new Error('Professions API Error'))
 
-      // Act
-      await adminController.get(mockRequest, mockH)
+      // Act & Assert - Should throw Boom error due to projects API error
+      await expect(adminController.get(mockRequest, mockH)).rejects.toThrow()
 
-      // Assert
-      expect(mockH.view).toHaveBeenCalledWith('admin/index', {
-        pageTitle: 'Data Management',
-        heading: 'Data Management',
-        standardsCount: defaultServiceStandards.length,
-        projectsCount: mockProjects.length,
-        professionsCount: defaultProfessions.length,
-        projects: mockProjects,
-        standards: defaultServiceStandards,
-        professions: defaultProfessions,
-        notification: 'Test notification',
-        isTestEnvironment: true,
-        isDevelopment: false
-      })
+      // Assert that h.view was never called due to the error
+      expect(mockH.view).not.toHaveBeenCalled()
     })
   })
 
@@ -1417,6 +1500,291 @@ describe('Admin controller', () => {
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Failed to restore service standard&tab=standards'
+      )
+    })
+  })
+
+  // Delivery Groups Tests
+  describe('createDeliveryGroup', () => {
+    it('should create delivery group successfully and redirect', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: 'Frontend Team',
+        lead: 'John Doe'
+      }
+
+      // Act
+      await adminController.createDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(createDeliveryGroup).toHaveBeenCalledWith(
+        {
+          Id: 'frontend-team',
+          Name: 'Frontend Team',
+          Status: 'Pending',
+          Lead: 'John Doe',
+          IsActive: true,
+          CreatedAt: expect.any(String),
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Delivery group created successfully&tab=delivery-groups'
+      )
+    })
+
+    it('should handle missing name', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: '',
+        lead: 'John Doe'
+      }
+
+      // Act
+      await adminController.createDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(createDeliveryGroup).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Name is required&tab=delivery-groups'
+      )
+    })
+
+    it('should handle missing lead (should still create with empty lead)', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: 'Backend Team'
+        // lead is undefined
+      }
+
+      // Act
+      await adminController.createDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(createDeliveryGroup).toHaveBeenCalledWith(
+        {
+          Id: 'backend-team',
+          Name: 'Backend Team',
+          Status: 'Pending',
+          Lead: '',
+          IsActive: true,
+          CreatedAt: expect.any(String),
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Delivery group created successfully&tab=delivery-groups'
+      )
+    })
+
+    it('should handle creation errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: 'Test Group',
+        lead: 'Test Lead'
+      }
+      createDeliveryGroup.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.createDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to create delivery group&tab=delivery-groups'
+      )
+    })
+  })
+
+  describe('updateDeliveryGroup', () => {
+    it('should update delivery group name and lead successfully', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'frontend-team',
+        name: 'Updated Frontend Team',
+        lead: 'New Lead'
+      }
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(updateDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        {
+          Name: 'Updated Frontend Team',
+          Lead: 'New Lead',
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Delivery group updated successfully&tab=delivery-groups'
+      )
+    })
+
+    it('should update delivery group name only', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'frontend-team',
+        name: 'Updated Frontend Team',
+        lead: '' // Empty lead
+      }
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(updateDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        {
+          Name: 'Updated Frontend Team',
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
+    })
+
+    it('should update delivery group lead only', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'frontend-team',
+        name: '', // Empty name
+        lead: 'New Lead'
+      }
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(updateDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        {
+          Lead: 'New Lead',
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
+    })
+
+    it('should handle missing id', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: '',
+        name: 'Updated Name',
+        lead: 'Updated Lead'
+      }
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(updateDeliveryGroup).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Please select a delivery group to update&tab=delivery-groups'
+      )
+    })
+
+    it('should handle missing name and lead', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'frontend-team',
+        name: '',
+        lead: ''
+      }
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(updateDeliveryGroup).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Please provide at least a name or lead to update&tab=delivery-groups'
+      )
+    })
+
+    it('should handle update errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'frontend-team',
+        name: 'Updated Name',
+        lead: 'Updated Lead'
+      }
+      updateDeliveryGroup.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to update delivery group&tab=delivery-groups'
+      )
+    })
+  })
+
+  describe('archiveDeliveryGroup', () => {
+    it('should archive delivery group and redirect', async () => {
+      // Arrange
+      mockRequest.params = { id: 'frontend-team' }
+
+      // Act
+      await adminController.archiveDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(deleteDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Delivery group archived successfully&tab=delivery-groups'
+      )
+    })
+
+    it('should handle archive errors', async () => {
+      // Arrange
+      mockRequest.params = { id: 'frontend-team' }
+      deleteDeliveryGroup.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.archiveDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to archive delivery group&tab=delivery-groups'
+      )
+    })
+  })
+
+  describe('restoreDeliveryGroup', () => {
+    it('should restore delivery group and redirect', async () => {
+      // Arrange
+      mockRequest.params = { id: 'frontend-team' }
+
+      // Act
+      await adminController.restoreDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(restoreDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Delivery group restored successfully&tab=delivery-groups'
+      )
+    })
+
+    it('should handle restore errors', async () => {
+      // Arrange
+      mockRequest.params = { id: 'frontend-team' }
+      restoreDeliveryGroup.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.restoreDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to restore delivery group&tab=delivery-groups'
       )
     })
   })

@@ -36,7 +36,13 @@ export const PAGE_TITLES = {
   ARCHIVE_PROJECT_UPDATE: 'Archive Project Update',
   CONFIRM_PROJECT_DELETION: 'Confirm Project Deletion',
   CONFIRM_DELETE_ALL_STANDARDS: 'Confirm Delete All Standards',
-  CONFIRM_DELETE_ALL_PROFESSIONS: 'Confirm Delete All Professions'
+  CONFIRM_DELETE_ALL_PROFESSIONS: 'Confirm Delete All Professions',
+  ADD_DELIVERY_GROUP: 'Add Delivery Group',
+  EDIT_DELIVERY_GROUP: 'Edit Delivery Group',
+  CONFIRM_DELETE_DELIVERY_GROUP: 'Confirm Delete Delivery Group',
+  ADD_DELIVERY_PARTNER: 'Add Delivery Partner',
+  EDIT_DELIVERY_PARTNER: 'Edit Delivery Partner',
+  CONFIRM_DELETE_DELIVERY_PARTNER: 'Confirm Delete Delivery Partner'
 }
 
 export const HEADINGS = {
@@ -46,7 +52,13 @@ export const HEADINGS = {
   DATA_MANAGEMENT: 'Data Management',
   DELETE_PROJECT: 'Delete Project',
   DELETE_ALL_STANDARDS: 'Delete All Standards',
-  DELETE_ALL_PROFESSIONS: 'Delete All Professions'
+  DELETE_ALL_PROFESSIONS: 'Delete All Professions',
+  ADD_DELIVERY_GROUP: 'Add Delivery Group',
+  EDIT_DELIVERY_GROUP: 'Edit Delivery Group',
+  DELETE_DELIVERY_GROUP: 'Delete Delivery Group',
+  ADD_DELIVERY_PARTNER: 'Add Delivery Partner',
+  EDIT_DELIVERY_PARTNER: 'Edit Delivery Partner',
+  DELETE_DELIVERY_PARTNER: 'Delete Delivery Partner'
 }
 
 export const VIEW_TEMPLATES = {
@@ -75,6 +87,7 @@ export const VIEW_TEMPLATES = {
   PROJECTS_MANAGE_SELECT: 'projects/manage/views/select',
   PROJECTS_MANAGE_STATUS: 'projects/manage/views/status',
   PROJECTS_MANAGE_DETAILS: 'projects/manage/views/details',
+  PROJECTS_MANAGE_ADD_PARTNER: 'projects/manage/views/add-partner',
 
   // Project standards views
   PROJECTS_STANDARDS_LIST: 'projects/standards/views/list',
@@ -110,7 +123,31 @@ export const ADMIN_NOTIFICATIONS = {
   FAILED_TO_SEED_PROFESSIONS: 'Failed to seed professions',
   PROJECTS_SEEDED_SUCCESSFULLY:
     'Projects and assessments seeded successfully with new system',
-  FAILED_TO_SEED_PROJECTS: 'Failed to seed projects and assessments'
+  FAILED_TO_SEED_PROJECTS: 'Failed to seed projects and assessments',
+
+  // Delivery Groups notifications
+  DELIVERY_GROUP_CREATED_SUCCESSFULLY: 'Delivery group created successfully',
+  DELIVERY_GROUP_UPDATED_SUCCESSFULLY: 'Delivery group updated successfully',
+  DELIVERY_GROUP_ARCHIVED_SUCCESSFULLY: 'Delivery group archived successfully',
+  DELIVERY_GROUP_RESTORED_SUCCESSFULLY: 'Delivery group restored successfully',
+  FAILED_TO_CREATE_DELIVERY_GROUP: 'Failed to create delivery group',
+  FAILED_TO_UPDATE_DELIVERY_GROUP: 'Failed to update delivery group',
+  FAILED_TO_ARCHIVE_DELIVERY_GROUP: 'Failed to archive delivery group',
+  FAILED_TO_RESTORE_DELIVERY_GROUP: 'Failed to restore delivery group',
+
+  // Delivery Partners notifications
+  DELIVERY_PARTNER_CREATED_SUCCESSFULLY:
+    'Delivery partner created successfully',
+  DELIVERY_PARTNER_UPDATED_SUCCESSFULLY:
+    'Delivery partner updated successfully',
+  DELIVERY_PARTNER_ARCHIVED_SUCCESSFULLY:
+    'Delivery partner archived successfully',
+  DELIVERY_PARTNER_RESTORED_SUCCESSFULLY:
+    'Delivery partner restored successfully',
+  FAILED_TO_CREATE_DELIVERY_PARTNER: 'Failed to create delivery partner',
+  FAILED_TO_UPDATE_DELIVERY_PARTNER: 'Failed to update delivery partner',
+  FAILED_TO_ARCHIVE_DELIVERY_PARTNER: 'Failed to archive delivery partner',
+  FAILED_TO_RESTORE_DELIVERY_PARTNER: 'Failed to restore delivery partner'
 }
 
 export const MANAGE_NOTIFICATIONS = {

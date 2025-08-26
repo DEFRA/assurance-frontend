@@ -40,6 +40,15 @@
         {% if project.defCode %}
           <p class="govuk-body-m govuk-!-margin-bottom-1"><strong>Project ID:</strong> {{ project.defCode }}</p>
         {% endif %}
+        {% if deliveryPartners and deliveryPartners.length > 0 %}
+          <p class="govuk-body-m govuk-!-margin-bottom-1">
+            <strong>Delivery partner{{ 's' if deliveryPartners.length > 1 }}:</strong> 
+            {% for partner in deliveryPartners %}
+              {{- partner.name }}
+              {%- if not loop.last %}, {% endif -%}
+            {% endfor %}
+          </p>
+        {% endif %}
       </div>
       
       <!-- Current delivery status heading -->

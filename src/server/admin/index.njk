@@ -473,6 +473,325 @@
     </div>
   {% endset %}
 
+  {% set deliveryGroupsTabContent %}
+    <!-- Add New Delivery Group Form -->
+    <details class="govuk-details" data-module="govuk-details">
+      <summary class="govuk-details__summary">
+        <span class="govuk-details__summary-text">
+          Add New Delivery Group
+        </span>
+      </summary>
+      <div class="govuk-details__text">
+        <form method="POST" action="/admin/delivery-groups/create">
+          {{ govukInput({
+            label: {
+              text: "Name",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Maximum 100 characters"
+            },
+            id: "delivery-group-name",
+            name: "name",
+            classes: "govuk-!-width-two-thirds",
+            attributes: {
+              maxlength: "100"
+            }
+          }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "Lead",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Name of the delivery group lead (optional)"
+            },
+            id: "delivery-group-lead",
+            name: "lead",
+            classes: "govuk-!-width-two-thirds",
+            attributes: {
+              maxlength: "100"
+            }
+          }) }}
+          
+          {{ govukButton({
+            text: "Add Delivery Group",
+            classes: "govuk-button--secondary"
+          }) }}
+        </form>
+      </div>
+    </details>
+
+    <!-- Update Delivery Group Form -->
+    <details class="govuk-details" data-module="govuk-details">
+      <summary class="govuk-details__summary">
+        <span class="govuk-details__summary-text">
+          Update Delivery Group
+        </span>
+      </summary>
+      <div class="govuk-details__text">
+        <form method="POST" action="/admin/delivery-groups/update">
+          {% set deliveryGroupOptions = [{ value: "", text: "Choose delivery group" }] %}
+          {% for group in deliveryGroups %}
+            {% set groupName = group.Name or group.name %}
+            {% set isActive = group.IsActive if group.IsActive != undefined else group.isActive %}
+            {% set deliveryGroupOptions = deliveryGroupOptions.concat([{ 
+              value: group.Id or group.id, 
+              text: groupName + (" (Archived)" if not isActive else "")
+            }]) %}
+          {% endfor %}
+          
+          {{ govukSelect({
+            id: "update-delivery-group-id",
+            name: "id",
+            label: {
+              text: "Select delivery group to update",
+              classes: "govuk-label--s"
+            },
+            items: deliveryGroupOptions
+          }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "New Name",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Leave empty to keep current name"
+            },
+            id: "update-delivery-group-name",
+            name: "name",
+            classes: "govuk-!-width-two-thirds",
+            attributes: {
+              maxlength: "100"
+            }
+          }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "New Lead",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Leave empty to keep current lead"
+            },
+            id: "update-delivery-group-lead",
+            name: "lead",
+            classes: "govuk-!-width-two-thirds",
+            attributes: {
+              maxlength: "100"
+            }
+          }) }}
+          
+          {{ govukButton({
+            text: "Update Delivery Group",
+            classes: "govuk-button--secondary"
+          }) }}
+        </form>
+      </div>
+    </details>
+
+    <!-- Delivery Groups Table -->
+    {% if deliveryGroups and deliveryGroups.length > 0 %}
+      <h3 class="govuk-heading-s">All Delivery Groups</h3>
+      <table class="govuk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header">Name</th>
+            <th scope="col" class="govuk-table__header">Lead</th>
+            <th scope="col" class="govuk-table__header">Status</th>
+            <th scope="col" class="govuk-table__header">State</th>
+            <th scope="col" class="govuk-table__header">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for group in deliveryGroups %}
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell">{{ group.Name or group.name }}</td>
+              <td class="govuk-table__cell">{{ group.Lead or group.lead or '-' }}</td>
+              <td class="govuk-table__cell">
+                {% set statusText = group.Status or group.status or 'Pending' %}
+                {% if statusText == 'Pending' %}
+                  {{ govukTag({ text: statusText, classes: "govuk-tag--blue" }) }}
+                {% elif statusText == 'Active' %}
+                  {{ govukTag({ text: statusText, classes: "govuk-tag--green" }) }}
+                {% elif statusText == 'Complete' %}
+                  {{ govukTag({ text: statusText, classes: "govuk-tag--green" }) }}
+                {% elif statusText == 'On Hold' %}
+                  {{ govukTag({ text: statusText, classes: "govuk-tag--yellow" }) }}
+                {% elif statusText == 'Cancelled' %}
+                  {{ govukTag({ text: statusText, classes: "govuk-tag--red" }) }}
+                {% else %}
+                  {{ govukTag({ text: statusText, classes: "govuk-tag--grey" }) }}
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                {% set isActive = group.IsActive if group.IsActive != undefined else group.isActive %}
+                {% if isActive %}
+                  {{ govukTag({ text: "Active", classes: "govuk-tag--green" }) }}
+                {% else %}
+                  {{ govukTag({ text: "Archived", classes: "govuk-tag--grey" }) }}
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                <div class="govuk-button-group">
+                  {% set isActive = group.IsActive if group.IsActive != undefined else group.isActive %}
+                  {% set groupId = group.Id or group.id %}
+                  {% if isActive %}
+                    {% if not isTestEnvironment %}
+                      <form method="POST" action="/admin/delivery-groups/{{ groupId }}/archive" class="govuk-!-display-inline-block">
+                        <button class="govuk-button govuk-button--warning govuk-!-margin-bottom-0">Archive</button>
+                      </form>
+                    {% endif %}
+                  {% else %}
+                    {% if not isTestEnvironment %}
+                      <form method="POST" action="/admin/delivery-groups/{{ groupId }}/restore" class="govuk-!-display-inline-block">
+                        <button class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0">Restore</button>
+                      </form>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="govuk-body">No delivery groups found.</p>
+    {% endif %}
+  {% endset %}
+
+  {% set deliveryPartnersTabContent %}
+    <!-- Add New Delivery Partner Form -->
+    <details class="govuk-details" data-module="govuk-details">
+      <summary class="govuk-details__summary">
+        <span class="govuk-details__summary-text">
+          Add New Delivery Partner
+        </span>
+      </summary>
+      <div class="govuk-details__text">
+        <form method="POST" action="/admin/delivery-partners/create">
+          {{ govukInput({
+            label: {
+              text: "Name",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Maximum 100 characters"
+            },
+            id: "delivery-partner-name",
+            name: "name",
+            classes: "govuk-!-width-two-thirds",
+            attributes: {
+              maxlength: "100"
+            }
+          }) }}
+          
+          {{ govukButton({
+            text: "Add Delivery Partner",
+            classes: "govuk-button--secondary"
+          }) }}
+        </form>
+      </div>
+    </details>
+
+    <!-- Update Delivery Partner Form -->
+    <details class="govuk-details" data-module="govuk-details">
+      <summary class="govuk-details__summary">
+        <span class="govuk-details__summary-text">
+          Update Delivery Partner Name
+        </span>
+      </summary>
+      <div class="govuk-details__text">
+        <form method="POST" action="/admin/delivery-partners/update">
+          {% set deliveryPartnerOptions = [{ value: "", text: "Choose delivery partner" }] %}
+          {% for partner in deliveryPartners %}
+            {% set deliveryPartnerOptions = deliveryPartnerOptions.concat([{ 
+              value: partner.id, 
+              text: partner.name + (" (Archived)" if not partner.isActive else "")
+            }]) %}
+          {% endfor %}
+          
+          {{ govukSelect({
+            id: "update-delivery-partner-id",
+            name: "id",
+            label: {
+              text: "Select delivery partner to update",
+              classes: "govuk-label--s"
+            },
+            items: deliveryPartnerOptions
+          }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "New Name",
+              classes: "govuk-label--s"
+            },
+            id: "update-delivery-partner-name",
+            name: "name",
+            classes: "govuk-!-width-two-thirds",
+            attributes: {
+              maxlength: "100"
+            }
+          }) }}
+          
+          {{ govukButton({
+            text: "Update Name",
+            classes: "govuk-button--secondary"
+          }) }}
+        </form>
+      </div>
+    </details>
+
+    <!-- Delivery Partners Table -->
+    {% if deliveryPartners and deliveryPartners.length > 0 %}
+      <h3 class="govuk-heading-s">All Delivery Partners</h3>
+      <table class="govuk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header">Name</th>
+            <th scope="col" class="govuk-table__header">Status</th>
+            <th scope="col" class="govuk-table__header">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for partner in deliveryPartners %}
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell">{{ partner.name }}</td>
+              <td class="govuk-table__cell">
+                {% if partner.isActive %}
+                  {{ govukTag({ text: "Active", classes: "govuk-tag--green" }) }}
+                {% else %}
+                  {{ govukTag({ text: "Archived", classes: "govuk-tag--grey" }) }}
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                <div class="govuk-button-group">
+                  {% if partner.isActive %}
+                    {% if not isTestEnvironment %}
+                      <form method="POST" action="/admin/delivery-partners/{{ partner.id }}/archive" class="govuk-!-display-inline-block">
+                        <button class="govuk-button govuk-button--warning govuk-!-margin-bottom-0">Archive</button>
+                      </form>
+                    {% endif %}
+                  {% else %}
+                    {% if not isTestEnvironment %}
+                      <form method="POST" action="/admin/delivery-partners/{{ partner.id }}/restore" class="govuk-!-display-inline-block">
+                        <button class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0">Restore</button>
+                      </form>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="govuk-body">No delivery partners found.</p>
+    {% endif %}
+  {% endset %}
+
   {{ govukTabs({
     attributes: {
       "data-module": "govuk-tabs"
@@ -490,6 +809,20 @@
         id: "standards", 
         panel: {
           html: standardsTabContent
+        }
+      },
+      {
+        label: "Delivery Groups",
+        id: "delivery-groups",
+        panel: {
+          html: deliveryGroupsTabContent
+        }
+      },
+      {
+        label: "Delivery Partners",
+        id: "delivery-partners",
+        panel: {
+          html: deliveryPartnersTabContent
         }
       },
       {

@@ -7,10 +7,14 @@ import {
   getProjectById,
   updateProject,
   getProjectHistory,
-  replaceProjectStatus
+  replaceProjectStatus,
+  getProjectDeliveryPartners,
+  addProjectDeliveryPartner,
+  removeProjectDeliveryPartner
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
+import { getDeliveryPartners } from '~/src/server/services/delivery-partners.js'
 import { STATUS, STATUS_LABEL } from '~/src/server/constants/status.js'
 import {
   NOTIFICATIONS,
@@ -677,9 +681,13 @@ export const manageController = {
 
   getManageProjectDetails: async (request, h) => {
     const { id } = request.params
+    const { notification } = request.query
 
     try {
-      const project = await getProjectById(id, request)
+      const [project, deliveryPartners] = await Promise.all([
+        getProjectById(id, request),
+        getProjectDeliveryPartners(id, request)
+      ])
 
       if (!project) {
         return h
@@ -695,6 +703,8 @@ export const manageController = {
         pageTitle: `Update Project Details | ${project.name}`,
         project,
         phaseOptions,
+        deliveryPartners,
+        notification,
         values: {},
         errors: {}
       })
@@ -712,7 +722,11 @@ export const manageController = {
     const { name, phase, defCode } = request.payload
 
     try {
-      const project = await getProjectById(id, request)
+      const [project, deliveryPartners] = await Promise.all([
+        getProjectById(id, request),
+        getProjectDeliveryPartners(id, request)
+      ])
+
       if (!project) {
         return h
           .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
@@ -729,6 +743,7 @@ export const manageController = {
           pageTitle: `Update Project Details | ${project.name}`,
           project,
           phaseOptions,
+          deliveryPartners,
           values: request.payload,
           errors: {
             name: !name,
@@ -757,6 +772,7 @@ export const manageController = {
           pageTitle: `Update Project Details | ${project.name}`,
           project,
           phaseOptions,
+          deliveryPartners,
           values: request.payload,
           errors: {},
           errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT
@@ -764,6 +780,190 @@ export const manageController = {
       }
     } catch (error) {
       request.logger.error({ error, id }, 'Error managing project details')
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
+    }
+  },
+
+  getAddDeliveryPartner: async (request, h) => {
+    const { id } = request.params
+
+    try {
+      const [project, allPartners, currentPartners] = await Promise.all([
+        getProjectById(id, request),
+        getDeliveryPartners(request),
+        getProjectDeliveryPartners(id, request)
+      ])
+
+      if (!project) {
+        return h
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
+          })
+          .code(statusCodes.notFound)
+      }
+
+      // Filter out partners already assigned to this project
+      const currentPartnerIds = currentPartners.map((p) => p.id)
+      const availablePartners = allPartners.filter(
+        (partner) => !currentPartnerIds.includes(partner.id)
+      )
+
+      // Transform partners into radio items for govukRadios
+      const partnerRadioItems = availablePartners.map((partner) => ({
+        value: partner.id,
+        text: partner.name
+      }))
+
+      return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_ADD_PARTNER, {
+        pageTitle: `Add Delivery Partner | ${project.name}`,
+        project,
+        availablePartners,
+        partnerRadioItems,
+        values: {},
+        errors: {}
+      })
+    } catch (error) {
+      request.logger.error(
+        { error, id },
+        'Error loading add delivery partner page'
+      )
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
+    }
+  },
+
+  postAddDeliveryPartner: async (request, h) => {
+    const { id } = request.params
+    const { partnerId } = request.payload
+
+    try {
+      const [project, allPartners, currentPartners] = await Promise.all([
+        getProjectById(id, request),
+        getDeliveryPartners(request),
+        getProjectDeliveryPartners(id, request)
+      ])
+
+      if (!project) {
+        return h
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
+          })
+          .code(statusCodes.notFound)
+      }
+
+      // Validate partner selection
+      if (!partnerId) {
+        // Re-fetch available partners for display
+        const currentPartnerIds = currentPartners.map((p) => p.id)
+        const availablePartners = allPartners.filter(
+          (partner) => !currentPartnerIds.includes(partner.id)
+        )
+
+        // Transform partners into radio items for govukRadios
+        const partnerRadioItems = availablePartners.map((partner) => ({
+          value: partner.id,
+          text: partner.name
+        }))
+
+        return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_ADD_PARTNER, {
+          pageTitle: `Add Delivery Partner | ${project.name}`,
+          project,
+          availablePartners,
+          partnerRadioItems,
+          values: request.payload,
+          errors: {
+            partnerId: { text: 'Select a delivery partner' }
+          },
+          errorMessage: 'Select a delivery partner'
+        })
+      }
+
+      try {
+        // Add delivery partner to project
+        await addProjectDeliveryPartner(id, partnerId, request)
+        request.logger.info(
+          { projectId: id, partnerId },
+          'Delivery partner added to project'
+        )
+
+        return h.redirect(
+          `/projects/${id}/manage/details?notification=${encodeURIComponent('Delivery partner added to project')}`
+        )
+      } catch (error) {
+        request.logger.error(
+          { error, projectId: id, partnerId },
+          'Error adding delivery partner to project'
+        )
+
+        // Re-fetch available partners for display on error
+        const currentPartnerIds = currentPartners.map((p) => p.id)
+        const availablePartners = allPartners.filter(
+          (partner) => !currentPartnerIds.includes(partner.id)
+        )
+
+        // Transform partners into radio items for govukRadios
+        const partnerRadioItems = availablePartners.map((partner) => ({
+          value: partner.id,
+          text: partner.name
+        }))
+
+        return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_ADD_PARTNER, {
+          pageTitle: `Add Delivery Partner | ${project.name}`,
+          project,
+          availablePartners,
+          partnerRadioItems,
+          values: request.payload,
+          errors: {},
+          errorMessage: 'Failed to add delivery partner. Please try again.'
+        })
+      }
+    } catch (error) {
+      request.logger.error(
+        { error, id },
+        'Error processing add delivery partner'
+      )
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
+    }
+  },
+
+  removeDeliveryPartner: async (request, h) => {
+    const { id, partnerId } = request.params
+
+    try {
+      const project = await getProjectById(id, request)
+      if (!project) {
+        return h
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
+          })
+          .code(statusCodes.notFound)
+      }
+
+      try {
+        // Remove delivery partner from project
+        await removeProjectDeliveryPartner(id, partnerId, request)
+        request.logger.info(
+          { projectId: id, partnerId },
+          'Delivery partner removed from project'
+        )
+
+        return h.redirect(
+          `/projects/${id}/manage/details?notification=${encodeURIComponent('Delivery partner removed from project')}`
+        )
+      } catch (error) {
+        request.logger.error(
+          { error, projectId: id, partnerId },
+          'Error removing delivery partner from project'
+        )
+
+        return h.redirect(
+          `/projects/${id}/manage/details?notification=${encodeURIComponent('Failed to remove delivery partner. Please try again.')}`
+        )
+      }
+    } catch (error) {
+      request.logger.error(
+        { error, id, partnerId },
+        'Error processing remove delivery partner'
+      )
       throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   }

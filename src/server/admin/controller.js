@@ -21,6 +21,20 @@ import {
   deleteProfession,
   restoreProfession
 } from '~/src/server/services/professions.js'
+import {
+  getAllDeliveryGroups,
+  createDeliveryGroup,
+  updateDeliveryGroup,
+  deleteDeliveryGroup,
+  restoreDeliveryGroup
+} from '~/src/server/services/delivery-groups.js'
+import {
+  getAllDeliveryPartners,
+  createDeliveryPartner,
+  updateDeliveryPartner,
+  deleteDeliveryPartner,
+  restoreDeliveryPartner
+} from '~/src/server/services/delivery-partners.js'
 import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
 import { defaultServiceStandards } from '~/src/server/data/service-standards.js'
 import { defaultProfessions } from '~/src/server/data/professions.js'
@@ -91,6 +105,24 @@ const fetchProfessionsData = async (request) => {
   }
 }
 
+const fetchDeliveryGroupsData = async (request) => {
+  try {
+    return (await getAllDeliveryGroups(request)) || []
+  } catch (error) {
+    request.logger.error({ error }, 'Error fetching delivery groups')
+    return []
+  }
+}
+
+const fetchDeliveryPartnersData = async (request) => {
+  try {
+    return (await getAllDeliveryPartners(request)) || []
+  } catch (error) {
+    request.logger.error({ error }, 'Error fetching delivery partners')
+    return []
+  }
+}
+
 const getEnvironmentFlags = () => {
   const isTestEnvironment = config.get ? config.get('env') === 'test' : false
   const isDevelopment = config.get ? config.get('env') === 'development' : false
@@ -104,6 +136,8 @@ export const adminController = {
       const projects = await fetchProjectsData(request)
       const { professions, allProfessions } =
         await fetchProfessionsData(request)
+      const deliveryGroups = await fetchDeliveryGroupsData(request)
+      const deliveryPartners = await fetchDeliveryPartnersData(request)
       const { isTestEnvironment, isDevelopment } = getEnvironmentFlags()
 
       return h.view(VIEW_TEMPLATES.ADMIN_INDEX, {
@@ -115,6 +149,8 @@ export const adminController = {
         projects,
         standards: allStandards,
         professions: allProfessions,
+        deliveryGroups,
+        deliveryPartners,
         notification: request.query.notification,
         isTestEnvironment,
         isDevelopment
@@ -572,6 +608,221 @@ export const adminController = {
       request.logger.error({ error }, 'Failed to restore service standard')
       return h.redirect(
         `${ADMIN_BASE_URL}?notification=Failed to restore service standard&tab=standards`
+      )
+    }
+  },
+
+  // Delivery Groups CRUD operations
+  createDeliveryGroup: async (request, h) => {
+    try {
+      const { name, lead } = request.payload
+
+      if (!name?.trim()) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Name is required&tab=delivery-groups`
+        )
+      }
+
+      // Generate ID from name (kebab-case) following the same pattern as professions
+      const id = name
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+
+      const deliveryGroupData = {
+        Id: id,
+        Name: name.trim(),
+        Status: 'Pending', // Default status is now Pending
+        Lead: lead?.trim() || '', // Handle optional lead field
+        IsActive: true,
+        CreatedAt: new Date().toISOString(),
+        UpdatedAt: new Date().toISOString()
+      }
+
+      await createDeliveryGroup(deliveryGroupData, request)
+
+      request.logger.info(
+        { id, name, lead },
+        'Delivery group created successfully'
+      )
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.DELIVERY_GROUP_CREATED_SUCCESSFULLY}&tab=delivery-groups`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to create delivery group')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_CREATE_DELIVERY_GROUP}&tab=delivery-groups`
+      )
+    }
+  },
+
+  updateDeliveryGroup: async (request, h) => {
+    try {
+      const { id, name, lead } = request.payload
+
+      if (!id) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Please select a delivery group to update&tab=delivery-groups`
+        )
+      }
+
+      if (!name?.trim() && !lead?.trim()) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Please provide at least a name or lead to update&tab=delivery-groups`
+        )
+      }
+
+      // Build update payload with only the fields that are provided
+      const updateData = {
+        UpdatedAt: new Date().toISOString()
+      }
+
+      if (name?.trim()) {
+        updateData.Name = name.trim()
+      }
+
+      if (lead?.trim()) {
+        updateData.Lead = lead.trim()
+      }
+
+      await updateDeliveryGroup(id, updateData, request)
+
+      const updatedFields = []
+      if (name?.trim()) {
+        updatedFields.push('name')
+      }
+      if (lead?.trim()) {
+        updatedFields.push('lead')
+      }
+
+      request.logger.info(
+        { id, name, lead, updatedFields },
+        'Delivery group updated successfully'
+      )
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.DELIVERY_GROUP_UPDATED_SUCCESSFULLY}&tab=delivery-groups`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to update delivery group')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_UPDATE_DELIVERY_GROUP}&tab=delivery-groups`
+      )
+    }
+  },
+
+  archiveDeliveryGroup: async (request, h) => {
+    try {
+      const { id } = request.params
+      await deleteDeliveryGroup(id, request)
+
+      request.logger.info({ id }, 'Delivery group archived successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.DELIVERY_GROUP_ARCHIVED_SUCCESSFULLY}&tab=delivery-groups`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to archive delivery group')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_ARCHIVE_DELIVERY_GROUP}&tab=delivery-groups`
+      )
+    }
+  },
+
+  restoreDeliveryGroup: async (request, h) => {
+    try {
+      const { id } = request.params
+      await restoreDeliveryGroup(id, request)
+
+      request.logger.info({ id }, 'Delivery group restored successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.DELIVERY_GROUP_RESTORED_SUCCESSFULLY}&tab=delivery-groups`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to restore delivery group')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_RESTORE_DELIVERY_GROUP}&tab=delivery-groups`
+      )
+    }
+  },
+
+  // Delivery Partners CRUD operations
+  createDeliveryPartner: async (request, h) => {
+    try {
+      const { name } = request.payload
+
+      if (!name?.trim()) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Name is required&tab=delivery-partners`
+        )
+      }
+
+      await createDeliveryPartner({ name }, request)
+
+      request.logger.info({ name }, 'Delivery partner created successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.DELIVERY_PARTNER_CREATED_SUCCESSFULLY}&tab=delivery-partners`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to create delivery partner')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_CREATE_DELIVERY_PARTNER}&tab=delivery-partners`
+      )
+    }
+  },
+
+  updateDeliveryPartner: async (request, h) => {
+    try {
+      const { id, name } = request.payload
+
+      if (!id || !name?.trim()) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Please select a delivery partner and enter a new name&tab=delivery-partners`
+        )
+      }
+
+      await updateDeliveryPartner(id, { name }, request)
+
+      request.logger.info({ id, name }, 'Delivery partner updated successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.DELIVERY_PARTNER_UPDATED_SUCCESSFULLY}&tab=delivery-partners`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to update delivery partner')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_UPDATE_DELIVERY_PARTNER}&tab=delivery-partners`
+      )
+    }
+  },
+
+  archiveDeliveryPartner: async (request, h) => {
+    try {
+      const { id } = request.params
+      await deleteDeliveryPartner(id, request)
+
+      request.logger.info({ id }, 'Delivery partner archived successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.DELIVERY_PARTNER_ARCHIVED_SUCCESSFULLY}&tab=delivery-partners`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to archive delivery partner')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_ARCHIVE_DELIVERY_PARTNER}&tab=delivery-partners`
+      )
+    }
+  },
+
+  restoreDeliveryPartner: async (request, h) => {
+    try {
+      const { id } = request.params
+      await restoreDeliveryPartner(id, request)
+
+      request.logger.info({ id }, 'Delivery partner restored successfully')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.DELIVERY_PARTNER_RESTORED_SUCCESSFULLY}&tab=delivery-partners`
+      )
+    } catch (error) {
+      request.logger.error({ error }, 'Failed to restore delivery partner')
+      return h.redirect(
+        `${ADMIN_BASE_URL}?notification=${ADMIN_NOTIFICATIONS.FAILED_TO_RESTORE_DELIVERY_PARTNER}&tab=delivery-partners`
       )
     }
   }

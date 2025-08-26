@@ -5,6 +5,8 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 
 {% block beforeContent %}
   {{ govukBreadcrumbs({
@@ -28,6 +30,14 @@
 {% endblock %}
 
 {% block content %}
+  {% if notification %}
+    {{ govukNotificationBanner({
+      type: "success",
+      titleText: "Success",
+      text: notification
+    }) }}
+  {% endif %}
+
   <h1 class="govuk-heading-xl">Update Project Details</h1>
   <h2 class="govuk-heading-l govuk-!-margin-bottom-6">{{ project.name }}</h2>
   
@@ -94,4 +104,32 @@
       }) }}
     </div>
   </form>
+
+  {# 
+  Delivery partner functionality temporarily disabled
+  
+  <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+  <h2 class="govuk-heading-m">Delivery partner(s)</h2>
+  
+  {% if deliveryPartners and deliveryPartners.length > 0 %}
+    {{ govukTable({
+      head: [
+        {
+          text: "Delivery partner name"
+        },
+        {
+          text: "Action"
+        }
+      ],
+      rows: deliveryPartners | deliveryPartnerTableRows(project.id)
+    }) }}
+  {% else %}
+    <p class="govuk-body">No delivery partners are currently assigned to this project.</p>
+  {% endif %}
+
+  <p class="govuk-body govuk-!-margin-top-4">
+    <a href="/projects/{{ project.id }}/manage/delivery-partners/add" class="govuk-link">Add a delivery partner</a>
+  </p>
+  #}
 {% endblock %} 

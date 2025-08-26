@@ -13,6 +13,7 @@ const mockGetProfessions = jest.fn()
 const mockGetProfessionHistory = jest.fn()
 const mockArchiveProjectHistoryEntry = jest.fn()
 const mockArchiveProfessionHistoryEntry = jest.fn()
+const mockGetProjectDeliveryPartners = jest.fn()
 
 jest.mock('~/src/server/services/projects.js', () => ({
   getProjects: (...args) => mockGetProjects(...args),
@@ -24,7 +25,9 @@ jest.mock('~/src/server/services/projects.js', () => ({
   archiveProjectHistoryEntry: (...args) =>
     mockArchiveProjectHistoryEntry(...args),
   archiveProfessionHistoryEntry: (...args) =>
-    mockArchiveProfessionHistoryEntry(...args)
+    mockArchiveProfessionHistoryEntry(...args),
+  getProjectDeliveryPartners: (...args) =>
+    mockGetProjectDeliveryPartners(...args)
 }))
 
 jest.mock('~/src/server/services/service-standards.js', () => ({
@@ -156,9 +159,14 @@ describe('Projects controller', () => {
       }
       const mockStandards = [{ status: 'GREEN' }]
       const mockProfessions = []
+      const mockDeliveryPartners = []
+      const mockProjectHistory = []
+
       mockGetProjectById.mockResolvedValue(mockProject)
       mockGetServiceStandards.mockResolvedValue(mockStandards)
       mockGetProfessions.mockResolvedValue(mockProfessions)
+      mockGetProjectDeliveryPartners.mockResolvedValue(mockDeliveryPartners)
+      mockGetProjectHistory.mockResolvedValue(mockProjectHistory)
 
       // Act
       await projectsController.get(
@@ -189,6 +197,8 @@ describe('Projects controller', () => {
           project: mockProject,
           standards: mockStandards,
           professions: mockProfessions,
+          deliveryPartners: mockDeliveryPartners,
+          projectHistory: mockProjectHistory,
           isAuthenticated: true,
           statusClassMap: expect.any(Object),
           statusLabelMap: expect.any(Object)

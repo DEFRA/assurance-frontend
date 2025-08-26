@@ -1503,4 +1503,289 @@ describe('Admin controller', () => {
       )
     })
   })
+
+  // Delivery Groups Tests
+  describe('createDeliveryGroup', () => {
+    it('should create delivery group successfully and redirect', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: 'Frontend Team',
+        lead: 'John Doe'
+      }
+
+      // Act
+      await adminController.createDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(createDeliveryGroup).toHaveBeenCalledWith(
+        {
+          Id: 'frontend-team',
+          Name: 'Frontend Team',
+          Status: 'Pending',
+          Lead: 'John Doe',
+          IsActive: true,
+          CreatedAt: expect.any(String),
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Delivery group created successfully&tab=delivery-groups'
+      )
+    })
+
+    it('should handle missing name', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: '',
+        lead: 'John Doe'
+      }
+
+      // Act
+      await adminController.createDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(createDeliveryGroup).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Name is required&tab=delivery-groups'
+      )
+    })
+
+    it('should handle missing lead (should still create with empty lead)', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: 'Backend Team'
+        // lead is undefined
+      }
+
+      // Act
+      await adminController.createDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(createDeliveryGroup).toHaveBeenCalledWith(
+        {
+          Id: 'backend-team',
+          Name: 'Backend Team',
+          Status: 'Pending',
+          Lead: '',
+          IsActive: true,
+          CreatedAt: expect.any(String),
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Delivery group created successfully&tab=delivery-groups'
+      )
+    })
+
+    it('should handle creation errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        name: 'Test Group',
+        lead: 'Test Lead'
+      }
+      createDeliveryGroup.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.createDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to create delivery group&tab=delivery-groups'
+      )
+    })
+  })
+
+  describe('updateDeliveryGroup', () => {
+    it('should update delivery group name and lead successfully', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'frontend-team',
+        name: 'Updated Frontend Team',
+        lead: 'New Lead'
+      }
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(updateDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        {
+          Name: 'Updated Frontend Team',
+          Lead: 'New Lead',
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Delivery group updated successfully&tab=delivery-groups'
+      )
+    })
+
+    it('should update delivery group name only', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'frontend-team',
+        name: 'Updated Frontend Team',
+        lead: '' // Empty lead
+      }
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(updateDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        {
+          Name: 'Updated Frontend Team',
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
+    })
+
+    it('should update delivery group lead only', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'frontend-team',
+        name: '', // Empty name
+        lead: 'New Lead'
+      }
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(updateDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        {
+          Lead: 'New Lead',
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
+    })
+
+    it('should handle missing id', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: '',
+        name: 'Updated Name',
+        lead: 'Updated Lead'
+      }
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(updateDeliveryGroup).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Please select a delivery group to update&tab=delivery-groups'
+      )
+    })
+
+    it('should handle missing name and lead', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'frontend-team',
+        name: '',
+        lead: ''
+      }
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(updateDeliveryGroup).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Please provide at least a name or lead to update&tab=delivery-groups'
+      )
+    })
+
+    it('should handle update errors', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'frontend-team',
+        name: 'Updated Name',
+        lead: 'Updated Lead'
+      }
+      updateDeliveryGroup.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.updateDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to update delivery group&tab=delivery-groups'
+      )
+    })
+  })
+
+  describe('archiveDeliveryGroup', () => {
+    it('should archive delivery group and redirect', async () => {
+      // Arrange
+      mockRequest.params = { id: 'frontend-team' }
+
+      // Act
+      await adminController.archiveDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(deleteDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Delivery group archived successfully&tab=delivery-groups'
+      )
+    })
+
+    it('should handle archive errors', async () => {
+      // Arrange
+      mockRequest.params = { id: 'frontend-team' }
+      deleteDeliveryGroup.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.archiveDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to archive delivery group&tab=delivery-groups'
+      )
+    })
+  })
+
+  describe('restoreDeliveryGroup', () => {
+    it('should restore delivery group and redirect', async () => {
+      // Arrange
+      mockRequest.params = { id: 'frontend-team' }
+
+      // Act
+      await adminController.restoreDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(restoreDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        mockRequest
+      )
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Delivery group restored successfully&tab=delivery-groups'
+      )
+    })
+
+    it('should handle restore errors', async () => {
+      // Arrange
+      mockRequest.params = { id: 'frontend-team' }
+      restoreDeliveryGroup.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await adminController.restoreDeliveryGroup(mockRequest, mockH)
+
+      // Assert
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Failed to restore delivery group&tab=delivery-groups'
+      )
+    })
+  })
 })

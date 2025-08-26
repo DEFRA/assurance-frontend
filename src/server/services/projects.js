@@ -34,6 +34,8 @@ export async function getProjects(request, options = {}) {
     if (options.tag) {
       queryParams.append('tag', options.tag)
     }
+    // Note: deliveryPartnerIds filtering is handled client-side for now
+    // as it requires mock data relationships
 
     const fullEndpoint = queryParams.toString()
       ? `${endpoint}?${queryParams.toString()}`
@@ -59,6 +61,16 @@ export async function getProjects(request, options = {}) {
     if (!data || !Array.isArray(data)) {
       logger.warn('Invalid data returned from API', { data })
       return []
+    }
+
+    // TODO: Delivery partner filtering should be handled by backend
+    // Note: Backend needs to support deliveryPartnerIds query parameters
+    // For now, delivery partner filtering is disabled until backend endpoints are available
+    if (options.deliveryPartnerIds && options.deliveryPartnerIds.length > 0) {
+      logger.warn(
+        { deliveryPartnerIds: options.deliveryPartnerIds },
+        'Delivery partner filtering requested but not yet supported by backend - ignoring filter'
+      )
     }
 
     logger.info({ count: data.length }, 'Projects retrieved successfully')
@@ -89,6 +101,7 @@ export async function getProjects(request, options = {}) {
       },
       'Failed to fetch projects'
     )
+
     throw error // Let the controller handle the error
   }
 }
@@ -1118,6 +1131,177 @@ export async function replaceProjectStatus(projectId, newProjectData, request) {
       },
       'Failed to replace project status'
     )
+    throw error
+  }
+}
+
+/**
+ * Get delivery partners assigned to a specific project
+ * Note: This will need backend endpoint: GET /api/v{version}/projects/{projectId}/delivery-partners
+ * @param {string} projectId - The project ID
+ * @param {object} request - Hapi request object
+ * @returns {Promise<Array>} List of delivery partners for the project
+ */
+export async function getProjectDeliveryPartners(projectId, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/delivery-partners`
+    logger.info(
+      { endpoint, projectId },
+      'Fetching project delivery partners from API'
+    )
+
+    let data
+    if (request) {
+      logger.info(
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for project delivery partners API`
+      )
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
+      data = await fetcher(endpoint)
+    }
+
+    if (!data || !Array.isArray(data)) {
+      logger.warn('Invalid data returned from API', { data })
+      return []
+    }
+
+    logger.info(
+      { projectId, count: data.length },
+      'Project delivery partners retrieved successfully'
+    )
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        projectId
+      },
+      'Failed to fetch project delivery partners - returning empty array to prevent blocking other data'
+    )
+    // Always return empty array for any error to prevent breaking Promise.all
+    // This ensures service standards and professions still load even if delivery partners fail
+    // TODO: Once backend endpoint is fully implemented, consider more selective error handling
+    logger.warn(
+      { projectId },
+      'Returning empty delivery partners array due to API error'
+    )
+    return []
+  }
+}
+
+/**
+ * Add a delivery partner to a project
+ * Note: This will need backend endpoint: POST /api/v{version}/projects/{projectId}/delivery-partners
+ * @param {string} projectId - The project ID
+ * @param {string} partnerId - The delivery partner ID to add
+ * @param {object} request - Hapi request object
+ * @returns {Promise<void>}
+ */
+export async function addProjectDeliveryPartner(projectId, partnerId, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/delivery-partners`
+    logger.info(
+      { endpoint, projectId, partnerId },
+      'Adding delivery partner to project'
+    )
+
+    const requestData = { partnerId }
+
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(requestData)
+      })
+    } else {
+      await fetcher(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(requestData)
+      })
+    }
+
+    logger.info(
+      { projectId, partnerId },
+      'Delivery partner added to project successfully'
+    )
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        projectId,
+        partnerId
+      },
+      'Failed to add delivery partner to project'
+    )
+    // For now, throw a more user-friendly error if endpoint doesn't exist
+    // TODO: Remove this fallback once backend endpoint is implemented
+    if (error.code === 'ENOTFOUND' || error.message.includes('404')) {
+      throw new Error(
+        'Project delivery partner management is not yet available'
+      )
+    }
+    throw error
+  }
+}
+
+/**
+ * Remove a delivery partner from a project
+ * Note: This will need backend endpoint: DELETE /api/v{version}/projects/{projectId}/delivery-partners/{partnerId}
+ * @param {string} projectId - The project ID
+ * @param {string} partnerId - The delivery partner ID to remove
+ * @param {object} request - Hapi request object
+ * @returns {Promise<void>}
+ */
+export async function removeProjectDeliveryPartner(
+  projectId,
+  partnerId,
+  request
+) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/delivery-partners/${partnerId}`
+    logger.info(
+      { endpoint, projectId, partnerId },
+      'Removing delivery partner from project'
+    )
+
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch(endpoint, { method: 'DELETE' })
+    } else {
+      await fetcher(endpoint, { method: 'DELETE' })
+    }
+
+    logger.info(
+      { projectId, partnerId },
+      'Delivery partner removed from project successfully'
+    )
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        projectId,
+        partnerId
+      },
+      'Failed to remove delivery partner from project'
+    )
+    // For now, throw a more user-friendly error if endpoint doesn't exist
+    // TODO: Remove this fallback once backend endpoint is implemented
+    if (error.code === 'ENOTFOUND' || error.message.includes('404')) {
+      throw new Error(
+        'Project delivery partner management is not yet available'
+      )
+    }
     throw error
   }
 }

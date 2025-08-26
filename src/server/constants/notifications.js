@@ -87,6 +87,7 @@ export const VIEW_TEMPLATES = {
   PROJECTS_MANAGE_SELECT: 'projects/manage/views/select',
   PROJECTS_MANAGE_STATUS: 'projects/manage/views/status',
   PROJECTS_MANAGE_DETAILS: 'projects/manage/views/details',
+  PROJECTS_MANAGE_ADD_PARTNER: 'projects/manage/views/add-partner',
 
   // Project standards views
   PROJECTS_STANDARDS_LIST: 'projects/standards/views/list',

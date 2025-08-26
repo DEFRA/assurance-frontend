@@ -9,7 +9,8 @@ import {
   updateProject,
   getProjectHistory,
   getProfessionHistory,
-  archiveProjectHistoryEntry
+  archiveProjectHistoryEntry,
+  getProjectDeliveryPartners
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
@@ -256,13 +257,22 @@ export const projectsController = {
         projectStatus: project.status
       })
 
-      // Get service standards and professions for reference data
+      // Get service standards, professions, and delivery partners for reference data
       let standards = []
       let professions = []
+      let deliveryPartners = []
 
       try {
-        standards = await getServiceStandards(request)
-        professions = await getProfessions(request)
+        const [standardsData, professionsData, deliveryPartnersData] =
+          await Promise.all([
+            getServiceStandards(request),
+            getProfessions(request),
+            getProjectDeliveryPartners(id, request)
+          ])
+
+        standards = standardsData
+        professions = professionsData
+        deliveryPartners = deliveryPartnersData
       } catch (error) {
         request.logger.error({ error }, 'Error fetching reference data')
       }
@@ -307,6 +317,7 @@ export const projectsController = {
         project,
         standards,
         professions,
+        deliveryPartners,
         projectHistory,
         isAuthenticated,
         statusClassMap: STATUS_CLASS,

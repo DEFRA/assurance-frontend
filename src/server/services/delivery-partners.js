@@ -1,203 +1,370 @@
-// Mock delivery partners service - frontend only implementation
-// This will be replaced with actual API calls when backend is implemented
+import { logger } from '~/src/server/common/helpers/logging/logger.js'
+import { fetcher } from '~/src/server/common/helpers/fetch/fetcher.js'
+import { authedFetchJsonDecorator } from '~/src/server/common/helpers/fetch/authed-fetch-json.js'
+import { config } from '~/src/config/config.js'
+import { API_AUTH_MESSAGES } from '~/src/server/common/constants/log-messages.js'
 
-const mockDeliveryPartners = [
-  {
-    id: 'delivery-partner-1',
-    name: 'Acme Solutions Ltd',
-    isActive: true,
-    createdAt: '2024-01-10T08:30:00.000Z',
-    updatedAt: '2024-01-10T08:30:00.000Z'
-  },
-  {
-    id: 'delivery-partner-2',
-    name: 'TechFlow Consulting',
-    isActive: true,
-    createdAt: '2024-01-12T11:45:00.000Z',
-    updatedAt: '2024-01-12T11:45:00.000Z'
-  },
-  {
-    id: 'delivery-partner-3',
-    name: 'Digital Solutions Partnership',
-    isActive: false,
-    createdAt: '2024-01-14T16:20:00.000Z',
-    updatedAt: '2024-01-19T10:15:00.000Z'
-  },
-  {
-    id: 'delivery-partner-4',
-    name: 'CloudFirst Technologies',
-    isActive: true,
-    createdAt: '2024-01-18T13:10:00.000Z',
-    updatedAt: '2024-01-18T13:10:00.000Z'
-  }
-]
+// API endpoint constants
+const API_BASE_PATH = 'deliverypartners'
 
-// Helper function to generate unique IDs
-const generateId = (name) => {
-  const timestamp = Date.now()
-  const cleanName = name
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-  return `delivery-partner-${cleanName}-${timestamp}`
-}
+// API configuration constants
+const API_VERSION_KEY = 'api.version'
+const API_BASE_PREFIX = '/api'
 
-export const getDeliveryPartners = async (request) => {
-  request.logger?.info('Fetching delivery partners (mock data)')
-
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 50))
-
-  // Return only active partners by default (like professions service)
-  return mockDeliveryPartners
-    .filter((p) => p.isActive)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-}
-
-export const getAllDeliveryPartners = async (request) => {
-  request.logger?.info(
-    'Fetching all delivery partners including archived (mock data)'
-  )
-
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 50))
-
-  // Return all partners (active and archived)
-  return mockDeliveryPartners.sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+/**
+ * Generate a unique ID from a name
+ * @param {string} name - The name to generate ID from
+ * @returns {string} - Generated ID
+ */
+function generateId(name) {
+  return (
+    name
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '') +
+    '-' +
+    Date.now()
   )
 }
 
-export const getDeliveryPartnerById = async (id, request) => {
-  request.logger?.info({ id }, 'Fetching delivery partner by ID (mock data)')
+/**
+ * Get all active delivery partners
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<Array>} - The active delivery partners
+ */
+export async function getDeliveryPartners(request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
+    logger.info({ endpoint }, 'Fetching delivery partners from API')
 
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 30))
+    let data
+    if (request) {
+      logger.info(
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for delivery partners API`
+      )
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
+      data = await fetcher(endpoint)
+    }
 
-  const partner = mockDeliveryPartners.find((p) => p.id === id)
-  if (!partner) {
-    throw new Error(`Delivery partner with ID ${id} not found`)
+    if (!data || !Array.isArray(data)) {
+      logger.warn('Invalid data returned from API', { data })
+      return []
+    }
+
+    // Filter to only active partners and sort by created date (newest first)
+    const activePartners = data
+      .filter((partner) => partner.isActive !== false)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+
+    logger.info(
+      { count: activePartners.length },
+      'Active delivery partners retrieved successfully'
+    )
+    return activePartners
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code
+      },
+      'Failed to fetch delivery partners'
+    )
+    throw error
   }
-
-  return partner
 }
 
-export const createDeliveryPartner = async (partnerData, request) => {
-  request.logger?.info({ partnerData }, 'Creating delivery partner (mock data)')
+/**
+ * Get all delivery partners including inactive ones (for admin use)
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<Array>} - All delivery partners including inactive
+ */
+export async function getAllDeliveryPartners(request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
+    logger.info(
+      { endpoint },
+      'Fetching all delivery partners (including inactive) from API'
+    )
 
-  // Validate required fields
-  if (!partnerData.name || partnerData.name.trim().length === 0) {
-    throw new Error('Name is required')
+    let data
+    if (request) {
+      logger.info(
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for all delivery partners API`
+      )
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
+      data = await fetcher(endpoint)
+    }
+
+    if (!data || !Array.isArray(data)) {
+      logger.warn('Invalid data returned from API', { data })
+      return []
+    }
+
+    // Sort by created date (newest first) - includes both active and inactive
+    const sortedPartners = data.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    )
+
+    logger.info(
+      { count: sortedPartners.length },
+      'All delivery partners retrieved successfully'
+    )
+    return sortedPartners
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code
+      },
+      'Failed to fetch all delivery partners'
+    )
+    throw error
   }
-
-  if (partnerData.name.length > 100) {
-    throw new Error('Name must be 100 characters or less')
-  }
-
-  // Check for duplicate names among active partners
-  const existingPartner = mockDeliveryPartners.find(
-    (p) => p.isActive && p.name.toLowerCase() === partnerData.name.toLowerCase()
-  )
-  if (existingPartner) {
-    throw new Error('A delivery partner with this name already exists')
-  }
-
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 100))
-
-  const newPartner = {
-    id: generateId(partnerData.name),
-    name: partnerData.name.trim(),
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-
-  mockDeliveryPartners.push(newPartner)
-  return newPartner
 }
 
-export const updateDeliveryPartner = async (id, updateData, request) => {
-  request.logger?.info(
-    { id, updateData },
-    'Updating delivery partner (mock data)'
-  )
+/**
+ * Get delivery partner by ID
+ * @param {string} id - The delivery partner ID
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object|null>} - The delivery partner or null if not found
+ */
+export async function getDeliveryPartnerById(id, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
+    logger.info({ endpoint, id }, 'Fetching delivery partner by ID from API')
 
-  const partnerIndex = mockDeliveryPartners.findIndex((p) => p.id === id)
-  if (partnerIndex === -1) {
-    throw new Error(`Delivery partner with ID ${id} not found`)
+    let data
+    if (request) {
+      logger.info(
+        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for delivery partner by ID API`
+      )
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint)
+    } else {
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
+      data = await fetcher(endpoint)
+    }
+
+    logger.info({ id }, 'Delivery partner retrieved successfully by ID')
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to fetch delivery partner by ID'
+    )
+    throw error
   }
-
-  // Validate required fields
-  if (!updateData.name || updateData.name.trim().length === 0) {
-    throw new Error('Name is required')
-  }
-
-  if (updateData.name.length > 100) {
-    throw new Error('Name must be 100 characters or less')
-  }
-
-  // Check for duplicate names among active partners (excluding current partner)
-  const existingPartner = mockDeliveryPartners.find(
-    (p) =>
-      p.id !== id &&
-      p.isActive &&
-      p.name.toLowerCase() === updateData.name.toLowerCase()
-  )
-  if (existingPartner) {
-    throw new Error('A delivery partner with this name already exists')
-  }
-
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 80))
-
-  mockDeliveryPartners[partnerIndex] = {
-    ...mockDeliveryPartners[partnerIndex],
-    name: updateData.name.trim(),
-    updatedAt: new Date().toISOString()
-  }
-
-  return mockDeliveryPartners[partnerIndex]
 }
 
-export const deleteDeliveryPartner = async (id, request) => {
-  request.logger?.info({ id }, 'Archiving delivery partner (mock data)')
+/**
+ * Create a new delivery partner
+ * @param {object} deliveryPartnerData - The delivery partner data to create
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object>} - The created delivery partner
+ */
+export async function createDeliveryPartner(deliveryPartnerData, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}`
+    logger.info({ endpoint }, 'Creating new delivery partner')
 
-  const partnerIndex = mockDeliveryPartners.findIndex((p) => p.id === id)
-  if (partnerIndex === -1) {
-    throw new Error(`Delivery partner with ID ${id} not found`)
+    // Transform frontend data structure to match backend DeliveryPartnerModel
+    const deliveryPartnerModel = {
+      Id: deliveryPartnerData.id || generateId(deliveryPartnerData.name),
+      Name: deliveryPartnerData.name,
+      IsActive:
+        deliveryPartnerData.isActive !== undefined
+          ? deliveryPartnerData.isActive
+          : true,
+      CreatedAt: new Date().toISOString(),
+      UpdatedAt: new Date().toISOString()
+    }
+
+    logger.info(
+      { model: deliveryPartnerModel },
+      'Transformed delivery partner data for backend'
+    )
+
+    let data
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(deliveryPartnerModel)
+      })
+    } else {
+      data = await fetcher(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(deliveryPartnerModel)
+      })
+    }
+
+    logger.info({ id: data?.id }, 'Delivery partner created successfully')
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code
+      },
+      'Failed to create delivery partner'
+    )
+    throw error
   }
-
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 60))
-
-  // Archive instead of delete
-  mockDeliveryPartners[partnerIndex] = {
-    ...mockDeliveryPartners[partnerIndex],
-    isActive: false,
-    updatedAt: new Date().toISOString()
-  }
-
-  return mockDeliveryPartners[partnerIndex]
 }
 
-export const restoreDeliveryPartner = async (id, request) => {
-  request.logger?.info({ id }, 'Restoring delivery partner (mock data)')
+/**
+ * Update a delivery partner
+ * @param {string} id - The delivery partner ID
+ * @param {object} updateData - The data to update
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object>} - The updated delivery partner
+ */
+export async function updateDeliveryPartner(id, updateData, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
+    logger.info({ endpoint, id }, 'Updating delivery partner')
 
-  const partnerIndex = mockDeliveryPartners.findIndex((p) => p.id === id)
-  if (partnerIndex === -1) {
-    throw new Error(`Delivery partner with ID ${id} not found`)
+    // Transform frontend data structure to match backend DeliveryPartnerModel
+    const deliveryPartnerModel = {
+      Id: id,
+      Name: updateData.name,
+      IsActive: updateData.isActive !== undefined ? updateData.isActive : true,
+      UpdatedAt: new Date().toISOString()
+    }
+
+    // Only include CreatedAt if provided (preserve existing value)
+    if (updateData.createdAt) {
+      deliveryPartnerModel.CreatedAt = updateData.createdAt
+    }
+
+    logger.info(
+      { model: deliveryPartnerModel },
+      'Transformed update data for backend'
+    )
+
+    let data
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      data = await authedFetch(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(deliveryPartnerModel)
+      })
+    } else {
+      data = await fetcher(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(deliveryPartnerModel)
+      })
+    }
+
+    logger.info({ id }, 'Delivery partner updated successfully')
+    return data
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to update delivery partner'
+    )
+    throw error
   }
+}
 
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 60))
+/**
+ * Soft delete a delivery partner (sets isActive to false)
+ * @param {string} id - The delivery partner ID
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<boolean>} - Success status
+ */
+export async function deleteDeliveryPartner(id, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
+    logger.info({ endpoint, id }, 'Soft deleting delivery partner')
 
-  // Restore from archive
-  mockDeliveryPartners[partnerIndex] = {
-    ...mockDeliveryPartners[partnerIndex],
-    isActive: true,
-    updatedAt: new Date().toISOString()
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      await authedFetch(endpoint, { method: 'DELETE' })
+    } else {
+      await fetcher(endpoint, { method: 'DELETE' })
+    }
+
+    logger.info({ id }, 'Delivery partner soft deleted successfully')
+    return true
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to soft delete delivery partner'
+    )
+    throw error
   }
+}
 
-  return mockDeliveryPartners[partnerIndex]
+/**
+ * Restore a soft-deleted delivery partner (sets isActive to true)
+ * Note: Backend doesn't have explicit restore endpoint, so we use update
+ * @param {string} id - The delivery partner ID
+ * @param {import('@hapi/hapi').Request} [request] - The Hapi request object
+ * @returns {Promise<object>} - The restored delivery partner
+ */
+export async function restoreDeliveryPartner(id, request) {
+  try {
+    logger.info({ id }, 'Restoring delivery partner')
+
+    // First get the current partner data
+    const currentPartner = await getDeliveryPartnerById(id, request)
+    if (!currentPartner) {
+      throw new Error(`Delivery partner with ID ${id} not found`)
+    }
+
+    // Update with isActive: true to restore
+    const restoredPartner = await updateDeliveryPartner(
+      id,
+      {
+        ...currentPartner,
+        isActive: true
+      },
+      request
+    )
+
+    logger.info({ id }, 'Delivery partner restored successfully')
+    return restoredPartner
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to restore delivery partner'
+    )
+    throw error
+  }
 }

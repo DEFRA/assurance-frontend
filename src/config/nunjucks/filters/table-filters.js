@@ -143,3 +143,26 @@ export function standardsAtRiskTableRows(standardsAtRisk) {
 
   return rows
 }
+
+/**
+ * Transform delivery partners into table rows for GOV.UK table component
+ * @param {Array} deliveryPartners - Array of delivery partner objects
+ * @param {string} projectId - Project ID for constructing remove links
+ * @returns {Array} Array of table row objects
+ */
+export function deliveryPartnerTableRows(deliveryPartners, projectId) {
+  if (!Array.isArray(deliveryPartners)) {
+    return []
+  }
+
+  return deliveryPartners.map((partner) => {
+    return [
+      {
+        text: partner.name
+      },
+      {
+        html: `<a href="/projects/${projectId}/manage/delivery-partners/${partner.id}/remove" class="govuk-link govuk-link--destructive">Remove</a>`
+      }
+    ]
+  })
+}

@@ -242,6 +242,99 @@ export async function createProject(projectData, request) {
   }
 }
 
+// Helper function to build base project object
+function buildBaseProject(currentProject, projectData) {
+  return {
+    id: currentProject.id, // Explicitly preserve the ID
+    name: projectData.name || currentProject.name,
+    phase: projectData.phase || currentProject.phase,
+    defCode: projectData.defCode || currentProject.defCode,
+    status: projectData.status || currentProject.status,
+    commentary: projectData.commentary || currentProject.commentary,
+    // Preserve other important fields that shouldn't be overwritten
+    tags: projectData.tags || currentProject.tags
+  }
+}
+
+// Helper function to handle delivery group ID conversion
+function handleDeliveryGroupId(projectData, updatedProject) {
+  if (projectData.deliveryGroupId !== undefined) {
+    updatedProject.DeliveryGroupId =
+      projectData.deliveryGroupId === null || projectData.deliveryGroupId === ''
+        ? null
+        : projectData.deliveryGroupId
+  }
+}
+
+// Helper function to handle update date
+function handleUpdateDate(projectData, updatedProject) {
+  if (projectData.updateDate) {
+    logger.info(
+      {
+        updateDate: projectData.updateDate,
+        type: typeof projectData.updateDate
+      },
+      'Passing updateDate to backend'
+    )
+    updatedProject.updateDate = projectData.updateDate
+  }
+}
+
+// Helper function to build updated project object
+function buildUpdatedProject(currentProject, projectData) {
+  const updatedProject = buildBaseProject(currentProject, projectData)
+  handleDeliveryGroupId(projectData, updatedProject)
+  handleUpdateDate(projectData, updatedProject)
+  return updatedProject
+}
+
+// Helper function to merge standards with existing ones
+function mergeProjectStandards(currentProject, projectData, updatedProject) {
+  if (!projectData.standards) {
+    return
+  }
+
+  updatedProject.standards = currentProject.standards.map((standard) => {
+    const updatedStandard = projectData.standards.find(
+      (s) => s.standardId === standard.standardId
+    )
+    return updatedStandard
+      ? {
+          ...standard,
+          status: updatedStandard.status || standard.status,
+          commentary: updatedStandard.commentary || standard.commentary
+        }
+      : standard
+  })
+}
+
+// Helper function to update professions
+function updateProjectProfessions(projectData, updatedProject) {
+  if (!projectData.professions) {
+    return
+  }
+
+  // Initialize professions array if it doesn't exist
+  updatedProject.professions = updatedProject.professions || []
+  updatedProject.professions = projectData.professions
+  logger.info(
+    { professions: updatedProject.professions },
+    'Updating project professions'
+  )
+}
+
+// Helper function to make API request
+async function makeProjectUpdateRequest(endpoint, updatedProject, request) {
+  const requestOptions = {
+    method: 'PUT',
+    body: JSON.stringify(updatedProject)
+  }
+
+  return request
+    ? await authedFetchJsonDecorator(request)(endpoint, requestOptions)
+    : await fetcher(endpoint, requestOptions)
+}
+
 export async function updateProject(
   id,
   projectData,
@@ -251,10 +344,9 @@ export async function updateProject(
   try {
     // Build endpoint - add suppressHistory parameter if true
     const apiVersion = config.get(API_VERSION_KEY)
-    let endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}`
-    if (suppressHistory) {
-      endpoint += SUPPRESS_HISTORY_QUERY
-    }
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}${
+      suppressHistory ? SUPPRESS_HISTORY_QUERY : ''
+    }`
 
     logger.info({ id, projectData, suppressHistory }, 'Updating project')
 
@@ -264,76 +356,19 @@ export async function updateProject(
       throw new Error('Project not found')
     }
 
-    // Only send the fields that are being updated, don't overwrite backend-managed fields
-    const updatedProject = {
-      id: currentProject.id, // Explicitly preserve the ID
-      name: projectData.name || currentProject.name,
-      phase: projectData.phase || currentProject.phase,
-      defCode: projectData.defCode || currentProject.defCode,
-      status: projectData.status || currentProject.status,
-      commentary: projectData.commentary || currentProject.commentary,
-      // Preserve other important fields that shouldn't be overwritten
-      tags: projectData.tags || currentProject.tags
-    }
+    // Build the updated project object
+    const updatedProject = buildUpdatedProject(currentProject, projectData)
 
-    // Pass updateDate through if present
-    if (projectData.updateDate) {
-      logger.info(
-        {
-          updateDate: projectData.updateDate,
-          type: typeof projectData.updateDate
-        },
-        'Passing updateDate to backend'
-      )
-      updatedProject.updateDate = projectData.updateDate
-    }
+    // Merge standards and professions
+    mergeProjectStandards(currentProject, projectData, updatedProject)
+    updateProjectProfessions(projectData, updatedProject)
 
-    // If we're updating standards, merge them with existing standards
-    if (projectData.standards) {
-      updatedProject.standards = currentProject.standards.map((standard) => {
-        const updatedStandard = projectData.standards.find(
-          (s) => s.standardId === standard.standardId
-        )
-        if (updatedStandard) {
-          return {
-            ...standard,
-            status: updatedStandard.status || standard.status,
-            commentary: updatedStandard.commentary || standard.commentary
-          }
-        }
-        return standard
-      })
-    }
-
-    // If we're updating professions, replace the entire array
-    if (projectData.professions) {
-      // Initialize professions array if it doesn't exist
-      if (!updatedProject.professions) {
-        updatedProject.professions = []
-      }
-
-      updatedProject.professions = projectData.professions
-      logger.info(
-        { professions: updatedProject.professions },
-        'Updating project professions'
-      )
-    }
-
-    let result
-    if (request) {
-      // Use authenticated fetcher if request is provided
-      const authedFetch = authedFetchJsonDecorator(request)
-      result = await authedFetch(endpoint, {
-        method: 'PUT',
-        body: JSON.stringify(updatedProject)
-      })
-    } else {
-      // Fall back to unauthenticated fetcher
-      result = await fetcher(endpoint, {
-        method: 'PUT',
-        body: JSON.stringify(updatedProject)
-      })
-    }
+    // Make the API request
+    const result = await makeProjectUpdateRequest(
+      endpoint,
+      updatedProject,
+      request
+    )
 
     // Check if result exists and is a Boom error (400 Bad Request)
     if (result?.isBoom) {

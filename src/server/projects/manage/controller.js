@@ -15,6 +15,7 @@ import {
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
 import { getDeliveryPartners } from '~/src/server/services/delivery-partners.js'
+import { getDeliveryGroups } from '~/src/server/services/delivery-groups.js'
 import { STATUS, STATUS_LABEL } from '~/src/server/constants/status.js'
 import {
   NOTIFICATIONS,
@@ -110,6 +111,37 @@ function createPhaseOptions(selectedPhase = '') {
   })
 
   return phaseOptions
+}
+
+// Helper function to create delivery group options with selection
+function createDeliveryGroupOptions(
+  deliveryGroups,
+  selectedDeliveryGroupId = ''
+) {
+  const deliveryGroupOptions = [{ text: 'Select delivery group', value: '' }]
+
+  if (deliveryGroups && Array.isArray(deliveryGroups)) {
+    // The getDeliveryGroups service already filters for IsActive, so no need to filter again
+    // Handle both PascalCase and camelCase field names
+    const sortedGroups = deliveryGroups.sort((a, b) => {
+      const nameA = a.Name || a.name || ''
+      const nameB = b.Name || b.name || ''
+      return nameA.localeCompare(nameB)
+    })
+
+    sortedGroups.forEach((group) => {
+      const groupName = group.Name || group.name
+      const groupId = group.Id || group.id || group._id
+
+      deliveryGroupOptions.push({
+        text: groupName,
+        value: groupId,
+        selected: groupId === selectedDeliveryGroupId
+      })
+    })
+  }
+
+  return deliveryGroupOptions
 }
 
 // Helper function to process profession comments
@@ -684,9 +716,10 @@ export const manageController = {
     const { notification } = request.query
 
     try {
-      const [project, deliveryPartners] = await Promise.all([
+      const [project, deliveryPartners, deliveryGroups] = await Promise.all([
         getProjectById(id, request),
-        getProjectDeliveryPartners(id, request)
+        getProjectDeliveryPartners(id, request),
+        getDeliveryGroups(request)
       ])
 
       if (!project) {
@@ -698,11 +731,19 @@ export const manageController = {
       }
 
       const phaseOptions = createPhaseOptions(project.phase)
+      // Handle both PascalCase and camelCase field names from backend
+      const currentDeliveryGroupId =
+        project.deliveryGroupId || project.DeliveryGroupId
+      const deliveryGroupOptions = createDeliveryGroupOptions(
+        deliveryGroups,
+        currentDeliveryGroupId
+      )
 
       return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
         pageTitle: `Update Project Details | ${project.name}`,
         project,
         phaseOptions,
+        deliveryGroupOptions,
         deliveryPartners,
         notification,
         values: {},
@@ -719,12 +760,13 @@ export const manageController = {
 
   postManageProjectDetails: async (request, h) => {
     const { id } = request.params
-    const { name, phase, defCode } = request.payload
+    const { name, phase, defCode, deliveryGroupId } = request.payload
 
     try {
-      const [project, deliveryPartners] = await Promise.all([
+      const [project, deliveryPartners, deliveryGroups] = await Promise.all([
         getProjectById(id, request),
-        getProjectDeliveryPartners(id, request)
+        getProjectDeliveryPartners(id, request),
+        getDeliveryGroups(request)
       ])
 
       if (!project) {
@@ -738,11 +780,19 @@ export const manageController = {
       // Validate required fields
       if (!name || !phase) {
         const phaseOptions = createPhaseOptions(phase)
+        // Handle both PascalCase and camelCase field names from backend
+        const currentDeliveryGroupId =
+          project.deliveryGroupId || project.DeliveryGroupId
+        const deliveryGroupOptions = createDeliveryGroupOptions(
+          deliveryGroups,
+          deliveryGroupId || currentDeliveryGroupId
+        )
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
           pageTitle: `Update Project Details | ${project.name}`,
           project,
           phaseOptions,
+          deliveryGroupOptions,
           deliveryPartners,
           values: request.payload,
           errors: {
@@ -754,8 +804,17 @@ export const manageController = {
       }
 
       try {
+        // Prepare update data - only include deliveryGroupId if it's not empty
+        const updateData = { name, phase, defCode }
+        if (deliveryGroupId && deliveryGroupId.trim() !== '') {
+          updateData.deliveryGroupId = deliveryGroupId
+        } else {
+          // If empty string, explicitly set to null to clear the assignment
+          updateData.deliveryGroupId = null
+        }
+
         // Update the project
-        await updateProject(id, { name, phase, defCode }, request)
+        await updateProject(id, updateData, request)
         request.logger.info(LOG_MESSAGES.PROJECT_DETAILS_UPDATED)
         return h.redirect(
           `/projects/${id}?notification=${MANAGE_NOTIFICATIONS.PROJECT_DETAILS_UPDATED_SUCCESSFULLY}`
@@ -767,11 +826,19 @@ export const manageController = {
         )
 
         const phaseOptions = createPhaseOptions(phase)
+        // Handle both PascalCase and camelCase field names from backend
+        const currentDeliveryGroupId =
+          project.deliveryGroupId || project.DeliveryGroupId
+        const deliveryGroupOptions = createDeliveryGroupOptions(
+          deliveryGroups,
+          deliveryGroupId || currentDeliveryGroupId
+        )
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
           pageTitle: `Update Project Details | ${project.name}`,
           project,
           phaseOptions,
+          deliveryGroupOptions,
           deliveryPartners,
           values: request.payload,
           errors: {},

@@ -14,6 +14,7 @@ const mockGetProfessionHistory = jest.fn()
 const mockArchiveProjectHistoryEntry = jest.fn()
 const mockArchiveProfessionHistoryEntry = jest.fn()
 const mockGetProjectDeliveryPartners = jest.fn()
+const mockGetDeliveryGroupById = jest.fn()
 
 jest.mock('~/src/server/services/projects.js', () => ({
   getProjects: (...args) => mockGetProjects(...args),
@@ -36,6 +37,10 @@ jest.mock('~/src/server/services/service-standards.js', () => ({
 
 jest.mock('~/src/server/services/professions.js', () => ({
   getProfessions: (...args) => mockGetProfessions(...args)
+}))
+
+jest.mock('~/src/server/services/delivery-groups.js', () => ({
+  getDeliveryGroupById: (...args) => mockGetDeliveryGroupById(...args)
 }))
 
 // Add mock for authedFetchJsonDecorator
@@ -1630,6 +1635,69 @@ describe('Projects controller', () => {
         expect(mockUpdateProject).toHaveBeenCalled()
         expect(mockH.redirect).toHaveBeenCalledWith(
           expect.stringContaining('notification=Project updated successfully')
+        )
+      })
+    })
+
+    describe('fetchProjectDeliveryGroup helper function', () => {
+      it('should fetch delivery group when project has deliveryGroupId', async () => {
+        // Arrange
+        const mockProject = {
+          id: 'test-id',
+          deliveryGroupId: 'test-delivery-group'
+        }
+        const mockDeliveryGroup = {
+          id: 'test-delivery-group',
+          name: 'Test Group'
+        }
+
+        mockGetDeliveryGroupById.mockResolvedValue(mockDeliveryGroup)
+
+        // Act - We need to test this through the main controller since helper is not exported
+        mockGetProjectById.mockResolvedValue(mockProject)
+        mockGetServiceStandards.mockResolvedValue([])
+        mockGetProfessions.mockResolvedValue([])
+        mockGetProjectDeliveryPartners.mockResolvedValue([])
+        mockGetProjectHistory.mockResolvedValue([])
+
+        await projectsController.get(mockRequest, mockH)
+
+        // Assert
+        expect(mockGetDeliveryGroupById).toHaveBeenCalledWith(
+          'test-delivery-group',
+          mockRequest
+        )
+        expect(mockRequest.logger.info).toHaveBeenCalledWith(
+          { deliveryGroupId: 'test-delivery-group' },
+          'Attempting to fetch delivery group for project'
+        )
+      })
+
+      it('should handle delivery group fetch errors gracefully', async () => {
+        // Arrange
+        const mockProject = {
+          id: 'test-id',
+          deliveryGroupId: 'test-delivery-group'
+        }
+        const mockError = new Error('API Error')
+
+        mockGetDeliveryGroupById.mockRejectedValue(mockError)
+        mockGetProjectById.mockResolvedValue(mockProject)
+        mockGetServiceStandards.mockResolvedValue([])
+        mockGetProfessions.mockResolvedValue([])
+        mockGetProjectDeliveryPartners.mockResolvedValue([])
+        mockGetProjectHistory.mockResolvedValue([])
+
+        // Act
+        await projectsController.get(mockRequest, mockH)
+
+        // Assert
+        expect(mockRequest.logger.error).toHaveBeenCalledWith(
+          {
+            error: mockError,
+            deliveryGroupId: 'test-delivery-group'
+          },
+          'Error fetching delivery group'
         )
       })
     })

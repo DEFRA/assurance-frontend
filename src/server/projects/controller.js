@@ -218,6 +218,49 @@ async function addProfessionHistoryToTimeline({
   }
 }
 
+// Helper function to fetch delivery group for a project
+async function fetchProjectDeliveryGroup(project, request) {
+  // Handle both PascalCase and camelCase field names
+  const projectDeliveryGroupId =
+    project.deliveryGroupId || project.DeliveryGroupId
+
+  if (!projectDeliveryGroupId) {
+    request.logger.info('No delivery group ID found for project', {
+      project: {
+        id: project.id,
+        deliveryGroupId: project.deliveryGroupId,
+        DeliveryGroupId: project.DeliveryGroupId
+      }
+    })
+    return null
+  }
+
+  try {
+    request.logger.info(
+      { deliveryGroupId: projectDeliveryGroupId },
+      'Attempting to fetch delivery group for project'
+    )
+    const deliveryGroup = await getDeliveryGroupById(
+      projectDeliveryGroupId,
+      request
+    )
+    request.logger.info(
+      { deliveryGroup },
+      'Successfully fetched delivery group'
+    )
+    return deliveryGroup
+  } catch (deliveryGroupError) {
+    request.logger.error(
+      {
+        error: deliveryGroupError,
+        deliveryGroupId: projectDeliveryGroupId
+      },
+      'Error fetching delivery group'
+    )
+    return null
+  }
+}
+
 export const projectsController = {
   getAll: async (request, h) => {
     try {
@@ -277,41 +320,7 @@ export const projectsController = {
         deliveryPartners = deliveryPartnersData
 
         // Fetch delivery group if project has one assigned
-        // Handle both PascalCase and camelCase field names
-        const projectDeliveryGroupId =
-          project.deliveryGroupId || project.DeliveryGroupId
-        if (projectDeliveryGroupId) {
-          try {
-            request.logger.info(
-              { deliveryGroupId: projectDeliveryGroupId },
-              'Attempting to fetch delivery group for project'
-            )
-            deliveryGroup = await getDeliveryGroupById(
-              projectDeliveryGroupId,
-              request
-            )
-            request.logger.info(
-              { deliveryGroup },
-              'Successfully fetched delivery group'
-            )
-          } catch (deliveryGroupError) {
-            request.logger.error(
-              {
-                error: deliveryGroupError,
-                deliveryGroupId: projectDeliveryGroupId
-              },
-              'Error fetching delivery group'
-            )
-          }
-        } else {
-          request.logger.info('No delivery group ID found for project', {
-            project: {
-              id: project.id,
-              deliveryGroupId: project.deliveryGroupId,
-              DeliveryGroupId: project.DeliveryGroupId
-            }
-          })
-        }
+        deliveryGroup = await fetchProjectDeliveryGroup(project, request)
       } catch (error) {
         request.logger.error({ error }, 'Error fetching reference data')
       }

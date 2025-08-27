@@ -41,7 +41,10 @@
           <p class="govuk-body-m govuk-!-margin-bottom-1"><strong>Project ID:</strong> {{ project.defCode }}</p>
         {% endif %}
         {% if project.deliveryGroup %}
-          <p class="govuk-body-m govuk-!-margin-bottom-1"><strong>Delivery group:</strong> {{ project.deliveryGroup.name }}</p>
+          <p class="govuk-body-m govuk-!-margin-bottom-1">
+            <strong>Delivery group:</strong> 
+            <a href="/delivery-groups/{{ project.deliveryGroup.id or project.deliveryGroup.Id }}" class="govuk-link">{{ project.deliveryGroup.name or project.deliveryGroup.Name }}</a>
+          </p>
         {% endif %}
         {% if deliveryPartners and deliveryPartners.length > 0 %}
           <p class="govuk-body-m govuk-!-margin-bottom-1">
@@ -52,16 +55,12 @@
             {% endfor %}
           </p>
         {% endif %}
+        <div class="govuk-body-m govuk-!-margin-bottom-1" style="display: flex; align-items: center; flex-wrap: nowrap; gap: 8px;">
+          <strong>Current delivery status:</strong>
+          {{ renderStatusTag(project.status) }}
+        </div>
       </div>
       
-      <!-- Current delivery status heading -->
-      <div class="govuk-!-margin-top-4 govuk-!-margin-bottom-3">
-        <h2 class="govuk-heading-m inline-heading">
-          <span>Current delivery status:</span>
-          <span>{{ renderStatusTag(project.status) }}</span>
-        </h2>
-      </div>
-
       {% set ragStatusHelpHtml %}
         <ul class="govuk-list">
           <li class="govuk-body-s govuk-!-margin-bottom-2">

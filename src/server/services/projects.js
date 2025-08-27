@@ -1364,3 +1364,54 @@ export async function removeProjectDeliveryPartner(
     throw error
   }
 }
+
+/**
+ * Get all projects associated with a specific delivery group
+ * @param {string} deliveryGroupId - The delivery group ID to filter by
+ * @param {object} request - The request object for authentication and logging
+ * @returns {Promise<Array>} Array of project objects
+ */
+export async function getProjectsByDeliveryGroup(deliveryGroupId, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/bydeliverygroup/${deliveryGroupId}`
+
+    if (request) {
+      request.logger?.info(
+        { deliveryGroupId, endpoint },
+        'Fetching projects by delivery group'
+      )
+    }
+
+    let response
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      response = await authedFetch(endpoint)
+    } else {
+      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
+      response = await fetcher(endpoint)
+    }
+
+    if (request) {
+      request.logger?.info(
+        { deliveryGroupId, projectCount: response?.length || 0 },
+        'Successfully fetched projects by delivery group'
+      )
+    }
+
+    return response || []
+  } catch (error) {
+    if (request) {
+      request.logger?.error(
+        { error, deliveryGroupId },
+        'Failed to fetch projects by delivery group'
+      )
+    } else {
+      logger.error(
+        { error, deliveryGroupId },
+        'Failed to fetch projects by delivery group'
+      )
+    }
+    throw error
+  }
+}

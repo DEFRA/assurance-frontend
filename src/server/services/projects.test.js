@@ -14,7 +14,8 @@ import {
   getAssessmentHistory,
   archiveAssessmentHistoryEntry,
   replaceAssessment,
-  replaceProjectStatus
+  replaceProjectStatus,
+  getProjectsByDeliveryGroup
 } from './projects.js'
 
 // First declare the mocks
@@ -2643,5 +2644,135 @@ describe('getProjects edge cases and options', () => {
       'Projects retrieved successfully'
     )
     expect(result).toEqual(mockProjects)
+  })
+})
+
+describe('getProjectsByDeliveryGroup', () => {
+  const mockAuthedFetch = jest.fn()
+  const mockFetcher = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockAuthedFetch.mockReset()
+    mockFetcher.mockReset()
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+    mockFetch.mockImplementation(mockFetcher)
+
+    // Reset config mock for this describe block
+    mockConfig.get.mockImplementation((key) => {
+      if (key === 'api.version') {
+        return 'v1.0'
+      }
+      return undefined
+    })
+  })
+
+  it('should fetch projects for a delivery group with authenticated request', async () => {
+    // Arrange
+    const deliveryGroupId = 'test-delivery-group'
+    const mockProjects = [
+      { id: 'project1', name: 'Project 1', status: 'GREEN' },
+      { id: 'project2', name: 'Project 2', status: 'AMBER' }
+    ]
+    const mockRequest = {
+      logger: {
+        info: jest.fn(),
+        error: jest.fn()
+      }
+    }
+
+    mockAuthedFetch.mockResolvedValue(mockProjects)
+
+    // Act
+    const result = await getProjectsByDeliveryGroup(
+      deliveryGroupId,
+      mockRequest
+    )
+
+    // Assert
+    expect(mockAuthedFetchJsonDecorator).toHaveBeenCalledWith(mockRequest)
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/api/v1.0/projects/bydeliverygroup/test-delivery-group'
+    )
+    expect(mockRequest.logger.info).toHaveBeenCalledWith(
+      {
+        deliveryGroupId: 'test-delivery-group',
+        endpoint: '/api/v1.0/projects/bydeliverygroup/test-delivery-group'
+      },
+      'Fetching projects by delivery group'
+    )
+    expect(mockRequest.logger.info).toHaveBeenCalledWith(
+      { deliveryGroupId: 'test-delivery-group', projectCount: 2 },
+      'Successfully fetched projects by delivery group'
+    )
+    expect(result).toEqual(mockProjects)
+  })
+
+  it('should use unauthenticated fetcher when no request provided', async () => {
+    // Arrange
+    const deliveryGroupId = 'test-delivery-group'
+    const mockProjects = [
+      { id: 'project-1', name: 'Project 1' },
+      { id: 'project-2', name: 'Project 2' }
+    ]
+
+    mockFetcher.mockResolvedValue(mockProjects)
+
+    // Act - pass undefined instead of null to match the function's logic
+    const result = await getProjectsByDeliveryGroup(deliveryGroupId, undefined)
+
+    // Assert
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      '[API_AUTH] No request context provided, using unauthenticated fetcher'
+    )
+    expect(mockFetcher).toHaveBeenCalledWith(
+      '/api/v1.0/projects/bydeliverygroup/test-delivery-group'
+    )
+    expect(result).toEqual(mockProjects)
+  })
+
+  it('should return empty array when response is null', async () => {
+    // Arrange
+    const deliveryGroupId = 'test-delivery-group'
+    const mockRequest = {
+      logger: {
+        info: jest.fn(),
+        error: jest.fn()
+      }
+    }
+
+    mockAuthedFetch.mockResolvedValue(null)
+
+    // Act
+    const result = await getProjectsByDeliveryGroup(
+      deliveryGroupId,
+      mockRequest
+    )
+
+    // Assert
+    expect(result).toEqual([])
+  })
+
+  it('should handle errors and log them', async () => {
+    // Arrange
+    const deliveryGroupId = 'test-delivery-group'
+    const mockError = new Error('API Error')
+    const mockRequest = {
+      logger: {
+        info: jest.fn(),
+        error: jest.fn()
+      }
+    }
+
+    mockAuthedFetch.mockRejectedValue(mockError)
+
+    // Act & Assert
+    await expect(
+      getProjectsByDeliveryGroup(deliveryGroupId, mockRequest)
+    ).rejects.toThrow('API Error')
+    expect(mockRequest.logger.error).toHaveBeenCalledWith(
+      { error: mockError, deliveryGroupId: 'test-delivery-group' },
+      'Failed to fetch projects by delivery group'
+    )
   })
 })

@@ -840,6 +840,14 @@ describe('Manage Controller', () => {
           phaseOptions: expect.arrayContaining([
             expect.objectContaining({ text: 'Select phase', value: '' })
           ]),
+          deliveryGroupOptions: expect.arrayContaining([
+            expect.objectContaining({
+              text: 'Select delivery group',
+              value: ''
+            })
+          ]),
+          deliveryPartners: undefined,
+          notification: undefined,
           values: {},
           errors: {}
         }
@@ -886,7 +894,12 @@ describe('Manage Controller', () => {
       // Assert
       expect(updateProject).toHaveBeenCalledWith(
         'project-123',
-        { name: 'Updated Project', phase: 'Alpha', defCode: 'UPD001' },
+        {
+          name: 'Updated Project',
+          phase: 'Alpha',
+          defCode: 'UPD001',
+          deliveryGroupId: null
+        },
         mockRequest
       )
       expect(mockH.redirect).toHaveBeenCalledWith(

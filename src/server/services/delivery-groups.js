@@ -20,9 +20,14 @@ export const getDeliveryGroups = async (request) => {
     const response = await authedFetch(getDeliveryGroupsEndpoint(apiVersion))
 
     // Filter to only active groups and sort by creation date (newest first)
+    // Handle both PascalCase and camelCase for IsActive field
     return (response || [])
-      .filter((group) => group.IsActive)
-      .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt))
+      .filter((group) => group.IsActive === true || group.isActive === true)
+      .sort(
+        (a, b) =>
+          new Date(b.CreatedAt || b.createdAt) -
+          new Date(a.CreatedAt || a.createdAt)
+      )
   } catch (error) {
     request.logger?.error({ error }, 'Failed to fetch delivery groups from API')
     throw error

@@ -92,6 +92,22 @@
       required: false
     }) }}
 
+    {{ govukSelect({
+      id: "deliveryGroupId",
+      name: "deliveryGroupId",
+      label: {
+        text: "Delivery group",
+        classes: "govuk-label--m"
+      },
+      hint: {
+        text: "Select the delivery group responsible for this project"
+      },
+      items: deliveryGroupOptions,
+      value: values.deliveryGroupId or project.deliveryGroupId,
+      errorMessage: errors.deliveryGroupId,
+      required: false
+    }) }}
+
     <div class="govuk-button-group">
       {{ govukButton({
         text: "Save changes"

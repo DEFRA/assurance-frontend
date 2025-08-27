@@ -276,6 +276,18 @@ export async function updateProject(
       tags: projectData.tags || currentProject.tags
     }
 
+    // Handle deliveryGroupId - convert to PascalCase for backend
+    if (projectData.deliveryGroupId !== undefined) {
+      if (
+        projectData.deliveryGroupId === null ||
+        projectData.deliveryGroupId === ''
+      ) {
+        updatedProject.DeliveryGroupId = null // Clear the assignment
+      } else {
+        updatedProject.DeliveryGroupId = projectData.deliveryGroupId // Set the new value
+      }
+    }
+
     // Pass updateDate through if present
     if (projectData.updateDate) {
       logger.info(

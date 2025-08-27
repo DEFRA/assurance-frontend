@@ -14,6 +14,7 @@ import {
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
+import { getDeliveryGroupById } from '~/src/server/services/delivery-groups.js'
 import {
   STATUS,
   STATUS_CLASS,
@@ -257,10 +258,11 @@ export const projectsController = {
         projectStatus: project.status
       })
 
-      // Get service standards, professions, and delivery partners for reference data
+      // Get service standards, professions, delivery partners, and delivery group for reference data
       let standards = []
       let professions = []
       let deliveryPartners = []
+      let deliveryGroup = null
 
       try {
         const [standardsData, professionsData, deliveryPartnersData] =
@@ -273,6 +275,43 @@ export const projectsController = {
         standards = standardsData
         professions = professionsData
         deliveryPartners = deliveryPartnersData
+
+        // Fetch delivery group if project has one assigned
+        // Handle both PascalCase and camelCase field names
+        const projectDeliveryGroupId =
+          project.deliveryGroupId || project.DeliveryGroupId
+        if (projectDeliveryGroupId) {
+          try {
+            request.logger.info(
+              { deliveryGroupId: projectDeliveryGroupId },
+              'Attempting to fetch delivery group for project'
+            )
+            deliveryGroup = await getDeliveryGroupById(
+              projectDeliveryGroupId,
+              request
+            )
+            request.logger.info(
+              { deliveryGroup },
+              'Successfully fetched delivery group'
+            )
+          } catch (deliveryGroupError) {
+            request.logger.error(
+              {
+                error: deliveryGroupError,
+                deliveryGroupId: projectDeliveryGroupId
+              },
+              'Error fetching delivery group'
+            )
+          }
+        } else {
+          request.logger.info('No delivery group ID found for project', {
+            project: {
+              id: project.id,
+              deliveryGroupId: project.deliveryGroupId,
+              DeliveryGroupId: project.DeliveryGroupId
+            }
+          })
+        }
       } catch (error) {
         request.logger.error({ error }, 'Error fetching reference data')
       }
@@ -311,10 +350,16 @@ export const projectsController = {
         // Continue with empty history if fetch fails
       }
 
+      // Add delivery group to project object for template access
+      const projectWithDeliveryGroup = {
+        ...project,
+        deliveryGroup
+      }
+
       return h.view(VIEW_TEMPLATES.PROJECTS_DETAIL_INDEX, {
         pageTitle: `${project.name}${DDTS_ASSURANCE_SUFFIX}`,
         heading: project.name,
-        project,
+        project: projectWithDeliveryGroup,
         standards,
         professions,
         deliveryPartners,

@@ -194,7 +194,10 @@ describe('Projects controller', () => {
         expect.objectContaining({
           pageTitle: 'Test Project | Defra Digital Assurance',
           heading: 'Test Project',
-          project: mockProject,
+          project: expect.objectContaining({
+            ...mockProject,
+            deliveryGroup: null
+          }),
           standards: mockStandards,
           professions: mockProfessions,
           deliveryPartners: mockDeliveryPartners,
@@ -288,7 +291,10 @@ describe('Projects controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/detail/views/index',
         expect.objectContaining({
-          project: mockProject
+          project: expect.objectContaining({
+            ...mockProject,
+            deliveryGroup: null
+          })
         })
       )
     })
@@ -329,7 +335,10 @@ describe('Projects controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/detail/views/index',
         expect.objectContaining({
-          project: mockProject
+          project: expect.objectContaining({
+            ...mockProject,
+            deliveryGroup: null
+          })
         })
       )
     })
@@ -1546,7 +1555,10 @@ describe('Projects controller', () => {
         expect(mockH.view).toHaveBeenCalledWith(
           'projects/detail/views/index',
           expect.objectContaining({
-            project: mockProject,
+            project: expect.objectContaining({
+              ...mockProject,
+              deliveryGroup: null
+            }),
             projectHistory: []
           })
         )

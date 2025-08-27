@@ -242,9 +242,9 @@ export async function createProject(projectData, request) {
   }
 }
 
-// Helper function to build updated project object
-function buildUpdatedProject(currentProject, projectData) {
-  const updatedProject = {
+// Helper function to build base project object
+function buildBaseProject(currentProject, projectData) {
+  return {
     id: currentProject.id, // Explicitly preserve the ID
     name: projectData.name || currentProject.name,
     phase: projectData.phase || currentProject.phase,
@@ -254,16 +254,20 @@ function buildUpdatedProject(currentProject, projectData) {
     // Preserve other important fields that shouldn't be overwritten
     tags: projectData.tags || currentProject.tags
   }
+}
 
-  // Handle deliveryGroupId - convert to PascalCase for backend
+// Helper function to handle delivery group ID conversion
+function handleDeliveryGroupId(projectData, updatedProject) {
   if (projectData.deliveryGroupId !== undefined) {
     updatedProject.DeliveryGroupId =
       projectData.deliveryGroupId === null || projectData.deliveryGroupId === ''
         ? null
         : projectData.deliveryGroupId
   }
+}
 
-  // Pass updateDate through if present
+// Helper function to handle update date
+function handleUpdateDate(projectData, updatedProject) {
   if (projectData.updateDate) {
     logger.info(
       {
@@ -274,13 +278,21 @@ function buildUpdatedProject(currentProject, projectData) {
     )
     updatedProject.updateDate = projectData.updateDate
   }
+}
 
+// Helper function to build updated project object
+function buildUpdatedProject(currentProject, projectData) {
+  const updatedProject = buildBaseProject(currentProject, projectData)
+  handleDeliveryGroupId(projectData, updatedProject)
+  handleUpdateDate(projectData, updatedProject)
   return updatedProject
 }
 
 // Helper function to merge standards with existing ones
 function mergeProjectStandards(currentProject, projectData, updatedProject) {
-  if (!projectData.standards) return
+  if (!projectData.standards) {
+    return
+  }
 
   updatedProject.standards = currentProject.standards.map((standard) => {
     const updatedStandard = projectData.standards.find(
@@ -298,7 +310,9 @@ function mergeProjectStandards(currentProject, projectData, updatedProject) {
 
 // Helper function to update professions
 function updateProjectProfessions(projectData, updatedProject) {
-  if (!projectData.professions) return
+  if (!projectData.professions) {
+    return
+  }
 
   // Initialize professions array if it doesn't exist
   updatedProject.professions = updatedProject.professions || []

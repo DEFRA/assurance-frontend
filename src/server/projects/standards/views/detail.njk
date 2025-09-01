@@ -143,6 +143,28 @@
               ] %}
             {% endif %}
             
+            {% set assessmentRows = [
+              {
+                key: { text: "Compliance confidence" },
+                value: { html: renderStatusTag(assessment.status or 'PENDING') }
+              },
+              {
+                key: { text: "Commentary" },
+                value: { 
+                  html: displayCommentary
+                }
+              },
+              {
+                key: { text: "Last updated" },
+                value: { text: (assessment.lastUpdated | formatDate) if assessment.lastUpdated else "Not available" }
+              }
+            ] %}
+            {% if assessment.changedBy and assessment.changedBy != 'Unknown' and assessment.changedBy != 'Unknown User' %}
+              {% set assessmentRows = assessmentRows.concat([{
+                key: { text: "Updated by" },
+                value: { html: '<a href="mailto:' + assessment.changedBy + '" class="govuk-link">' + assessment.changedBy + '</a>' }
+              }]) %}
+            {% endif %}
             {{ govukSummaryList({
               card: {
                 title: {
@@ -152,22 +174,7 @@
                   items: actionItems
                 }
               },
-              rows: [
-                {
-                  key: { text: "Compliance confidence" },
-                  value: { html: renderStatusTag(assessment.status or 'PENDING') }
-                },
-                {
-                  key: { text: "Commentary" },
-                  value: { 
-                    html: displayCommentary
-                  }
-                },
-                {
-                  key: { text: "Last updated" },
-                  value: { text: (assessment.lastUpdated | formatDate) if assessment.lastUpdated else "Not available" }
-                }
-              ]
+              rows: assessmentRows
             }) }}
           </div>
         {% endfor %}

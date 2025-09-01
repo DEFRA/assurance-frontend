@@ -102,6 +102,9 @@
               
               <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-margin-top-2 govuk-!-font-size-16">
                 Last updated: {{ entry.timestamp | formatDate }}
+                {% if entry.changedBy and entry.changedBy != 'Unknown' and entry.changedBy != 'Unknown User' %}
+                  <br>Updated by: <a href="mailto:{{ entry.changedBy }}" class="govuk-link">{{ entry.changedBy }}</a>
+                {% endif %}
               </p>
               
               {% if isAdmin and not entry.archived %}

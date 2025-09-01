@@ -19,7 +19,8 @@ import {
   createProfession,
   updateProfession,
   deleteProfession,
-  restoreProfession
+  restoreProfession,
+  getProfessionById
 } from '~/src/server/services/professions.js'
 import {
   getAllDeliveryGroups,
@@ -446,11 +447,22 @@ export const adminController = {
         )
       }
 
-      await updateProfession(
-        id,
-        { Name: name, UpdatedAt: new Date().toISOString() },
-        request
-      )
+      // First, fetch the existing profession to get all current values
+      const existingProfession = await getProfessionById(id, request)
+      if (!existingProfession) {
+        return h.redirect(
+          `${ADMIN_BASE_URL}?notification=Profession not found&tab=professions`
+        )
+      }
+
+      // Build the complete updated profession object
+      const updatedProfession = {
+        ...existingProfession,
+        Name: name,
+        UpdatedAt: new Date().toISOString()
+      }
+
+      await updateProfession(id, updatedProfession, request)
 
       request.logger.info({ id, name }, 'Profession updated successfully')
       return h.redirect(

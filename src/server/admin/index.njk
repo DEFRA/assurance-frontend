@@ -76,11 +76,6 @@
         </span>
       </summary>
       <div class="govuk-details__text">
-        <div class="govuk-inset-text">
-          <p><strong>Note:</strong> Individual profession updates are not currently supported by the API. This feature requires backend API enhancement.</p>
-          <p>Available operations: Create, Archive, Restore, and Bulk Seed via the Bulk Operations tab.</p>
-        </div>
-        
         <form method="POST" action="/admin/professions/update">
           {% set professionOptions = [{ value: "", text: "Choose profession" }] %}
           {% for profession in professions %}
@@ -97,10 +92,7 @@
               text: "Select profession to update",
               classes: "govuk-label--s"
             },
-            items: professionOptions,
-            attributes: {
-              disabled: true
-            }
+            items: professionOptions
           }) }}
           
           {{ govukInput({
@@ -110,18 +102,12 @@
             },
             id: "update-profession-name",
             name: "name",
-            classes: "govuk-!-width-two-thirds",
-            attributes: {
-              disabled: true
-            }
+            classes: "govuk-!-width-two-thirds"
           }) }}
           
           {{ govukButton({
             text: "Update Name",
-            classes: "govuk-button--secondary",
-            attributes: {
-              disabled: true
-            }
+            classes: "govuk-button--secondary"
           }) }}
         </form>
       </div>

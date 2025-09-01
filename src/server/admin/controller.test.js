@@ -1223,14 +1223,29 @@ describe('Admin controller', () => {
         name: 'Updated Profession'
       }
 
+      // Mock the existing profession
+      const existingProfession = {
+        Id: 'prof-1',
+        Name: 'Original Profession',
+        Description: 'Original Description',
+        IsActive: true,
+        CreatedAt: '2023-01-01T00:00:00.000Z',
+        UpdatedAt: '2023-01-01T00:00:00.000Z'
+      }
+      getProfessionById.mockResolvedValue(existingProfession)
+
       // Act
       await adminController.updateProfession(mockRequest, mockH)
 
       // Assert
+      expect(getProfessionById).toHaveBeenCalledWith('prof-1', mockRequest)
       expect(updateProfession).toHaveBeenCalledWith(
         'prof-1',
         expect.objectContaining({
-          Name: 'Updated Profession'
+          Id: 'prof-1',
+          Name: 'Updated Profession',
+          Description: 'Original Description',
+          IsActive: true
         }),
         mockRequest
       )
@@ -1262,6 +1277,15 @@ describe('Admin controller', () => {
         id: 'prof-1',
         name: 'Updated Profession'
       }
+
+      // Mock existing profession fetch
+      const existingProfession = {
+        Id: 'prof-1',
+        Name: 'Original Profession',
+        Description: 'Original Description',
+        IsActive: true
+      }
+      getProfessionById.mockResolvedValue(existingProfession)
       updateProfession.mockRejectedValue(new Error('API Error'))
 
       // Act
@@ -1270,6 +1294,27 @@ describe('Admin controller', () => {
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
         '/admin?notification=Failed to update profession&tab=professions'
+      )
+    })
+
+    it('should handle profession not found', async () => {
+      // Arrange
+      mockRequest.payload = {
+        id: 'prof-1',
+        name: 'Updated Profession'
+      }
+
+      // Mock profession not found
+      getProfessionById.mockResolvedValue(null)
+
+      // Act
+      await adminController.updateProfession(mockRequest, mockH)
+
+      // Assert
+      expect(getProfessionById).toHaveBeenCalledWith('prof-1', mockRequest)
+      expect(updateProfession).not.toHaveBeenCalled()
+      expect(mockH.redirect).toHaveBeenCalledWith(
+        '/admin?notification=Profession not found&tab=professions'
       )
     })
   })

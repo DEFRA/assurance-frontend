@@ -552,6 +552,7 @@ async function buildAssessmentsWithDetails(
       // Get the most recent history entry for this profession/standard combination
       let mostRecentHistoryId = null
       let changedBy = null
+      let changedByName = null
       try {
         const history = await getAssessmentHistory(
           id,
@@ -564,6 +565,7 @@ async function buildAssessmentsWithDetails(
           const recentEntry = history.find((entry) => !entry.archived)
           mostRecentHistoryId = recentEntry?.id
           changedBy = recentEntry?.changedBy
+          changedByName = recentEntry?.changedByName
         }
       } catch (error) {
         request.logger.warn(
@@ -578,7 +580,8 @@ async function buildAssessmentsWithDetails(
         professionDisplayName:
           professionInfo?.name || `Profession ${assessment.professionId}`,
         mostRecentHistoryId,
-        changedBy
+        changedBy,
+        changedByName
       }
     })
   )

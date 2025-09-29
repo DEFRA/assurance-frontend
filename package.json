@@ -70,6 +70,9 @@
     "pino-pretty": "^13.0.0",
     "undici": "^6.21.1"
   },
+  "overrides": {
+    "form-data": ">=4.0.4"
+  },
   "devDependencies": {
     "@babel/cli": "^7.25.9",
     "@babel/core": "^7.26.0",

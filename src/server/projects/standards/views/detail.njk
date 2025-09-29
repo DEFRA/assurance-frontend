@@ -160,9 +160,10 @@
               }
             ] %}
             {% if assessment.changedBy and assessment.changedBy != 'Unknown' and assessment.changedBy != 'Unknown User' %}
+              {% set displayName = assessment.changedByName or assessment.changedBy %}
               {% set assessmentRows = assessmentRows.concat([{
                 key: { text: "Updated by" },
-                value: { html: '<a href="mailto:' + assessment.changedBy + '" class="govuk-link">' + assessment.changedBy + '</a>' }
+                value: { html: '<a href="mailto:' + assessment.changedBy + '" class="govuk-link">' + displayName + '</a>' }
               }]) %}
             {% endif %}
             {{ govukSummaryList({

@@ -170,7 +170,7 @@ describe('Standards Controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        `/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+        `/projects?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
       )
       expect(result).toBe('redirect-response')
     })
@@ -412,7 +412,7 @@ describe('Standards Controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        `/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+        `/projects?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
       )
       expect(result).toBe('redirect-response')
     })

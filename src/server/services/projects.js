@@ -1269,11 +1269,11 @@ export async function getProjectDeliveryPartners(projectId, request) {
         return {
           id: deliveryPartnerId,
           name: partnerDetails.name || 'Unknown Partner',
-          engagementManager: engagementManager,
+          engagementManager,
           engagementStarted:
             projectPartner.EngagementStarted ||
             projectPartner.engagementStarted,
-          engagementEnded: engagementEnded,
+          engagementEnded,
           // Keep the original relationship data for reference
           relationshipId: projectPartner.Id || projectPartner.id
         }

@@ -900,7 +900,7 @@ export const manageController = {
 
   postAddDeliveryPartner: async (request, h) => {
     const { id } = request.params
-    const { partnerId } = request.payload
+    const { partnerId, engagementManager } = request.payload
 
     try {
       const [project, allPartners, currentPartners] = await Promise.all([
@@ -917,8 +917,16 @@ export const manageController = {
           .code(statusCodes.notFound)
       }
 
-      // Validate partner selection
+      // Validate inputs
+      const errors = {}
       if (!partnerId) {
+        errors.partnerId = { text: 'Select a delivery partner' }
+      }
+      if (!engagementManager?.trim()) {
+        errors.engagementManager = { text: 'Enter the engagement manager name' }
+      }
+
+      if (Object.keys(errors).length > 0) {
         // Re-fetch available partners for display
         const currentPartnerIds = currentPartners.map((p) => p.id)
         const availablePartners = allPartners.filter(
@@ -937,16 +945,18 @@ export const manageController = {
           availablePartners,
           partnerRadioItems,
           values: request.payload,
-          errors: {
-            partnerId: { text: 'Select a delivery partner' }
-          },
-          errorMessage: 'Select a delivery partner'
+          errors
         })
       }
 
       try {
         // Add delivery partner to project
-        await addProjectDeliveryPartner(id, partnerId, request)
+        await addProjectDeliveryPartner(
+          id,
+          partnerId,
+          engagementManager.trim(),
+          request
+        )
         request.logger.info(
           { projectId: id, partnerId },
           'Delivery partner added to project'

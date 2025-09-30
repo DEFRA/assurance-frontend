@@ -1196,42 +1196,108 @@ export async function replaceProjectStatus(projectId, newProjectData, request) {
 
 /**
  * Get delivery partners assigned to a specific project
- * Note: This will need backend endpoint: GET /api/v{version}/projects/{projectId}/delivery-partners
+ * Note: This will need backend endpoint: GET /api/v{version}/projects/{projectId}/deliverypartners
  * @param {string} projectId - The project ID
  * @param {object} request - Hapi request object
- * @returns {Promise<Array>} List of delivery partners for the project
+ * @returns {Promise<Array>} List of delivery partners for the project with full partner details
  */
 export async function getProjectDeliveryPartners(projectId, request) {
   try {
     const apiVersion = config.get(API_VERSION_KEY)
-    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/delivery-partners`
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/deliverypartners`
     logger.info(
       { endpoint, projectId },
       'Fetching project delivery partners from API'
     )
 
-    let data
+    let projectPartnerData
     if (request) {
       logger.info(
         `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for project delivery partners API`
       )
       const authedFetch = authedFetchJsonDecorator(request)
-      data = await authedFetch(endpoint)
+      projectPartnerData = await authedFetch(endpoint)
     } else {
       logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
-      data = await fetcher(endpoint)
+      projectPartnerData = await fetcher(endpoint)
     }
 
-    if (!data || !Array.isArray(data)) {
-      logger.warn('Invalid data returned from API', { data })
+    if (!projectPartnerData || !Array.isArray(projectPartnerData)) {
+      logger.warn('Invalid data returned from API', {
+        data: projectPartnerData
+      })
       return []
     }
 
+    // If no delivery partners are assigned, return empty array
+    if (projectPartnerData.length === 0) {
+      logger.info({ projectId }, 'No delivery partners assigned to project')
+      return []
+    }
+
+    // Fetch all delivery partners to get the names
+    const { getAllDeliveryPartners } = await import('./delivery-partners.js')
+    const allDeliveryPartners = await getAllDeliveryPartners(request)
+
+    // Create a map of delivery partner ID to delivery partner details
+    const deliveryPartnerMap = {}
+    if (allDeliveryPartners && Array.isArray(allDeliveryPartners)) {
+      allDeliveryPartners.forEach((partner) => {
+        deliveryPartnerMap[partner.id] = partner
+      })
+    }
+
+    // Merge project-partner relationship data with delivery partner details
+    const enrichedPartners = projectPartnerData
+      .map((projectPartner) => {
+        // Handle different possible field name formats (PascalCase vs camelCase)
+        const deliveryPartnerId =
+          projectPartner.DeliveryPartnerId ||
+          projectPartner.deliveryPartnerId ||
+          projectPartner.delivery_partner_id
+
+        const engagementManager =
+          projectPartner.EngagementManager ||
+          projectPartner.engagementManager ||
+          projectPartner.engagement_manager
+
+        const engagementEnded =
+          projectPartner.EngagementEnded || projectPartner.engagementEnded
+
+        const partnerDetails = deliveryPartnerMap[deliveryPartnerId] || {}
+
+        return {
+          id: deliveryPartnerId,
+          name: partnerDetails.name || 'Unknown Partner',
+          engagementManager: engagementManager,
+          engagementStarted:
+            projectPartner.EngagementStarted ||
+            projectPartner.engagementStarted,
+          engagementEnded: engagementEnded,
+          // Keep the original relationship data for reference
+          relationshipId: projectPartner.Id || projectPartner.id
+        }
+      })
+      .filter((partner) => {
+        // Only show active partnerships (where engagement hasn't ended)
+        if (!partner.engagementEnded) {
+          return true // No end date means active partnership
+        }
+
+        // If there's an end date, the partnership has been terminated
+        return false
+      })
+
     logger.info(
-      { projectId, count: data.length },
-      'Project delivery partners retrieved successfully'
+      {
+        projectId,
+        count: enrichedPartners.length,
+        partnerNames: enrichedPartners.map((p) => p.name),
+        partnerEndDates: enrichedPartners.map((p) => p.engagementEnded)
+      },
+      'Project delivery partners retrieved and enriched successfully - FINAL RESULT'
     )
-    return data
+    return enrichedPartners
   } catch (error) {
     logger.error(
       {
@@ -1244,7 +1310,6 @@ export async function getProjectDeliveryPartners(projectId, request) {
     )
     // Always return empty array for any error to prevent breaking Promise.all
     // This ensures service standards and professions still load even if delivery partners fail
-    // TODO: Once backend endpoint is fully implemented, consider more selective error handling
     logger.warn(
       { projectId },
       'Returning empty delivery partners array due to API error'
@@ -1255,22 +1320,34 @@ export async function getProjectDeliveryPartners(projectId, request) {
 
 /**
  * Add a delivery partner to a project
- * Note: This will need backend endpoint: POST /api/v{version}/projects/{projectId}/delivery-partners
+ * Note: This will need backend endpoint: POST /api/v{version}/projects/{projectId}/deliverypartners
  * @param {string} projectId - The project ID
  * @param {string} partnerId - The delivery partner ID to add
+ * @param {string} engagementManager - The name of the engagement manager
  * @param {object} request - Hapi request object
  * @returns {Promise<void>}
  */
-export async function addProjectDeliveryPartner(projectId, partnerId, request) {
+export async function addProjectDeliveryPartner(
+  projectId,
+  partnerId,
+  engagementManager,
+  request
+) {
   try {
     const apiVersion = config.get(API_VERSION_KEY)
-    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/delivery-partners`
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/deliverypartners`
     logger.info(
       { endpoint, projectId, partnerId },
       'Adding delivery partner to project'
     )
 
-    const requestData = { partnerId }
+    const requestData = {
+      Id: `${projectId}-${partnerId}`, // Generate a unique ID for the relationship
+      ProjectId: projectId,
+      DeliveryPartnerId: partnerId,
+      EngagementManager: engagementManager,
+      EngagementStarted: new Date().toISOString()
+    }
 
     if (request) {
       const authedFetch = authedFetchJsonDecorator(request)
@@ -1312,8 +1389,8 @@ export async function addProjectDeliveryPartner(projectId, partnerId, request) {
 }
 
 /**
- * Remove a delivery partner from a project
- * Note: This will need backend endpoint: DELETE /api/v{version}/projects/{projectId}/delivery-partners/{partnerId}
+ * Remove a delivery partner from a project by setting termination date
+ * Note: This will need backend endpoint: PUT /api/v{version}/projects/{projectId}/deliverypartners/{partnerId}
  * @param {string} projectId - The project ID
  * @param {string} partnerId - The delivery partner ID to remove
  * @param {object} request - Hapi request object
@@ -1326,22 +1403,50 @@ export async function removeProjectDeliveryPartner(
 ) {
   try {
     const apiVersion = config.get(API_VERSION_KEY)
-    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/delivery-partners/${partnerId}`
+
+    // First get the current delivery partner data
+    const getEndpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/deliverypartners/${partnerId}`
     logger.info(
-      { endpoint, projectId, partnerId },
-      'Removing delivery partner from project'
+      { endpoint: getEndpoint, projectId, partnerId },
+      'Getting current delivery partner data'
+    )
+
+    let currentData
+    if (request) {
+      const authedFetch = authedFetchJsonDecorator(request)
+      currentData = await authedFetch(getEndpoint)
+    } else {
+      currentData = await fetcher(getEndpoint)
+    }
+
+    // Update with termination date
+    const updateEndpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/deliverypartners/${partnerId}`
+    const requestData = {
+      ...currentData,
+      EngagementEnded: new Date().toISOString() // Set termination date to now
+    }
+
+    logger.info(
+      { endpoint: updateEndpoint, projectId, partnerId },
+      'Setting termination date for delivery partner'
     )
 
     if (request) {
       const authedFetch = authedFetchJsonDecorator(request)
-      await authedFetch(endpoint, { method: 'DELETE' })
+      await authedFetch(updateEndpoint, {
+        method: 'PUT',
+        body: JSON.stringify(requestData)
+      })
     } else {
-      await fetcher(endpoint, { method: 'DELETE' })
+      await fetcher(updateEndpoint, {
+        method: 'PUT',
+        body: JSON.stringify(requestData)
+      })
     }
 
     logger.info(
       { projectId, partnerId },
-      'Delivery partner removed from project successfully'
+      'Delivery partner termination date set successfully'
     )
   } catch (error) {
     logger.error(

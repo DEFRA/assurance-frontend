@@ -32,29 +32,8 @@
         classes: "govuk-heading-xl govuk-!-margin-bottom-2 govuk-!-word-break-word"
       }) }}
       
-      <!-- Phase and Project ID stacked vertically -->
+      <!-- Current delivery status only -->
       <div class="govuk-!-margin-top-2 govuk-!-margin-bottom-4">
-        {% if project.phase %}
-          <p class="govuk-body-m govuk-!-margin-bottom-1"><strong>Phase:</strong> {{ project.phase }}</p>
-        {% endif %}
-        {% if project.defCode %}
-          <p class="govuk-body-m govuk-!-margin-bottom-1"><strong>Project ID:</strong> {{ project.defCode }}</p>
-        {% endif %}
-        {% if project.deliveryGroup %}
-          <p class="govuk-body-m govuk-!-margin-bottom-1">
-            <strong>Delivery group:</strong> 
-            <a href="/delivery-groups/{{ project.deliveryGroup.id or project.deliveryGroup.Id }}" class="govuk-link">{{ project.deliveryGroup.name or project.deliveryGroup.Name }}</a>
-          </p>
-        {% endif %}
-        {% if deliveryPartners and deliveryPartners.length > 0 %}
-          <p class="govuk-body-m govuk-!-margin-bottom-1">
-            <strong>Delivery partner{{ 's' if deliveryPartners.length > 1 }}:</strong> 
-            {% for partner in deliveryPartners %}
-              {{- partner.name }}
-              {%- if not loop.last %}, {% endif -%}
-            {% endfor %}
-          </p>
-        {% endif %}
         <div class="govuk-body-m govuk-!-margin-bottom-1" style="display: flex; align-items: center; flex-wrap: nowrap; gap: 8px;">
           <strong>Current delivery status:</strong>
           {{ renderStatusTag(project.status) }}
@@ -116,117 +95,170 @@
         </p>
       {% endif %}
 
-      {% set complianceTabHtml %}
-        <h2 class="govuk-heading-m">Service Standard compliance</h2>
-        
-        {% if standards and standards.length > 0 %}
-          <table class="govuk-table">
-            <thead class="govuk-table__head">
-              <tr class="govuk-table__row">
-                <th scope="col" class="govuk-table__header">Point</th>
-                <th scope="col" class="govuk-table__header">Compliance confidence</th>
-              </tr>
-            </thead>
-            <tbody class="govuk-table__body">
-              {% for standard in standards %}
-                {% set standardSummary = null %}
-                {% for summary in project.standardsSummary %}
-                  {% if summary.standardId == standard.id %}
-                    {% set standardSummary = summary %}
-                  {% endif %}
+      {% set projectSidebarHtml %}
+        <div class="project-sidebar">
+          {% if project.defCode %}
+            <div class="govuk-!-margin-bottom-4">
+              <dt class="govuk-body-s govuk-!-font-weight-bold">Project ID</dt>
+              <dd class="govuk-body-s">{{ project.defCode }}</dd>
+            </div>
+          {% endif %}
+          
+          {% if project.phase %}
+            <div class="govuk-!-margin-bottom-4">
+              <dt class="govuk-body-s govuk-!-font-weight-bold">Phase</dt>
+              <dd class="govuk-body-s">{{ project.phase }}</dd>
+            </div>
+          {% endif %}
+          
+          {% if project.deliveryGroup %}
+            <div class="govuk-!-margin-bottom-4">
+              <dt class="govuk-body-s govuk-!-font-weight-bold">Delivery group</dt>
+              <dd class="govuk-body-s">
+                <a href="/delivery-groups/{{ project.deliveryGroup.id or project.deliveryGroup.Id }}" class="govuk-link">{{ project.deliveryGroup.name or project.deliveryGroup.Name }}</a>
+              </dd>
+            </div>
+          {% endif %}
+          
+          {% if deliveryPartners and deliveryPartners.length > 0 %}
+            <div class="govuk-!-margin-bottom-4">
+              <dt class="govuk-body-s govuk-!-font-weight-bold">Delivery partner{{ 's' if deliveryPartners.length > 1 }}</dt>
+              <dd class="govuk-body-s">
+                {% for partner in deliveryPartners %}
+                  {{- partner.name }}
+                  {%- if not loop.last %}<br>{% endif -%}
                 {% endfor %}
-                
-                <tr class="govuk-table__row">
-                  <td class="govuk-table__cell">
-                    <a href="/projects/{{ project.id }}/standards/{{ standard.id }}" class="govuk-link">
-                      {{ standard.number }}. {{ standard.name }}
-                    </a>
-                  </td>
-                  <td class="govuk-table__cell">
-                    {% if standardSummary %}
-                      {{ renderStatusTag(standardSummary.aggregatedStatus or 'PENDING') }}
-                    {% else %}
-                      {{ renderStatusTag('PENDING') }}
-                    {% endif %}
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        {% else %}
-          <p class="govuk-body">No service standards available.</p>
-        {% endif %}
+              </dd>
+            </div>
+          {% endif %}
+        </div>
+      {% endset %}
+
+      {% set complianceTabHtml %}
+        <div class="govuk-grid-row">
+          <div class="govuk-grid-column-one-third">
+            {{ projectSidebarHtml | safe }}
+          </div>
+          <div class="govuk-grid-column-two-thirds">
+            <h2 class="govuk-heading-m">Service Standard compliance</h2>
+            
+            {% if standards and standards.length > 0 %}
+              <table class="govuk-table">
+                <thead class="govuk-table__head">
+                  <tr class="govuk-table__row">
+                    <th scope="col" class="govuk-table__header">Point</th>
+                    <th scope="col" class="govuk-table__header">Compliance confidence</th>
+                  </tr>
+                </thead>
+                <tbody class="govuk-table__body">
+                  {% for standard in standards %}
+                    {% set standardSummary = null %}
+                    {% for summary in project.standardsSummary %}
+                      {% if summary.standardId == standard.id %}
+                        {% set standardSummary = summary %}
+                      {% endif %}
+                    {% endfor %}
+                    
+                    <tr class="govuk-table__row">
+                      <td class="govuk-table__cell">
+                        <a href="/projects/{{ project.id }}/standards/{{ standard.id }}" class="govuk-link">
+                          {{ standard.number }}. {{ standard.name }}
+                        </a>
+                      </td>
+                      <td class="govuk-table__cell">
+                        {% if standardSummary %}
+                          {{ renderStatusTag(standardSummary.aggregatedStatus or 'PENDING') }}
+                        {% else %}
+                          {{ renderStatusTag('PENDING') }}
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <p class="govuk-body">No service standards available.</p>
+            {% endif %}
+          </div>
+        </div>
       {% endset %}
 
       {% set engagementTabHtml %}
-        <h2 class="govuk-heading-m">Project engagement</h2>
-        <p class="govuk-body">Timeline of key project changes and updates.</p>
-        
-        {% if projectHistory and projectHistory.length > 0 %}
-          <div class="timeline">
-            {% for entry in projectHistory %}
-              <div class="timeline__event">
-                <h3 class="timeline__event-title govuk-heading-s">
-                  {{ entry.timestamp | formatDate('d MMM yy') }}
-                </h3>
-                
-                <div class="timeline__event-content">
-                  {% if entry.changes.status and entry.changes.status.from !== entry.changes.status.to %}
-                    <p class="govuk-body govuk-!-margin-bottom-2">
-                      <strong>Delivery status updated:</strong> {{ renderStatusTag(entry.changes.status.to) }}
-                    </p>
-                  {% endif %}
-                  
-                  {% if entry.changes.name %}
-                    <p class="govuk-body govuk-!-margin-bottom-2">
-                      <strong>Project name updated:</strong> {{ entry.changes.name.to }}
-                    </p>
-                  {% endif %}
-                  
-                  {% if entry.changes.phase %}
-                    <p class="govuk-body govuk-!-margin-bottom-2">
-                      <strong>Phase updated:</strong> {{ entry.changes.phase.to }}
-                    </p>
-                  {% endif %}
-                  
-                  {% if entry.changes.commentary and entry.changes.commentary.to %}
-                    {% set displayCommentary = entry.changes.commentary.to %}
-                    {% if "Path to green:" in displayCommentary %}
-                      {% set parts = displayCommentary.split("Path to green:") %}
-                      {% set issue = parts[0] | trim if parts[0] else "" %}
-                      {% set path = parts[1] | trim if parts[1] else "" %}
+        <div class="govuk-grid-row">
+          <div class="govuk-grid-column-one-third">
+            {{ projectSidebarHtml | safe }}
+          </div>
+          <div class="govuk-grid-column-two-thirds">
+            <h2 class="govuk-heading-m">Project engagement</h2>
+            <p class="govuk-body">Timeline of key project changes and updates.</p>
+            
+            {% if projectHistory and projectHistory.length > 0 %}
+              <div class="timeline">
+                {% for entry in projectHistory %}
+                  <div class="timeline__event">
+                    <h3 class="timeline__event-title govuk-heading-s">
+                      {{ entry.timestamp | formatDate('d MMM yy') }}
+                    </h3>
+                    
+                    <div class="timeline__event-content">
+                      {% if entry.changes.status and entry.changes.status.from !== entry.changes.status.to %}
+                        <p class="govuk-body govuk-!-margin-bottom-2">
+                          <strong>Delivery status updated:</strong> {{ renderStatusTag(entry.changes.status.to) }}
+                        </p>
+                      {% endif %}
                       
-                      {% if issue and path %}
-                        {% set displayCommentary = (issue + "\r\n\r\n" + path) | trim %}
-                      {% elif issue %}
-                        {% set displayCommentary = issue | trim %}
-                      {% elif path %}
-                        {% set displayCommentary = path | trim %}
+                      {% if entry.changes.name %}
+                        <p class="govuk-body govuk-!-margin-bottom-2">
+                          <strong>Project name updated:</strong> {{ entry.changes.name.to }}
+                        </p>
                       {% endif %}
-                    {% else %}
-                      {% set displayCommentary = displayCommentary | trim %}
-                    {% endif %}
-                    <div style="white-space: pre-wrap;">{{ displayCommentary }}</div>
-                  {% endif %}
-                  
-                  {% if isAdmin and entry.type === 'project' and (entry.changes.status or entry.changes.commentary) %}
-                    <p class="govuk-body-s govuk-!-margin-top-2">
-                      {% if loop.first %}
-                        <a href="/projects/{{ project.id }}/manage/status?edit=true&historyId={{ entry.id }}" class="govuk-link govuk-link--no-visited-state">Edit this update</a>
-                        | 
+                      
+                      {% if entry.changes.phase %}
+                        <p class="govuk-body govuk-!-margin-bottom-2">
+                          <strong>Phase updated:</strong> {{ entry.changes.phase.to }}
+                        </p>
                       {% endif %}
-                      <a href="/projects/{{ project.id }}/history/{{ entry.id }}/archive?returnTo=detail" class="govuk-link govuk-link--no-visited-state">Archive this update</a>
-                    </p>
-                  {% endif %}
-                </div>
+                      
+                      {% if entry.changes.commentary and entry.changes.commentary.to %}
+                        {% set displayCommentary = entry.changes.commentary.to %}
+                        {% if "Path to green:" in displayCommentary %}
+                          {% set parts = displayCommentary.split("Path to green:") %}
+                          {% set issue = parts[0] | trim if parts[0] else "" %}
+                          {% set path = parts[1] | trim if parts[1] else "" %}
+                          
+                          {% if issue and path %}
+                            {% set displayCommentary = (issue + "\r\n\r\n" + path) | trim %}
+                          {% elif issue %}
+                            {% set displayCommentary = issue | trim %}
+                          {% elif path %}
+                            {% set displayCommentary = path | trim %}
+                          {% endif %}
+                        {% else %}
+                          {% set displayCommentary = displayCommentary | trim %}
+                        {% endif %}
+                        <div style="white-space: pre-wrap;">{{ displayCommentary }}</div>
+                      {% endif %}
+                      
+                      {% if isAdmin and entry.type === 'project' and (entry.changes.status or entry.changes.commentary) %}
+                        <p class="govuk-body-s govuk-!-margin-top-2">
+                          {% if loop.first %}
+                            <a href="/projects/{{ project.id }}/manage/status?edit=true&historyId={{ entry.id }}" class="govuk-link govuk-link--no-visited-state">Edit this update</a>
+                            | 
+                          {% endif %}
+                          <a href="/projects/{{ project.id }}/history/{{ entry.id }}/archive?returnTo=detail" class="govuk-link govuk-link--no-visited-state">Archive this update</a>
+                        </p>
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endfor %}
               </div>
-            {% endfor %}
+            {% else %}
+              <div class="govuk-inset-text">
+                <p class="govuk-body">No project updates found yet.</p>
+              </div>
+            {% endif %}
           </div>
-        {% else %}
-          <div class="govuk-inset-text">
-            <p class="govuk-body">No project updates found yet.</p>
-          </div>
-        {% endif %}
+        </div>
       {% endset %}
 
       {{ govukTabs({
@@ -324,6 +356,15 @@
 
   .timeline__event-content {
     margin-top: 10px;
+  }
+
+  /* Project sidebar styles */
+  .project-sidebar dt {
+    margin-bottom: 4px;
+  }
+
+  .project-sidebar dd {
+    margin: 0 0 12px 0;
   }
 </style>
 {% endblock %}

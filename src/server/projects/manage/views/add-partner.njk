@@ -5,6 +5,7 @@
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
 
 {% block beforeContent %}
   {{ govukBreadcrumbs({
@@ -36,15 +37,30 @@
   <h1 class="govuk-heading-xl">Add a delivery partner</h1>
   <h2 class="govuk-heading-l govuk-!-margin-bottom-6">{{ project.name }}</h2>
   
-  {% if errorMessage %}
+  {% if errorMessage or errors.partnerId or errors.engagementManager %}
+    {% set errorList = [] %}
+    {% if errors.partnerId %}
+      {% set errorList = errorList.concat([{
+        text: errors.partnerId.text,
+        href: "#partnerId"
+      }]) %}
+    {% endif %}
+    {% if errors.engagementManager %}
+      {% set errorList = errorList.concat([{
+        text: errors.engagementManager.text,
+        href: "#engagementManager"
+      }]) %}
+    {% endif %}
+    {% if errorMessage and not errors.partnerId and not errors.engagementManager %}
+      {% set errorList = errorList.concat([{
+        text: errorMessage,
+        href: "#partnerId"
+      }]) %}
+    {% endif %}
+    
     {{ govukErrorSummary({
       titleText: "There is a problem",
-      errorList: [
-        {
-          text: errorMessage,
-          href: "#partnerId"
-        }
-      ]
+      errorList: errorList
     }) }}
   {% endif %}
 
@@ -63,6 +79,21 @@
         items: partnerRadioItems,
         value: values.partnerId,
         errorMessage: errors.partnerId
+      }) }}
+
+      {{ govukInput({
+        label: {
+          text: "Engagement manager name",
+          classes: "govuk-label--m"
+        },
+        hint: {
+          text: "Enter the name of the person managing this engagement"
+        },
+        id: "engagementManager",
+        name: "engagementManager",
+        classes: "govuk-!-width-two-thirds",
+        value: values.engagementManager,
+        errorMessage: errors.engagementManager
       }) }}
 
       <div class="govuk-button-group">

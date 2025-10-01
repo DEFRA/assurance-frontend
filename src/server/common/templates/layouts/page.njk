@@ -18,6 +18,13 @@
 {% block head %}
   <link href="{{ getAssetPath('stylesheets/application.scss') }}" rel="stylesheet">
   <link rel="stylesheet" href="{{ getAssetPath('accessible-autocomplete.min.css') }}">
+  <style>
+    /* Align header service name with navigation */
+    .govuk-header__content {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+  </style>
   {% block pageStyles %}{% endblock %}
 {% endblock %}
 
@@ -32,7 +39,7 @@
   {# Custom header for internal service - no crown logo, centered service name #}
   <header class="govuk-header" data-module="govuk-header">
     <div class="govuk-header__container govuk-width-container">
-      <div class="govuk-header__content" style="text-align: center; width: 100%;">
+      <div class="govuk-header__content">
         <a href="{{ serviceUrl or '/' }}" class="govuk-header__link govuk-header__service-name">
           {{ serviceName or "Defra Digital Assurance" }}
         </a>

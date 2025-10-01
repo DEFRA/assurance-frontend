@@ -1249,7 +1249,7 @@ function validateProjectPartnerData(projectPartnerData, projectId) {
 /**
  * Create delivery partner lookup map
  * @param {object} request - Hapi request object
- * @returns {Promise<Object>} Map of delivery partner ID to partner details
+ * @returns {Promise<object>} Map of delivery partner ID to partner details
  */
 async function createDeliveryPartnerMap(request) {
   // Fetch all delivery partners to get the names
@@ -1311,7 +1311,7 @@ function extractEngagementEnded(projectPartner) {
 /**
  * Transform project partner data into enriched partner objects
  * @param {Array} projectPartnerData - Raw project partner data
- * @param {Object} deliveryPartnerMap - Map of partner IDs to partner details
+ * @param {object} deliveryPartnerMap - Map of partner IDs to partner details
  * @returns {Array} Enriched partner objects
  */
 function enrichProjectPartners(projectPartnerData, deliveryPartnerMap) {

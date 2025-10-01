@@ -9,6 +9,7 @@ import { getDeliveryPartners } from '~/src/server/services/delivery-partners.js'
 import { VIEW_TEMPLATES } from '~/src/server/constants/notifications.js'
 import { statusCodes } from '~/src/server/common/constants/status-codes.js'
 import { PROJECT_STATUS } from '~/src/server/constants/status.js'
+import { getHomeBreadcrumbs } from '~/src/server/common/helpers/breadcrumbs.js'
 
 /**
  * Calculate status counts for projects
@@ -481,7 +482,8 @@ export const homeController = {
         deliveryPartners,
         isAuthenticated,
         notification,
-        searchTerm
+        searchTerm,
+        breadcrumbs: getHomeBreadcrumbs()
       })
     } catch (error) {
       request.logger.error('Error fetching data for homepage')

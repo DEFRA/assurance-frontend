@@ -154,7 +154,24 @@ describe('Standards Controller', () => {
         {
           pageTitle: `Standards Progress | ${mockProject.name}`,
           project: mockProject,
-          standards: mockServiceStandards
+          standards: mockServiceStandards,
+          breadcrumbs: [
+            {
+              text: 'Home',
+              href: '/'
+            },
+            {
+              text: 'Projects',
+              href: '/projects'
+            },
+            {
+              text: mockProject.name,
+              href: `/projects/${mockProject.id}`
+            },
+            {
+              text: 'Standards'
+            }
+          ]
         }
       )
       expect(result).toHaveProperty('code')
@@ -393,7 +410,24 @@ describe('Standards Controller', () => {
           heading: `Standard std-1 History`,
           project: mockProject,
           standard: expect.objectContaining({ standardId: 'std-1' }),
-          history: mockStandardHistory
+          history: mockStandardHistory,
+          breadcrumbs: [
+            {
+              text: 'Home',
+              href: '/'
+            },
+            {
+              text: 'Projects',
+              href: '/projects'
+            },
+            {
+              text: mockProject.name,
+              href: `/projects/${mockProject.id}`
+            },
+            {
+              text: 'Standard std-1 History'
+            }
+          ]
         }
       )
       expect(result).toHaveProperty('code')
@@ -1246,7 +1280,24 @@ describe('Standards Controller', () => {
           project: mockProject,
           standard: expect.objectContaining({ id: 'std-1' }),
           profession: expect.objectContaining({ id: 'prof-1' }),
-          history: mockAssessmentHistory
+          history: mockAssessmentHistory,
+          breadcrumbs: [
+            {
+              text: 'Home',
+              href: '/'
+            },
+            {
+              text: 'Projects',
+              href: '/projects'
+            },
+            {
+              text: mockProject.name,
+              href: `/projects/${mockProject.id}`
+            },
+            {
+              text: 'Standard 1 Assessment History'
+            }
+          ]
         }
       )
       expect(result).toHaveProperty('code')
@@ -1395,7 +1446,24 @@ describe('Standards Controller', () => {
           project: mockProject,
           standard: expect.objectContaining({ id: 'std-1' }),
           profession: expect.objectContaining({ id: 'prof-1' }),
-          historyEntry: expect.objectContaining({ id: 'hist-1' })
+          historyEntry: expect.objectContaining({ id: 'hist-1' }),
+          breadcrumbs: [
+            {
+              text: 'Home',
+              href: '/'
+            },
+            {
+              text: 'Projects',
+              href: '/projects'
+            },
+            {
+              text: mockProject.name,
+              href: `/projects/${mockProject.id}`
+            },
+            {
+              text: 'Archive Assessment'
+            }
+          ]
         }
       )
       expect(result).toHaveProperty('code')

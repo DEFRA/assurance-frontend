@@ -32,6 +32,11 @@ import {
   trackProjectView,
   trackProjectSearch
 } from '~/src/server/common/helpers/analytics.js'
+import {
+  getProjectsBreadcrumbs,
+  getProjectDetailBreadcrumbs,
+  truncateBreadcrumbText
+} from '~/src/server/common/helpers/breadcrumbs.js'
 
 export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND,
@@ -300,7 +305,8 @@ export const projectsController = {
         searchTerm: search,
         projectNames,
         isAuthenticated,
-        notification
+        notification,
+        breadcrumbs: getProjectsBreadcrumbs()
       })
     } catch (error) {
       request.logger.error('Error fetching projects for projects page')
@@ -406,7 +412,10 @@ export const projectsController = {
         projectHistory,
         isAuthenticated,
         statusClassMap: STATUS_CLASS,
-        statusLabelMap: STATUS_LABEL
+        statusLabelMap: STATUS_LABEL,
+        breadcrumbs: getProjectDetailBreadcrumbs(
+          truncateBreadcrumbText(project.name)
+        )
       })
     } catch (error) {
       request.logger.error({ error }, 'Error getting project')

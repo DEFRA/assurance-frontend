@@ -70,7 +70,16 @@ describe('Delivery Groups Controller', () => {
           name: 'Test Delivery Group',
           lead: 'John Doe'
         },
-        projects: mockProjects
+        projects: mockProjects,
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Test Delivery Group'
+          }
+        ]
       })
     })
 
@@ -97,7 +106,16 @@ describe('Delivery Groups Controller', () => {
           name: 'Test Delivery Group',
           lead: 'Jane Smith'
         },
-        projects: []
+        projects: [],
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Test Delivery Group'
+          }
+        ]
       })
     })
 
@@ -138,7 +156,16 @@ describe('Delivery Groups Controller', () => {
           name: 'Test Delivery Group',
           lead: undefined
         },
-        projects: []
+        projects: [],
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Test Delivery Group'
+          }
+        ]
       })
     })
 
@@ -163,7 +190,16 @@ describe('Delivery Groups Controller', () => {
           name: 'Test Delivery Group',
           lead: 'John Doe'
         },
-        projects: []
+        projects: [],
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Test Delivery Group'
+          }
+        ]
       })
     })
 

@@ -9,6 +9,10 @@ import {
   getProjectDeliveryPartners
 } from '~/src/server/services/projects.js'
 import { statusCodes } from '~/src/server/common/constants/status-codes.js'
+import {
+  getDeliveryPartnerDetailBreadcrumbs,
+  truncateBreadcrumbText
+} from '~/src/server/common/helpers/breadcrumbs.js'
 
 const VIEW_TEMPLATES = {
   DELIVERY_PARTNERS_DETAIL: 'delivery-partners/views/index',
@@ -185,7 +189,10 @@ export const deliveryPartnersController = {
           name: partnerName,
           lead: partnerLead
         },
-        projects: projects || []
+        projects: projects || [],
+        breadcrumbs: getDeliveryPartnerDetailBreadcrumbs(
+          truncateBreadcrumbText(partnerName)
+        )
       })
     } catch (error) {
       request.logger.error(

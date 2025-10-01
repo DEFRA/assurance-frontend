@@ -6,6 +6,10 @@ import Boom from '@hapi/boom'
 import { getDeliveryGroupById } from '~/src/server/services/delivery-groups.js'
 import { getProjectsByDeliveryGroup } from '~/src/server/services/projects.js'
 import { statusCodes } from '~/src/server/common/constants/status-codes.js'
+import {
+  getDeliveryGroupDetailBreadcrumbs,
+  truncateBreadcrumbText
+} from '~/src/server/common/helpers/breadcrumbs.js'
 
 const VIEW_TEMPLATES = {
   DELIVERY_GROUPS_DETAIL: 'delivery-groups/views/index',
@@ -57,7 +61,10 @@ export const deliveryGroupsController = {
           name: groupName,
           lead: groupLead
         },
-        projects: projects || []
+        projects: projects || [],
+        breadcrumbs: getDeliveryGroupDetailBreadcrumbs(
+          truncateBreadcrumbText(groupName)
+        )
       })
     } catch (error) {
       request.logger.error(

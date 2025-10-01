@@ -29,15 +29,16 @@
 {% endblock %}
 
 {% block header %}
-  {# New GOV.UK header with brand refresh #}
-  {{ govukHeader({
-    homepageUrl: "https://www.gov.uk/",
-    containerClasses: "govuk-width-container",
-    serviceName: (serviceName or "Defra Digital Assurance"),
-    serviceUrl: (serviceUrl or "/"),
-    useTudorCrown: true,
-    rebrand: true
-  }) }}
+  {# Custom header for internal service - no crown logo, centered service name #}
+  <header class="govuk-header" data-module="govuk-header">
+    <div class="govuk-header__container govuk-width-container">
+      <div class="govuk-header__content" style="text-align: center; width: 100%;">
+        <a href="{{ serviceUrl or '/' }}" class="govuk-header__link govuk-header__service-name">
+          {{ serviceName or "Defra Digital Assurance" }}
+        </a>
+      </div>
+    </div>
+  </header>
   
   {# Service navigation as separate component following new guidance #}
   <div class="govuk-service-navigation" data-module="govuk-service-navigation">
@@ -45,8 +46,8 @@
       <div class="govuk-service-navigation__container">
         <nav aria-label="Service navigation" class="govuk-service-navigation__wrapper">
           <ul class="govuk-service-navigation__list">
-            <li class="govuk-service-navigation__item{% if currentPath == '/' or (currentPath and currentPath.startsWith('/projects')) %} govuk-service-navigation__item--active{% endif %}">
-              <a class="govuk-service-navigation__link" href="/">Projects</a>
+            <li class="govuk-service-navigation__item{% if currentPath and currentPath.startsWith('/projects') %} govuk-service-navigation__item--active{% endif %}">
+              <a class="govuk-service-navigation__link" href="/projects">Projects</a>
             </li>
             {% if isAdmin %}
             <li class="govuk-service-navigation__item{% if currentPath and currentPath.startsWith('/admin') %} govuk-service-navigation__item--active{% endif %}">
@@ -94,24 +95,28 @@
 {% block content %}{% endblock %}
 
 {% block footer %}
-  {{ govukFooter({
-    meta: {
-      items: [
-        {
-          href: "https://www.gov.uk/help/privacy-notice",
-          text: "Privacy"
-        },
-        {
-          href: "https://www.gov.uk/help/cookies", 
-          text: "Cookies"
-        },
-        {
-          href: "https://www.gov.uk/help/accessibility-statement",
-          text: "Accessibility statement"
-        }
-      ]
-    }
-  }) }}
+  {# Custom footer for internal service - no crown branding #}
+  <footer class="govuk-footer">
+    <div class="govuk-width-container">
+      <div class="govuk-footer__meta">
+        <div class="govuk-footer__meta-item govuk-footer__meta-item--grow">
+          <h2 class="govuk-visually-hidden">Support links</h2>
+          <ul class="govuk-footer__inline-list">
+            <li class="govuk-footer__inline-list-item">
+              <a class="govuk-footer__link" href="mailto:CCTSAssurance@defra.gov.uk?subject=Privacy%20enquiry">
+                Privacy
+              </a>
+            </li>
+            <li class="govuk-footer__inline-list-item">
+              <a class="govuk-footer__link" href="mailto:CCTSAssurance@defra.gov.uk?subject=Accessibility%20enquiry">
+                Accessibility
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </footer>
 {% endblock %}
 
 {% block bodyEnd %}

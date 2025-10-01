@@ -1195,6 +1195,151 @@ export async function replaceProjectStatus(projectId, newProjectData, request) {
 }
 
 /**
+ * Fetch project partner data from API
+ * @param {string} projectId - The project ID
+ * @param {object} request - Hapi request object
+ * @returns {Promise<Array>} Raw project partner data from API
+ */
+async function fetchProjectPartnerData(projectId, request) {
+  const apiVersion = config.get(API_VERSION_KEY)
+  const endpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/deliverypartners`
+  logger.info(
+    { endpoint, projectId },
+    'Fetching project delivery partners from API'
+  )
+
+  let projectPartnerData
+  if (request) {
+    logger.info(
+      `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for project delivery partners API`
+    )
+    const authedFetch = authedFetchJsonDecorator(request)
+    projectPartnerData = await authedFetch(endpoint)
+  } else {
+    logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
+    projectPartnerData = await fetcher(endpoint)
+  }
+
+  return projectPartnerData
+}
+
+/**
+ * Validate project partner data from API
+ * @param {any} projectPartnerData - Raw data from API
+ * @param {string} projectId - The project ID for logging
+ * @returns {Array} Validated array of project partners
+ */
+function validateProjectPartnerData(projectPartnerData, projectId) {
+  if (!projectPartnerData || !Array.isArray(projectPartnerData)) {
+    logger.warn('Invalid data returned from API', {
+      data: projectPartnerData
+    })
+    return []
+  }
+
+  // If no delivery partners are assigned, return empty array
+  if (projectPartnerData.length === 0) {
+    logger.info({ projectId }, 'No delivery partners assigned to project')
+    return []
+  }
+
+  return projectPartnerData
+}
+
+/**
+ * Create delivery partner lookup map
+ * @param {object} request - Hapi request object
+ * @returns {Promise<Object>} Map of delivery partner ID to partner details
+ */
+async function createDeliveryPartnerMap(request) {
+  // Fetch all delivery partners to get the names
+  const { getAllDeliveryPartners } = await import('./delivery-partners.js')
+  const allDeliveryPartners = await getAllDeliveryPartners(request)
+
+  // Create a map of delivery partner ID to delivery partner details
+  const deliveryPartnerMap = {}
+  if (allDeliveryPartners && Array.isArray(allDeliveryPartners)) {
+    allDeliveryPartners.forEach((partner) => {
+      deliveryPartnerMap[partner.id] = partner
+    })
+  }
+
+  return deliveryPartnerMap
+}
+
+/**
+ * Extract delivery partner ID from project partner data (handles different field formats)
+ * @param {object} projectPartner - Project partner relationship data
+ * @returns {string} Delivery partner ID
+ */
+function extractDeliveryPartnerId(projectPartner) {
+  return (
+    projectPartner.DeliveryPartnerId ||
+    projectPartner.deliveryPartnerId ||
+    projectPartner.delivery_partner_id
+  )
+}
+
+/**
+ * Extract engagement manager from project partner data (handles different field formats)
+ * @param {object} projectPartner - Project partner relationship data
+ * @returns {string} Engagement manager name
+ */
+function extractEngagementManager(projectPartner) {
+  return (
+    projectPartner.EngagementManager ||
+    projectPartner.engagementManager ||
+    projectPartner.engagement_manager
+  )
+}
+
+/**
+ * Extract engagement ended date from project partner data (handles different field formats)
+ * @param {object} projectPartner - Project partner relationship data
+ * @returns {string|null} Engagement ended date
+ */
+function extractEngagementEnded(projectPartner) {
+  if (projectPartner.EngagementEnded !== undefined) {
+    return projectPartner.EngagementEnded
+  }
+  if (projectPartner.engagementEnded !== undefined) {
+    return projectPartner.engagementEnded
+  }
+  return null
+}
+
+/**
+ * Transform project partner data into enriched partner objects
+ * @param {Array} projectPartnerData - Raw project partner data
+ * @param {Object} deliveryPartnerMap - Map of partner IDs to partner details
+ * @returns {Array} Enriched partner objects
+ */
+function enrichProjectPartners(projectPartnerData, deliveryPartnerMap) {
+  return projectPartnerData
+    .map((projectPartner) => {
+      const deliveryPartnerId = extractDeliveryPartnerId(projectPartner)
+      const engagementManager = extractEngagementManager(projectPartner)
+      const engagementEnded = extractEngagementEnded(projectPartner)
+      const partnerDetails = deliveryPartnerMap[deliveryPartnerId] || {}
+
+      return {
+        id: deliveryPartnerId,
+        name: partnerDetails.name || 'Unknown Partner',
+        engagementManager,
+        engagementStarted:
+          projectPartner.EngagementStarted || projectPartner.engagementStarted,
+        engagementEnded,
+        // Keep the original relationship data for reference
+        relationshipId: projectPartner.Id || projectPartner.id
+      }
+    })
+    .filter((partner) => {
+      // Only show active partnerships (where engagement hasn't ended)
+      return !partner.engagementEnded
+    })
+}
+
+/**
  * Get delivery partners assigned to a specific project
  * Note: This will need backend endpoint: GET /api/v{version}/projects/{projectId}/deliverypartners
  * @param {string} projectId - The project ID
@@ -1203,90 +1348,26 @@ export async function replaceProjectStatus(projectId, newProjectData, request) {
  */
 export async function getProjectDeliveryPartners(projectId, request) {
   try {
-    const apiVersion = config.get(API_VERSION_KEY)
-    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/projects/${projectId}/deliverypartners`
-    logger.info(
-      { endpoint, projectId },
-      'Fetching project delivery partners from API'
+    // Fetch raw project partner data from API
+    const projectPartnerData = await fetchProjectPartnerData(projectId, request)
+
+    // Validate the data
+    const validatedData = validateProjectPartnerData(
+      projectPartnerData,
+      projectId
     )
-
-    let projectPartnerData
-    if (request) {
-      logger.info(
-        `${API_AUTH_MESSAGES.USING_AUTHENTICATED_FETCHER} for project delivery partners API`
-      )
-      const authedFetch = authedFetchJsonDecorator(request)
-      projectPartnerData = await authedFetch(endpoint)
-    } else {
-      logger.warn(API_AUTH_MESSAGES.NO_REQUEST_CONTEXT)
-      projectPartnerData = await fetcher(endpoint)
-    }
-
-    if (!projectPartnerData || !Array.isArray(projectPartnerData)) {
-      logger.warn('Invalid data returned from API', {
-        data: projectPartnerData
-      })
+    if (validatedData.length === 0) {
       return []
     }
 
-    // If no delivery partners are assigned, return empty array
-    if (projectPartnerData.length === 0) {
-      logger.info({ projectId }, 'No delivery partners assigned to project')
-      return []
-    }
+    // Create delivery partner lookup map
+    const deliveryPartnerMap = await createDeliveryPartnerMap(request)
 
-    // Fetch all delivery partners to get the names
-    const { getAllDeliveryPartners } = await import('./delivery-partners.js')
-    const allDeliveryPartners = await getAllDeliveryPartners(request)
-
-    // Create a map of delivery partner ID to delivery partner details
-    const deliveryPartnerMap = {}
-    if (allDeliveryPartners && Array.isArray(allDeliveryPartners)) {
-      allDeliveryPartners.forEach((partner) => {
-        deliveryPartnerMap[partner.id] = partner
-      })
-    }
-
-    // Merge project-partner relationship data with delivery partner details
-    const enrichedPartners = projectPartnerData
-      .map((projectPartner) => {
-        // Handle different possible field name formats (PascalCase vs camelCase)
-        const deliveryPartnerId =
-          projectPartner.DeliveryPartnerId ||
-          projectPartner.deliveryPartnerId ||
-          projectPartner.delivery_partner_id
-
-        const engagementManager =
-          projectPartner.EngagementManager ||
-          projectPartner.engagementManager ||
-          projectPartner.engagement_manager
-
-        const engagementEnded =
-          projectPartner.EngagementEnded || projectPartner.engagementEnded
-
-        const partnerDetails = deliveryPartnerMap[deliveryPartnerId] || {}
-
-        return {
-          id: deliveryPartnerId,
-          name: partnerDetails.name || 'Unknown Partner',
-          engagementManager: engagementManager,
-          engagementStarted:
-            projectPartner.EngagementStarted ||
-            projectPartner.engagementStarted,
-          engagementEnded: engagementEnded,
-          // Keep the original relationship data for reference
-          relationshipId: projectPartner.Id || projectPartner.id
-        }
-      })
-      .filter((partner) => {
-        // Only show active partnerships (where engagement hasn't ended)
-        if (!partner.engagementEnded) {
-          return true // No end date means active partnership
-        }
-
-        // If there's an end date, the partnership has been terminated
-        return false
-      })
+    // Transform and enrich the partner data
+    const enrichedPartners = enrichProjectPartners(
+      validatedData,
+      deliveryPartnerMap
+    )
 
     logger.info(
       {

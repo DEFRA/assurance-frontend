@@ -28,7 +28,10 @@ import {
   DDTS_ASSURANCE_SUFFIX
 } from '~/src/server/constants/notifications.js'
 import { statusCodes } from '~/src/server/common/constants/status-codes.js'
-import { trackProjectView } from '~/src/server/common/helpers/analytics.js'
+import {
+  trackProjectView,
+  trackProjectSearch
+} from '~/src/server/common/helpers/analytics.js'
 
 export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND,
@@ -263,18 +266,44 @@ async function fetchProjectDeliveryGroup(project, request) {
 
 export const projectsController = {
   getAll: async (request, h) => {
+    const { notification } = request.query
+    const isAuthenticated = request.auth.isAuthenticated
+
     try {
+      request.logger.info('Projects page - fetching projects')
       const projects = await getProjects(request)
-      const isAuthenticated = request.auth.isAuthenticated
+
+      // Filter out TBC projects for unauthenticated users
+      const visibleProjects = isAuthenticated
+        ? projects // Authenticated users see all projects
+        : projects.filter((project) => project.status !== 'TBC')
+
+      // Get all project names for autocomplete (from visible projects only)
+      const projectNames = visibleProjects.map((project) => project.name)
+
+      // Filter projects if search term is provided
+      const search = request.query.search
+      const filteredProjects = search
+        ? visibleProjects.filter((project) =>
+            project.name.toLowerCase().includes(search.toLowerCase())
+          )
+        : visibleProjects
+
+      // Track search if provided
+      if (search) {
+        await trackProjectSearch(request, search, filteredProjects.length)
+      }
 
       return h.view(VIEW_TEMPLATES.PROJECTS_INDEX, {
         pageTitle: PAGE_TITLES.PROJECTS,
-        heading: PAGE_TITLES.PROJECTS,
-        projects,
-        isAuthenticated
+        projects: filteredProjects,
+        searchTerm: search,
+        projectNames,
+        isAuthenticated,
+        notification
       })
     } catch (error) {
-      request.logger.error('Error fetching projects')
+      request.logger.error('Error fetching projects for projects page')
       throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
     }
   },
@@ -289,7 +318,9 @@ export const projectsController = {
 
       if (!project) {
         request.logger.error(NOTIFICATIONS.PROJECT_NOT_FOUND, { id })
-        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
+        return h.redirect(
+          `/projects?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+        )
       }
 
       request.logger.info({ id }, 'Project retrieved')
@@ -389,7 +420,9 @@ export const projectsController = {
     try {
       const project = await getProjectById(id, request)
       if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
+        return h.redirect(
+          `/projects?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+        )
       }
 
       // Get project history for recent delivery updates
@@ -462,7 +495,9 @@ export const projectsController = {
       // Get current project to modify
       const currentProject = await getProjectById(id, request)
       if (!currentProject) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
+        return h.redirect(
+          `/projects?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+        )
       }
 
       // Initialize the project data that will be updated
@@ -669,7 +704,9 @@ export const projectsController = {
     try {
       const project = await getProjectById(id, request)
       if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
+        return h.redirect(
+          `/projects?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+        )
       }
 
       const profession = project.professions?.find(
@@ -718,7 +755,9 @@ export const projectsController = {
       // Get project and history entry details
       const project = await getProjectById(id, request)
       if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
+        return h.redirect(
+          `/projects?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+        )
       }
 
       // Get the project history to find the specific entry

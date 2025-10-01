@@ -15,7 +15,7 @@
     items: [
       {
         text: "Projects",
-        href: "/"
+        href: "/projects"
       },
       {
         text: project.name
@@ -125,7 +125,9 @@
               <dt class="govuk-body-s govuk-!-font-weight-bold">Delivery partner{{ 's' if deliveryPartners.length > 1 }}</dt>
               <dd class="govuk-body-s">
                 {% for partner in deliveryPartners %}
-                  {{- partner.name }}
+                  <a href="/delivery-partners/{{ partner.id or partner.Id }}" class="govuk-link">
+                    {{ partner.name or partner.Name }}
+                  </a>
                   {%- if not loop.last %}<br>{% endif -%}
                 {% endfor %}
               </dd>

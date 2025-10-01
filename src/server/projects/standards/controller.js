@@ -615,7 +615,9 @@ export const standardsController = {
     try {
       const project = await getProjectById(id, request)
       if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
+        return h.redirect(
+          `/projects?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+        )
       }
 
       // Get service standards for reference
@@ -700,7 +702,9 @@ export const standardsController = {
     try {
       const project = await getProjectById(id, request)
       if (!project) {
-        return h.redirect(`/?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`)
+        return h.redirect(
+          `/projects?notification=${NOTIFICATIONS.PROJECT_NOT_FOUND}`
+        )
       }
 
       // Find the standard in standardsSummary

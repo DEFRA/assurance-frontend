@@ -7,6 +7,7 @@ import { authRoutes } from './auth/index.js'
 import { projectsRoutes } from './projects/index.js'
 import { professions } from './professions/index.js'
 import { deliveryGroups } from './delivery-groups/index.js'
+import { deliveryPartners } from './delivery-partners/index.js'
 import { serveStaticFiles } from './common/helpers/serve-static-files.js'
 /**
  * @satisfies {ServerRegisterPluginObject<void>}
@@ -28,7 +29,8 @@ export const router = {
         authRoutes,
         projectsRoutes,
         professions,
-        deliveryGroups
+        deliveryGroups,
+        deliveryPartners
       ])
 
       // Static assets

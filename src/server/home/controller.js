@@ -4,11 +4,9 @@ import {
   getProjectHistory,
   getAssessmentHistory
 } from '~/src/server/services/projects.js'
-import {
-  PAGE_TITLES,
-  VIEW_TEMPLATES
-} from '~/src/server/constants/notifications.js'
-import { trackProjectSearch } from '~/src/server/common/helpers/analytics.js'
+import { getDeliveryGroups } from '~/src/server/services/delivery-groups.js'
+import { getDeliveryPartners } from '~/src/server/services/delivery-partners.js'
+import { VIEW_TEMPLATES } from '~/src/server/constants/notifications.js'
 import { statusCodes } from '~/src/server/common/constants/status-codes.js'
 import { PROJECT_STATUS } from '~/src/server/constants/status.js'
 
@@ -442,12 +440,31 @@ export const homeController = {
    * @param {import('@hapi/hapi').ResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { notification } = request.query
+    const { notification, search } = request.query
     const isAuthenticated = request.auth.isAuthenticated
+    const searchTerm = search || ''
 
     try {
-      request.logger.info('Home page - fetching projects')
-      const projects = await getProjects(request)
+      request.logger.info('Home page - fetching data')
+
+      // Fetch projects, delivery groups, and delivery partners in parallel
+      const [projects, deliveryGroups, deliveryPartners] = await Promise.all([
+        getProjects(request),
+        getDeliveryGroups(request).catch((error) => {
+          request.logger.warn(
+            'Failed to fetch delivery groups for home page:',
+            error
+          )
+          return [] // Return empty array if delivery groups fail
+        }),
+        getDeliveryPartners(request).catch((error) => {
+          request.logger.warn(
+            'Failed to fetch delivery partners for home page:',
+            error
+          )
+          return [] // Return empty array if delivery partners fail
+        })
+      ])
 
       // Filter out TBC projects for unauthenticated users
       const visibleProjects = isAuthenticated
@@ -457,29 +474,17 @@ export const homeController = {
       // Get all project names for autocomplete (from visible projects only)
       const projectNames = visibleProjects.map((project) => project.name)
 
-      // Filter projects if search term is provided
-      const search = request.query.search
-      const filteredProjects = search
-        ? visibleProjects.filter((project) =>
-            project.name.toLowerCase().includes(search.toLowerCase())
-          )
-        : visibleProjects
-
-      // Track search if provided
-      if (search) {
-        await trackProjectSearch(request, search, filteredProjects.length)
-      }
-
       return h.view(VIEW_TEMPLATES.HOME_INDEX, {
-        pageTitle: PAGE_TITLES.HOME,
-        projects: filteredProjects,
-        searchTerm: search,
+        pageTitle: 'Defra Digital Assurance',
         projectNames,
+        deliveryGroups,
+        deliveryPartners,
         isAuthenticated,
-        notification
+        notification,
+        searchTerm
       })
     } catch (error) {
-      request.logger.error('Error fetching projects for homepage')
+      request.logger.error('Error fetching data for homepage')
 
       // Throw a 500 error to trigger our professional error page
       throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })

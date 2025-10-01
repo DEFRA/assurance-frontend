@@ -116,7 +116,9 @@ describe('Projects controller', () => {
       mockGetProjects.mockResolvedValue(projects)
 
       const request = {
-        auth: { isAuthenticated: false }
+        auth: { isAuthenticated: false },
+        query: {},
+        logger: { error: jest.fn(), info: jest.fn() }
       }
 
       // Act
@@ -126,9 +128,11 @@ describe('Projects controller', () => {
       expect(mockGetProjects).toHaveBeenCalledWith(request)
       expect(mockH.view).toHaveBeenCalledWith('projects/views/index', {
         pageTitle: 'Projects',
-        heading: 'Projects',
         projects,
-        isAuthenticated: false
+        projectNames: ['Project 1', 'Project 2'],
+        isAuthenticated: false,
+        notification: undefined,
+        searchTerm: undefined
       })
     })
 
@@ -137,7 +141,9 @@ describe('Projects controller', () => {
       mockGetProjects.mockRejectedValue(new Error('Database error'))
 
       const request = {
-        logger: { error: jest.fn() }
+        logger: { error: jest.fn() },
+        query: {},
+        auth: { isAuthenticated: false }
       }
 
       // Act & Assert
@@ -148,7 +154,7 @@ describe('Projects controller', () => {
         output: { statusCode: 500 }
       })
       expect(request.logger.error).toHaveBeenCalledWith(
-        'Error fetching projects'
+        'Error fetching projects for projects page'
       )
     })
   })
@@ -223,7 +229,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
+        '/projects?notification=Project not found'
       )
     })
 
@@ -371,7 +377,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
+        '/projects?notification=Project not found'
       )
     })
   })
@@ -456,7 +462,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        `/?notification=${NOTIFICATIONS.NOT_FOUND}`
+        `/projects?notification=${NOTIFICATIONS.NOT_FOUND}`
       )
     })
 
@@ -934,7 +940,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
+        '/projects?notification=Project not found'
       )
     })
 
@@ -1287,7 +1293,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project not found'
+        '/projects?notification=Project not found'
       )
     })
 

@@ -1,7 +1,304 @@
-{% if isAdmin %}
-{{ govukButton({
-  text: "Add new project",
-  href: "/projects/add",
-  classes: "govuk-button--secondary"
-}) }}
-{% endif %} 
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "status-tag.njk" import renderStatusTag %}
+
+{% block content %}
+  {{ appHeading({
+    text: "Projects"
+  }) }}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <form method="GET" action="/projects" class="govuk-!-margin-bottom-6">
+        <div class="govuk-form-group">
+          <label class="govuk-label govuk-label--s" for="search">
+            Search projects
+          </label>
+          <div class="gem-c-search">
+            <div class="gem-c-search__item-wrapper">
+              <div class="js-search-input-wrapper">
+                <div id="search-container" class="govuk-!-margin-bottom-0"></div>
+              </div>
+              <div class="gem-c-search__item gem-c-search__submit-wrapper">
+                <button class="gem-c-search__submit" type="submit" enterkeyhint="search">
+                  <svg class="gem-c-search__icon" width="27" height="27" viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                    <circle cx="12.0161" cy="11.0161" r="8.51613" stroke="currentColor" stroke-width="3"></circle>
+                    <line x1="17.8668" y1="17.3587" x2="26.4475" y2="25.9393" stroke="currentColor" stroke-width="3"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          {% if searchTerm %}
+            <p class="govuk-body govuk-!-margin-top-3">
+              <a href="/projects" class="govuk-link">Clear search</a>
+            </p>
+          {% endif %}
+        </div>
+      </form>
+
+      {% if isAuthenticated %}
+        <p class="govuk-body govuk-!-margin-bottom-6">
+          <a href="/projects/add" class="govuk-link">Add new project</a>
+        </p>
+      {% endif %}
+
+      {% if searchTerm %}
+        <h2 class="govuk-heading-m">Search results for: "{{ searchTerm }}"</h2>
+        {% if projects.length == 0 %}
+          <p class="govuk-body">No projects found matching your search.</p>
+          <p class="govuk-body"><a href="/projects" class="govuk-link">View all projects</a></p>
+        {% endif %}
+      {% endif %}
+
+      {% if projects.length > 0 %}
+        {{ govukTable({
+          caption: "List of projects" if not searchTerm else "Search results",
+          captionClasses: "govuk-visually-hidden",
+          head: [
+            { text: "Project name" },
+            { text: "RAG status" }
+          ],
+          rows: projects | projectTableRows
+        }) }}
+      {% elif not searchTerm %}
+        <p class="govuk-body">No projects available.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block pageStyles %}
+<style>
+  /* GOV.UK Search Component Styles */
+  .gem-c-search {
+    position: relative;
+    max-width: 100%;
+  }
+
+  .gem-c-search__item-wrapper {
+    display: flex;
+    position: relative;
+  }
+
+  .gem-c-search__item {
+    position: relative;
+  }
+
+  .js-search-input-wrapper {
+    flex: 1;
+  }
+
+  .gem-c-search__input {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-right: none !important;
+    height: 50px !important;
+    box-sizing: border-box !important;
+  }
+
+  .gem-c-search__submit-wrapper {
+    flex: 0 0 auto;
+  }
+
+  .gem-c-search__submit {
+    background-color: #1d70b8;
+    border: 3px solid #1d70b8;
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+    color: #ffffff;
+    cursor: pointer;
+    font-family: "GDS Transport", arial, sans-serif;
+    font-size: 0;
+    line-height: 1;
+    padding: 0;
+    position: relative;
+    text-align: center;
+    vertical-align: top;
+    white-space: nowrap;
+    height: 50px;
+    width: 50px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gem-c-search__submit:hover {
+    background-color: #003078;
+    border-color: #003078;
+  }
+
+  .gem-c-search__submit:focus {
+    background-color: #fd0;
+    border-color: #fd0;
+    box-shadow: 0 -2px #fd0, 0 4px #0b0c0c;
+    color: #0b0c0c;
+    outline: 4px solid transparent;
+  }
+
+  .gem-c-search__submit:focus .gem-c-search__icon {
+    color: #0b0c0c;
+  }
+
+  .gem-c-search__icon {
+    color: currentColor;
+    height: 20px;
+    width: 20px;
+    vertical-align: middle;
+    margin-left: 5px;
+  }
+
+  /* Ensure the autocomplete input matches the search styling */
+  .autocomplete__wrapper {
+    position: relative !important;
+  }
+
+  .autocomplete__input {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-right: none !important;
+    height: 50px !important;
+    box-sizing: border-box !important;
+  }
+
+  .autocomplete__input:focus {
+    border-right: none !important;
+  }
+</style>
+{% endblock %}
+
+{% block pageScripts %}
+<script>
+  (function() {
+    // Store event handlers in variables for cleanup
+    let formSubmitHandler = null;
+    let domContentLoadedHandler = null;
+
+    // Initialize autocomplete and form handling
+    domContentLoadedHandler = function() {
+      // Create a source array with project names and IDs for easy lookup
+      const projects = {{ projects | dump | safe }};
+      const projectsById = {};
+      const projectsByName = {};
+      
+      // Create lookup maps for faster access
+      projects.forEach(project => {
+        projectsById[project.id] = project;
+        projectsByName[project.name] = project;
+      });
+      
+      // Create a list of project names for the autocomplete
+      const projectNames = projects.map(project => project.name);
+      
+      // Initialize the GOV.UK accessible autocomplete
+      accessibleAutocomplete({
+        element: document.querySelector('#search-container'),
+        id: 'search',
+        name: 'search',
+        defaultValue: '{{ searchTerm }}',
+        source: projectNames,
+        placeholder: 'Start typing to search',
+        autoselect: false,
+        confirmOnBlur: false,
+        showNoOptionsFound: true,
+        minLength: 2,
+        displayMenu: 'overlay',
+        onConfirm: function(selectedProjectName) {
+          // Always submit the form when a value is confirmed (either by selection or Enter)
+          const form = document.querySelector('form[method="GET"]');
+          
+          if (selectedProjectName && selectedProjectName.trim()) {
+            // Check if this is an exact project match for direct navigation
+            const project = projectsByName[selectedProjectName];
+            if (project && project.id && selectedProjectName === project.name) {
+              // Direct navigation for exact matches
+              window.location.href = `/projects/${project.id}`;
+              return;
+            }
+          }
+          
+          // For all other cases (partial matches, no matches, or any text), submit the form
+          if (form) {
+            // Use a small timeout to ensure the input value is properly set
+            setTimeout(() => {
+              form.submit();
+            }, 50);
+          }
+        },
+        tNoResults: function() { 
+          return 'No projects found';
+        },
+        tStatusQueryTooShort: function(minQueryLength) {
+          return `Type in ${minQueryLength} or more characters for results`;
+        }
+      });
+      
+      const form = document.querySelector('form[method="GET"]');
+      
+      // Handle form submission for search functionality
+      if (form) {
+        formSubmitHandler = function(event) {
+          const searchInput = document.querySelector('#search');
+          
+          // If search input is empty, redirect to projects page
+          if (searchInput && !searchInput.value.trim()) {
+            event.preventDefault();
+            window.location.href = '/projects';
+            return;
+          }
+          
+          // If search input has value, allow normal form submission
+          // No need to prevent default - let the form submit normally with GET parameters
+        };
+        
+        form.addEventListener('submit', formSubmitHandler);
+      }
+      
+      // Add fallback Enter key handler after autocomplete is initialized
+      setTimeout(() => {
+        const searchInputElement = document.querySelector('#search');
+        if (searchInputElement) {
+          searchInputElement.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+              event.preventDefault(); // Prevent default to avoid double submission
+              // Submit the form after a small delay
+              setTimeout(() => {
+                if (this.value && this.value.trim()) {
+                  const form = document.querySelector('form[method="GET"]');
+                  if (form) {
+                    form.submit();
+                  }
+                }
+              }, 50);
+            }
+          });
+        }
+      }, 200); // Wait for autocomplete to be fully initialized
+    };
+
+    // Event listener setup
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', domContentLoadedHandler);
+    } else {
+      domContentLoadedHandler();
+    }
+
+    // Cleanup function
+    window.addEventListener('beforeunload', function() {
+      if (formSubmitHandler) {
+        const form = document.querySelector('form[method="GET"]');
+        if (form) {
+          form.removeEventListener('submit', formSubmitHandler);
+        }
+      }
+      
+      if (domContentLoadedHandler) {
+        document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
+      }
+    });
+  })();
+</script>
+{% endblock %}

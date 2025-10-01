@@ -4,6 +4,8 @@ import { homeController } from './controller.js'
 const mockGetProjects = jest.fn()
 const mockGetProjectHistory = jest.fn()
 const mockGetAssessmentHistory = jest.fn()
+const mockGetDeliveryGroups = jest.fn()
+const mockGetDeliveryPartners = jest.fn()
 const mockLogger = {
   info: jest.fn(),
   error: jest.fn(),
@@ -16,6 +18,14 @@ jest.mock('~/src/server/services/projects.js', () => ({
   getProjects: (...args) => mockGetProjects(...args),
   getProjectHistory: (...args) => mockGetProjectHistory(...args),
   getAssessmentHistory: (...args) => mockGetAssessmentHistory(...args)
+}))
+
+jest.mock('~/src/server/services/delivery-groups.js', () => ({
+  getDeliveryGroups: (...args) => mockGetDeliveryGroups(...args)
+}))
+
+jest.mock('~/src/server/services/delivery-partners.js', () => ({
+  getDeliveryPartners: (...args) => mockGetDeliveryPartners(...args)
 }))
 
 jest.mock('~/src/server/common/helpers/analytics.js', () => ({
@@ -123,6 +133,8 @@ describe('Home Controller', () => {
     mockGetProjects.mockResolvedValue(sampleProjects)
     mockGetProjectHistory.mockResolvedValue([])
     mockGetAssessmentHistory.mockResolvedValue([])
+    mockGetDeliveryGroups.mockResolvedValue([])
+    mockGetDeliveryPartners.mockResolvedValue([])
   })
 
   afterAll(() => {
@@ -141,25 +153,29 @@ describe('Home Controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'home/index',
         expect.objectContaining({
-          projects: expect.any(Array),
+          pageTitle: 'Defra Digital Assurance',
           projectNames: expect.arrayContaining([
             'Project 1',
             'Project 2',
             'Different Project'
-          ])
+          ]),
+          deliveryGroups: expect.any(Array),
+          deliveryPartners: expect.any(Array),
+          isAuthenticated: false,
+          searchTerm: ''
         })
       )
-      // Verify expected number of projects (3 for unauthenticated users - TBC hidden)
+      // Verify the view was called with correct data structure
       const viewArgs = mockH.view.mock.calls[0][1]
-      expect(viewArgs.projects).toHaveLength(3)
-
-      // Should not include TBC project for unauthenticated users
-      expect(viewArgs.projects.some((p) => p.status === 'TBC')).toBe(false)
+      expect(viewArgs.deliveryGroups).toEqual([])
+      expect(viewArgs.deliveryPartners).toEqual([])
+      expect(viewArgs.projectNames).toHaveLength(3)
     })
 
-    it('should filter projects by name when search term is provided', async () => {
+    it('should pass search term to view when search query is provided', async () => {
       // Arrange - Setup request with search query
       mockRequest.query = { search: 'Project 1' }
+      mockGetProjects.mockResolvedValue(sampleProjects)
 
       // Act
       await homeController.handler(mockRequest, mockH)
@@ -167,17 +183,18 @@ describe('Home Controller', () => {
       // Assert
       const viewArgs = mockH.view.mock.calls[0][1]
 
-      // Check behavior without over-specifying
-      expect(viewArgs.projects).toHaveLength(1)
-      expect(viewArgs.projects[0].name).toBe('Project 1')
+      // Home page should pass the search term but doesn't filter projects
       expect(viewArgs.searchTerm).toBe('Project 1')
       // All project names should still be available for autocomplete
-      expect(viewArgs.projectNames).toHaveLength(3)
+      expect(viewArgs.projectNames).toHaveLength(3) // All visible projects for autocomplete
+      expect(viewArgs.deliveryGroups).toEqual([])
+      expect(viewArgs.deliveryPartners).toEqual([])
     })
 
-    it('should perform case-insensitive search', async () => {
+    it('should pass search term to view for case-insensitive search', async () => {
       // Arrange - Use lowercase search term
       mockRequest.query = { search: 'project' }
+      mockGetProjects.mockResolvedValue(sampleProjects)
 
       // Act
       await homeController.handler(mockRequest, mockH)
@@ -185,23 +202,18 @@ describe('Home Controller', () => {
       // Assert
       const viewArgs = mockH.view.mock.calls[0][1]
 
-      // All projects with 'project' in name (case-insensitive) should be included
-      // This includes "Project 1", "Project 2", and "Different Project"
-      expect(viewArgs.projects).toHaveLength(3)
-
-      // Verify all projects with "project" in their name are found
-      const projectNames = viewArgs.projects.map((p) => p.name)
-      expect(projectNames).toContain('Project 1')
-      expect(projectNames).toContain('Project 2')
-      expect(projectNames).toContain('Different Project')
-
-      // Verify search was case-insensitive
+      // Home page should pass the search term but doesn't filter projects
       expect(viewArgs.searchTerm).toBe('project')
+      // All project names should still be available for autocomplete
+      expect(viewArgs.projectNames).toHaveLength(3)
+      expect(viewArgs.deliveryGroups).toEqual([])
+      expect(viewArgs.deliveryPartners).toEqual([])
     })
 
-    it('should return partial matches within project names', async () => {
+    it('should pass partial search term to view', async () => {
       // Arrange - Use partial term that appears in some project names
       mockRequest.query = { search: 'Diff' }
+      mockGetProjects.mockResolvedValue(sampleProjects)
 
       // Act
       await homeController.handler(mockRequest, mockH)
@@ -209,13 +221,16 @@ describe('Home Controller', () => {
       // Assert
       const viewArgs = mockH.view.mock.calls[0][1]
 
-      expect(viewArgs.projects).toHaveLength(1)
-      expect(viewArgs.projects[0].name).toBe('Different Project')
+      expect(viewArgs.searchTerm).toBe('Diff')
+      expect(viewArgs.projectNames).toHaveLength(3)
+      expect(viewArgs.deliveryGroups).toEqual([])
+      expect(viewArgs.deliveryPartners).toEqual([])
     })
 
-    it('should return empty projects array when no matches found', async () => {
+    it('should pass search term to view even when no matches expected', async () => {
       // Arrange
       mockRequest.query = { search: 'non-existent-project' }
+      mockGetProjects.mockResolvedValue(sampleProjects)
 
       // Act
       await homeController.handler(mockRequest, mockH)
@@ -223,9 +238,11 @@ describe('Home Controller', () => {
       // Assert
       const viewArgs = mockH.view.mock.calls[0][1]
 
-      expect(viewArgs.projects).toEqual([])
+      expect(viewArgs.searchTerm).toBe('non-existent-project')
       // Project names for autocomplete should still be available
       expect(viewArgs.projectNames).toHaveLength(3)
+      expect(viewArgs.deliveryGroups).toEqual([])
+      expect(viewArgs.deliveryPartners).toEqual([])
     })
 
     it('should handle authenticated users correctly', async () => {
@@ -274,8 +291,9 @@ describe('Home Controller', () => {
         // Assert
         const viewArgs = mockH.view.mock.calls[0][1]
 
-        expect(viewArgs.projects).toEqual([])
         expect(viewArgs.projectNames).toEqual([])
+        expect(viewArgs.deliveryGroups).toEqual([])
+        expect(viewArgs.deliveryPartners).toEqual([])
       })
     })
   })
@@ -848,8 +866,8 @@ describe('Home Controller', () => {
     })
   })
 
-  describe('TBC project filtering', () => {
-    it('should hide TBC projects from unauthenticated users', async () => {
+  describe('TBC project filtering for autocomplete', () => {
+    it('should hide TBC projects from autocomplete for unauthenticated users', async () => {
       // Arrange
       mockGetProjects.mockResolvedValue(sampleProjects)
       mockRequest.auth.isAuthenticated = false
@@ -860,24 +878,17 @@ describe('Home Controller', () => {
       // Assert
       const viewArgs = mockH.view.mock.calls[0][1]
 
-      // Should not include the TBC project
-      expect(viewArgs.projects).toHaveLength(3)
-      expect(viewArgs.projects.map((p) => p.id)).toEqual([
-        'project-1',
-        'project-2',
-        'project-3'
-      ])
-      expect(viewArgs.projects.some((p) => p.status === 'TBC')).toBe(false)
-
-      // Project names should also exclude TBC project
+      // Project names should exclude TBC project for autocomplete
       expect(viewArgs.projectNames).toEqual([
         'Project 1',
         'Project 2',
         'Different Project'
       ])
+      expect(viewArgs.deliveryGroups).toEqual([])
+      expect(viewArgs.deliveryPartners).toEqual([])
     })
 
-    it('should show TBC projects to authenticated users', async () => {
+    it('should include TBC projects in autocomplete for authenticated users', async () => {
       // Arrange
       mockGetProjects.mockResolvedValue(sampleProjects)
       mockRequest.auth.isAuthenticated = true
@@ -888,102 +899,15 @@ describe('Home Controller', () => {
       // Assert
       const viewArgs = mockH.view.mock.calls[0][1]
 
-      // Should include all projects including TBC
-      expect(viewArgs.projects).toHaveLength(4)
-      expect(viewArgs.projects.map((p) => p.id)).toEqual([
-        'project-1',
-        'project-2',
-        'project-3',
-        'project-4'
-      ])
-      expect(viewArgs.projects.some((p) => p.status === 'TBC')).toBe(true)
-
-      // Project names should include TBC project
+      // Project names should include TBC project for autocomplete
       expect(viewArgs.projectNames).toEqual([
         'Project 1',
         'Project 2',
         'Different Project',
         'TBC Project'
       ])
-    })
-
-    it('should filter TBC projects correctly when searching as unauthenticated user', async () => {
-      // Arrange
-      mockGetProjects.mockResolvedValue(sampleProjects)
-      mockRequest.auth.isAuthenticated = false
-      mockRequest.query.search = 'project' // Should match projects 1, 2, 3 but not TBC project
-
-      // Act
-      await homeController.handler(mockRequest, mockH)
-
-      // Assert
-      const viewArgs = mockH.view.mock.calls[0][1]
-
-      // Should match only visible (non-TBC) projects
-      expect(viewArgs.projects).toHaveLength(3)
-      expect(viewArgs.projects.map((p) => p.id)).toEqual([
-        'project-1',
-        'project-2',
-        'project-3'
-      ])
-      expect(viewArgs.projects.some((p) => p.status === 'TBC')).toBe(false)
-    })
-
-    it('should include TBC projects in search results for authenticated users', async () => {
-      // Arrange
-      mockGetProjects.mockResolvedValue(sampleProjects)
-      mockRequest.auth.isAuthenticated = true
-      mockRequest.query.search = 'project' // Should match all projects including TBC
-
-      // Act
-      await homeController.handler(mockRequest, mockH)
-
-      // Assert
-      const viewArgs = mockH.view.mock.calls[0][1]
-
-      // Should match all projects including TBC
-      expect(viewArgs.projects).toHaveLength(4)
-      expect(viewArgs.projects.map((p) => p.id)).toEqual([
-        'project-1',
-        'project-2',
-        'project-3',
-        'project-4'
-      ])
-      expect(viewArgs.projects.some((p) => p.status === 'TBC')).toBe(true)
-    })
-
-    it('should handle search for TBC project name as unauthenticated user', async () => {
-      // Arrange
-      mockGetProjects.mockResolvedValue(sampleProjects)
-      mockRequest.auth.isAuthenticated = false
-      mockRequest.query.search = 'TBC Project' // Searching specifically for TBC project
-
-      // Act
-      await homeController.handler(mockRequest, mockH)
-
-      // Assert
-      const viewArgs = mockH.view.mock.calls[0][1]
-
-      // Should return empty results since TBC projects are hidden
-      expect(viewArgs.projects).toHaveLength(0)
-    })
-
-    it('should handle search for TBC project name as authenticated user', async () => {
-      // Arrange
-      mockGetProjects.mockResolvedValue(sampleProjects)
-      mockRequest.auth.isAuthenticated = true
-      mockRequest.query.search = 'TBC Project' // Searching specifically for TBC project
-
-      // Act
-      await homeController.handler(mockRequest, mockH)
-
-      // Assert
-      const viewArgs = mockH.view.mock.calls[0][1]
-
-      // Should return the TBC project since user is authenticated
-      expect(viewArgs.projects).toHaveLength(1)
-      expect(viewArgs.projects[0].id).toBe('project-4')
-      expect(viewArgs.projects[0].status).toBe('TBC')
+      expect(viewArgs.deliveryGroups).toEqual([])
+      expect(viewArgs.deliveryPartners).toEqual([])
     })
   })
 })

@@ -164,7 +164,7 @@ describe('Add Project controller', () => {
         mockRequest
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project created successfully'
+        '/projects?notification=Project created successfully'
       )
       expect(result).toBe('redirect-response')
     })
@@ -435,7 +435,7 @@ describe('Add Project controller', () => {
         mockRequest
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/?notification=Project created successfully'
+        '/projects?notification=Project created successfully'
       )
       expect(result).toBe('redirect-response')
     })

@@ -12,7 +12,7 @@
         href: "/projects"
       },
       {
-        text: deliveryGroup.name
+        text: deliveryPartner.name
       }
     ]
   }) }}
@@ -22,13 +22,13 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
       {{ appHeading({
-        text: deliveryGroup.name,
+        text: deliveryPartner.name,
         classes: "govuk-heading-xl govuk-!-margin-bottom-4"
       }) }}
 
-      {% if deliveryGroup.lead %}
+      {% if deliveryPartner.lead %}
         <p class="govuk-body-m govuk-!-margin-bottom-6">
-          <strong>Delivery group lead:</strong> {{ deliveryGroup.lead }}
+          <strong>Delivery partner lead:</strong> {{ deliveryPartner.lead }}
         </p>
       {% endif %}
 
@@ -59,7 +59,7 @@
         }) }}
 
       {% else %}
-        <p class="govuk-body">No projects are currently assigned to this delivery group.</p>
+        <p class="govuk-body">No projects are currently assigned to this delivery partner.</p>
       {% endif %}
     </div>
   </div>

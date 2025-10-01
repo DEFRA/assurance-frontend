@@ -81,7 +81,7 @@ export const addProjectController = {
 
       request.logger.info(`Project "${name}" created successfully`)
       return h.redirect(
-        `/?notification=${NOTIFICATIONS.PROJECT_CREATED_SUCCESSFULLY}`
+        `/projects?notification=${NOTIFICATIONS.PROJECT_CREATED_SUCCESSFULLY}`
       )
     } catch (error) {
       request.logger.error({ error }, NOTIFICATIONS.FAILED_TO_CREATE_PROJECT)
@@ -138,7 +138,7 @@ export const postCreateProject = async (request, h) => {
 
     request.logger.info(`Project "${name}" created successfully`)
     return h.redirect(
-      `/?notification=${NOTIFICATIONS.PROJECT_CREATED_SUCCESSFULLY}`
+      `/projects?notification=${NOTIFICATIONS.PROJECT_CREATED_SUCCESSFULLY}`
     )
   } catch (error) {
     request.logger.error({ error }, NOTIFICATIONS.FAILED_TO_CREATE_PROJECT)

@@ -15,7 +15,8 @@ import {
   archiveAssessmentHistoryEntry,
   replaceAssessment,
   replaceProjectStatus,
-  getProjectsByDeliveryGroup
+  getProjectsByDeliveryGroup,
+  getProjectDeliveryPartners
 } from './projects.js'
 
 // First declare the mocks
@@ -2774,5 +2775,307 @@ describe('getProjectsByDeliveryGroup', () => {
       { error: mockError, deliveryGroupId: 'test-delivery-group' },
       'Failed to fetch projects by delivery group'
     )
+  })
+})
+
+describe('getProjectDeliveryPartners', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    // Mock the dynamic import of delivery-partners.js
+    jest.doMock('./delivery-partners.js', () => ({
+      getAllDeliveryPartners: jest.fn()
+    }))
+  })
+
+  afterEach(() => {
+    jest.dontMock('./delivery-partners.js')
+  })
+
+  it('should successfully fetch and enrich project delivery partners', async () => {
+    // Arrange
+    const projectId = 'test-project-123'
+    const mockRequest = {
+      logger: {
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn()
+      }
+    }
+
+    const mockProjectPartnerData = [
+      {
+        Id: 'rel-1',
+        DeliveryPartnerId: 'partner-1',
+        EngagementManager: 'John Doe',
+        EngagementStarted: '2023-01-01',
+        EngagementEnded: null
+      },
+      {
+        Id: 'rel-2',
+        deliveryPartnerId: 'partner-2', // Test camelCase
+        engagementManager: 'Jane Smith',
+        engagementStarted: '2023-02-01',
+        engagementEnded: '2023-12-01' // This should be filtered out
+      }
+    ]
+
+    const mockAllDeliveryPartners = [
+      { id: 'partner-1', name: 'Partner One' },
+      { id: 'partner-2', name: 'Partner Two' }
+    ]
+
+    const mockAuthedFetch = jest.fn().mockResolvedValue(mockProjectPartnerData)
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    // Mock the dynamic import
+    const { getAllDeliveryPartners } = await import('./delivery-partners.js')
+    getAllDeliveryPartners.mockResolvedValue(mockAllDeliveryPartners)
+
+    // Act
+    const result = await getProjectDeliveryPartners(projectId, mockRequest)
+
+    // Assert
+    expect(mockAuthedFetch).toHaveBeenCalledWith(
+      '/api/v1.0/projects/test-project-123/deliverypartners'
+    )
+    expect(getAllDeliveryPartners).toHaveBeenCalledWith(mockRequest)
+
+    // Should only return active partnerships (engagementEnded is null)
+    expect(result).toEqual([
+      {
+        id: 'partner-1',
+        name: 'Partner One',
+        engagementManager: 'John Doe',
+        engagementStarted: '2023-01-01',
+        engagementEnded: null,
+        relationshipId: 'rel-1'
+      }
+    ])
+
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: 'test-project-123',
+        count: 1,
+        partnerNames: ['Partner One']
+      }),
+      'Project delivery partners retrieved and enriched successfully - FINAL RESULT'
+    )
+  })
+
+  it('should return empty array when no project partner data', async () => {
+    // Arrange
+    const projectId = 'test-project-123'
+    const mockRequest = {
+      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+    }
+
+    const mockAuthedFetch = jest.fn().mockResolvedValue([])
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    // Act
+    const result = await getProjectDeliveryPartners(projectId, mockRequest)
+
+    // Assert
+    expect(result).toEqual([])
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      { projectId: 'test-project-123' },
+      'No delivery partners assigned to project'
+    )
+  })
+
+  it('should return empty array when invalid data returned from API', async () => {
+    // Arrange
+    const projectId = 'test-project-123'
+    const mockRequest = {
+      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+    }
+
+    const mockAuthedFetch = jest.fn().mockResolvedValue(null)
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    // Act
+    const result = await getProjectDeliveryPartners(projectId, mockRequest)
+
+    // Assert
+    expect(result).toEqual([])
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'Invalid data returned from API',
+      { data: null }
+    )
+  })
+
+  it('should handle missing partner details gracefully', async () => {
+    // Arrange
+    const projectId = 'test-project-123'
+    const mockRequest = {
+      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+    }
+
+    const mockProjectPartnerData = [
+      {
+        Id: 'rel-1',
+        DeliveryPartnerId: 'unknown-partner',
+        EngagementManager: 'John Doe',
+        EngagementStarted: '2023-01-01'
+      }
+    ]
+
+    const mockAllDeliveryPartners = [] // Empty partners list
+
+    const mockAuthedFetch = jest.fn().mockResolvedValue(mockProjectPartnerData)
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    const { getAllDeliveryPartners } = await import('./delivery-partners.js')
+    getAllDeliveryPartners.mockResolvedValue(mockAllDeliveryPartners)
+
+    // Act
+    const result = await getProjectDeliveryPartners(projectId, mockRequest)
+
+    // Assert
+    expect(result).toEqual([
+      {
+        id: 'unknown-partner',
+        name: 'Unknown Partner', // Fallback name
+        engagementManager: 'John Doe',
+        engagementStarted: '2023-01-01',
+        engagementEnded: null,
+        relationshipId: 'rel-1'
+      }
+    ])
+  })
+
+  it('should use unauthenticated fetcher when no request provided', async () => {
+    // Arrange
+    const projectId = 'test-project-123'
+    const mockProjectPartnerData = []
+
+    mockFetch.mockResolvedValue(mockProjectPartnerData)
+
+    // Act
+    const result = await getProjectDeliveryPartners(projectId, null)
+
+    // Assert
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      '[API_AUTH] No request context provided, using unauthenticated fetcher'
+    )
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1.0/projects/test-project-123/deliverypartners'
+    )
+    expect(result).toEqual([])
+  })
+
+  it('should handle different field name formats (snake_case)', async () => {
+    // Arrange
+    const projectId = 'test-project-123'
+    const mockRequest = {
+      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+    }
+
+    const mockProjectPartnerData = [
+      {
+        id: 'rel-1',
+        delivery_partner_id: 'partner-1', // snake_case
+        engagement_manager: 'John Doe',
+        engagementStarted: '2023-01-01'
+      }
+    ]
+
+    const mockAllDeliveryPartners = [{ id: 'partner-1', name: 'Partner One' }]
+
+    const mockAuthedFetch = jest.fn().mockResolvedValue(mockProjectPartnerData)
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    const { getAllDeliveryPartners } = await import('./delivery-partners.js')
+    getAllDeliveryPartners.mockResolvedValue(mockAllDeliveryPartners)
+
+    // Act
+    const result = await getProjectDeliveryPartners(projectId, mockRequest)
+
+    // Assert
+    expect(result).toEqual([
+      {
+        id: 'partner-1',
+        name: 'Partner One',
+        engagementManager: 'John Doe',
+        engagementStarted: '2023-01-01',
+        engagementEnded: null,
+        relationshipId: 'rel-1'
+      }
+    ])
+  })
+
+  it('should return empty array on API error to prevent blocking other data', async () => {
+    // Arrange
+    const projectId = 'test-project-123'
+    const mockRequest = {
+      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+    }
+    const mockError = new Error('API Error')
+
+    const mockAuthedFetch = jest.fn().mockRejectedValue(mockError)
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    // Act
+    const result = await getProjectDeliveryPartners(projectId, mockRequest)
+
+    // Assert
+    expect(result).toEqual([])
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      {
+        error: 'API Error',
+        stack: mockError.stack,
+        code: mockError.code,
+        projectId: 'test-project-123'
+      },
+      'Failed to fetch project delivery partners - returning empty array to prevent blocking other data'
+    )
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      { projectId: 'test-project-123' },
+      'Returning empty delivery partners array due to API error'
+    )
+  })
+
+  it('should filter out terminated partnerships', async () => {
+    // Arrange
+    const projectId = 'test-project-123'
+    const mockRequest = {
+      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+    }
+
+    const mockProjectPartnerData = [
+      {
+        Id: 'rel-1',
+        DeliveryPartnerId: 'partner-1',
+        EngagementManager: 'John Doe',
+        EngagementStarted: '2023-01-01',
+        EngagementEnded: null // Active
+      },
+      {
+        Id: 'rel-2',
+        DeliveryPartnerId: 'partner-2',
+        EngagementManager: 'Jane Smith',
+        EngagementStarted: '2023-02-01',
+        EngagementEnded: '2023-12-01' // Terminated
+      }
+    ]
+
+    const mockAllDeliveryPartners = [
+      { id: 'partner-1', name: 'Partner One' },
+      { id: 'partner-2', name: 'Partner Two' }
+    ]
+
+    const mockAuthedFetch = jest.fn().mockResolvedValue(mockProjectPartnerData)
+    mockAuthedFetchJsonDecorator.mockReturnValue(mockAuthedFetch)
+
+    const { getAllDeliveryPartners } = await import('./delivery-partners.js')
+    getAllDeliveryPartners.mockResolvedValue(mockAllDeliveryPartners)
+
+    // Act
+    const result = await getProjectDeliveryPartners(projectId, mockRequest)
+
+    // Assert - should only return the active partnership
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('partner-1')
+    expect(result[0].engagementEnded).toBeNull()
   })
 })

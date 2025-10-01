@@ -238,5 +238,125 @@ describe('Delivery Partners Controller', () => {
         'Error loading delivery partner details'
       )
     })
+
+    it('should handle errors in checkProjectForDeliveryPartner gracefully', async () => {
+      // Arrange
+      const mockDeliveryPartner = {
+        Name: 'Test Delivery Partner',
+        Lead: 'John Doe'
+      }
+      const mockAllProjects = [
+        { id: 'project1', name: 'Project 1', status: 'GREEN' }
+      ]
+
+      mockGetDeliveryPartnerById.mockResolvedValue(mockDeliveryPartner)
+      mockGetProjects.mockResolvedValue(mockAllProjects)
+
+      // Mock getProjectDeliveryPartners to throw an error
+      mockGetProjectDeliveryPartners.mockRejectedValue(new Error('API Error'))
+
+      // Act
+      await deliveryPartnersController.get(mockRequest, mockH)
+
+      // Assert - should continue and return empty projects array
+      expect(mockRequest.logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.any(Error),
+          projectId: 'project1',
+          deliveryPartnerId: 'test-delivery-partner'
+        }),
+        'Error checking delivery partners for project'
+      )
+      expect(mockH.view).toHaveBeenCalledWith('delivery-partners/views/index', {
+        pageTitle: 'Test Delivery Partner | Delivery Partner',
+        deliveryPartner: {
+          id: 'test-delivery-partner',
+          name: 'Test Delivery Partner',
+          lead: 'John Doe'
+        },
+        projects: [] // Should be empty due to error
+      })
+    })
+
+    it('should handle project matching with PascalCase delivery partner ID', async () => {
+      // Arrange
+      const mockDeliveryPartner = {
+        Name: 'Test Delivery Partner',
+        Lead: 'John Doe'
+      }
+      const mockAllProjects = [
+        { id: 'project1', name: 'Project 1', status: 'GREEN' }
+      ]
+
+      mockGetDeliveryPartnerById.mockResolvedValue(mockDeliveryPartner)
+      mockGetProjects.mockResolvedValue(mockAllProjects)
+
+      // Mock delivery partner with PascalCase Id field
+      mockGetProjectDeliveryPartners.mockResolvedValueOnce([
+        { Id: 'test-delivery-partner', name: 'Test Delivery Partner' }
+      ])
+
+      // Act
+      await deliveryPartnersController.get(mockRequest, mockH)
+
+      // Assert - should match the project
+      expect(mockH.view).toHaveBeenCalledWith('delivery-partners/views/index', {
+        pageTitle: 'Test Delivery Partner | Delivery Partner',
+        deliveryPartner: {
+          id: 'test-delivery-partner',
+          name: 'Test Delivery Partner',
+          lead: 'John Doe'
+        },
+        projects: [
+          {
+            id: 'project1',
+            name: 'Project 1',
+            status: 'GREEN',
+            deliveryPartners: [
+              { Id: 'test-delivery-partner', name: 'Test Delivery Partner' }
+            ]
+          }
+        ]
+      })
+    })
+
+    it('should sort projects alphabetically by name', async () => {
+      // Arrange
+      const mockDeliveryPartner = {
+        Name: 'Test Delivery Partner',
+        Lead: 'John Doe'
+      }
+      const mockAllProjects = [
+        { id: 'project1', name: 'Zebra Project', status: 'GREEN' },
+        { id: 'project2', name: 'Alpha Project', status: 'AMBER' },
+        { id: 'project3', name: 'Beta Project', status: 'RED' }
+      ]
+
+      mockGetDeliveryPartnerById.mockResolvedValue(mockDeliveryPartner)
+      mockGetProjects.mockResolvedValue(mockAllProjects)
+
+      // All projects have the test delivery partner
+      mockGetProjectDeliveryPartners
+        .mockResolvedValueOnce([
+          { id: 'test-delivery-partner', name: 'Test Delivery Partner' }
+        ])
+        .mockResolvedValueOnce([
+          { id: 'test-delivery-partner', name: 'Test Delivery Partner' }
+        ])
+        .mockResolvedValueOnce([
+          { id: 'test-delivery-partner', name: 'Test Delivery Partner' }
+        ])
+
+      // Act
+      await deliveryPartnersController.get(mockRequest, mockH)
+
+      // Assert - projects should be sorted alphabetically
+      const viewCall = mockH.view.mock.calls[0][1]
+      expect(viewCall.projects.map((p) => p.name)).toEqual([
+        'Alpha Project',
+        'Beta Project',
+        'Zebra Project'
+      ])
+    })
   })
 })

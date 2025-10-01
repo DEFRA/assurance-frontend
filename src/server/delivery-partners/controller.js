@@ -20,6 +20,69 @@ const NOTIFICATIONS = {
 }
 
 /**
+ * Check if a project has the specified delivery partner assigned
+ * @param {object} project - The project to check
+ * @param {string} deliveryPartnerId - The delivery partner ID to look for
+ * @param {import('@hapi/hapi').Request} request - The Hapi request object
+ * @returns {Promise<object|null>} Project with delivery partners if match found, null otherwise
+ */
+async function checkProjectForDeliveryPartner(
+  project,
+  deliveryPartnerId,
+  request
+) {
+  try {
+    // Get the delivery partners for this specific project
+    const projectDeliveryPartners = await getProjectDeliveryPartners(
+      project.id,
+      request
+    )
+
+    request.logger.debug(
+      {
+        projectId: project.id,
+        projectName: project.name,
+        deliveryPartnerId,
+        projectDeliveryPartners: projectDeliveryPartners.map((p) => ({
+          id: p.id,
+          name: p.name
+        }))
+      },
+      'Checking project delivery partners'
+    )
+
+    // Check if our delivery partner is in this project's delivery partners
+    const hasPartner = projectDeliveryPartners.some(
+      (partner) =>
+        partner.id === deliveryPartnerId || partner.Id === deliveryPartnerId
+    )
+
+    if (!hasPartner) {
+      return null
+    }
+
+    request.logger.info(
+      {
+        projectId: project.id,
+        projectName: project.name,
+        deliveryPartnerId
+      },
+      'Found project with matching delivery partner'
+    )
+
+    // Add the delivery partners to the project for the view
+    project.deliveryPartners = projectDeliveryPartners
+    return project
+  } catch (error) {
+    request.logger.warn(
+      { error, projectId: project.id, deliveryPartnerId },
+      'Error checking delivery partners for project'
+    )
+    return null
+  }
+}
+
+/**
  * Get projects by delivery partner ID
  * @param {string} deliveryPartnerId - The delivery partner ID
  * @param {import('@hapi/hapi').Request} request - The Hapi request object
@@ -43,51 +106,14 @@ async function getProjectsByDeliveryPartner(deliveryPartnerId, request) {
     const projectsWithDeliveryPartner = []
 
     for (const project of allProjects) {
-      try {
-        // Get the delivery partners for this specific project
-        const projectDeliveryPartners = await getProjectDeliveryPartners(
-          project.id,
-          request
-        )
+      const matchingProject = await checkProjectForDeliveryPartner(
+        project,
+        deliveryPartnerId,
+        request
+      )
 
-        request.logger.debug(
-          {
-            projectId: project.id,
-            projectName: project.name,
-            deliveryPartnerId,
-            projectDeliveryPartners: projectDeliveryPartners.map((p) => ({
-              id: p.id,
-              name: p.name
-            }))
-          },
-          'Checking project delivery partners'
-        )
-
-        // Check if our delivery partner is in this project's delivery partners
-        const hasPartner = projectDeliveryPartners.some(
-          (partner) =>
-            partner.id === deliveryPartnerId || partner.Id === deliveryPartnerId
-        )
-
-        if (hasPartner) {
-          request.logger.info(
-            {
-              projectId: project.id,
-              projectName: project.name,
-              deliveryPartnerId
-            },
-            'Found project with matching delivery partner'
-          )
-          // Add the delivery partners to the project for the view
-          project.deliveryPartners = projectDeliveryPartners
-          projectsWithDeliveryPartner.push(project)
-        }
-      } catch (error) {
-        request.logger.warn(
-          { error, projectId: project.id, deliveryPartnerId },
-          'Error checking delivery partners for project'
-        )
-        // Continue with next project if this one fails
+      if (matchingProject) {
+        projectsWithDeliveryPartner.push(matchingProject)
       }
     }
 

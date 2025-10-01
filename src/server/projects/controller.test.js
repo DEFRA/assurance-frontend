@@ -132,7 +132,16 @@ describe('Projects controller', () => {
         projectNames: ['Project 1', 'Project 2'],
         isAuthenticated: false,
         notification: undefined,
-        searchTerm: undefined
+        searchTerm: undefined,
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Projects'
+          }
+        ]
       })
     })
 

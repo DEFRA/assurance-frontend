@@ -5,17 +5,11 @@
 {% from "status-tag.njk" import renderStatusTag %}
 
 {% block beforeContent %}
-  {{ govukBreadcrumbs({
-    items: [
-      {
-        text: "Projects",
-        href: "/projects"
-      },
-      {
-        text: deliveryPartner.name
-      }
-    ]
-  }) }}
+  {% if breadcrumbs and breadcrumbs.length > 1 %}
+    {{ govukBreadcrumbs({
+      items: breadcrumbs
+    }) }}
+  {% endif %}
 {% endblock %}
 
 {% block content %}

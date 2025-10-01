@@ -118,6 +118,15 @@ describe('Delivery Partners Controller', () => {
               { id: 'test-delivery-partner', name: 'Test Delivery Partner' }
             ]
           }
+        ],
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Test Delivery Partner'
+          }
         ]
       })
     })
@@ -145,7 +154,16 @@ describe('Delivery Partners Controller', () => {
           name: 'Test Delivery Partner',
           lead: 'Jane Smith'
         },
-        projects: []
+        projects: [],
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Test Delivery Partner'
+          }
+        ]
       })
     })
 
@@ -186,7 +204,16 @@ describe('Delivery Partners Controller', () => {
           name: 'Test Delivery Partner',
           lead: undefined
         },
-        projects: []
+        projects: [],
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Test Delivery Partner'
+          }
+        ]
       })
     })
 
@@ -220,7 +247,16 @@ describe('Delivery Partners Controller', () => {
           name: 'Test Delivery Partner',
           lead: 'John Doe'
         },
-        projects: []
+        projects: [],
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Test Delivery Partner'
+          }
+        ]
       })
     })
 
@@ -274,7 +310,16 @@ describe('Delivery Partners Controller', () => {
           name: 'Test Delivery Partner',
           lead: 'John Doe'
         },
-        projects: [] // Should be empty due to error
+        projects: [], // Should be empty due to error
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Test Delivery Partner'
+          }
+        ]
       })
     })
 
@@ -315,6 +360,15 @@ describe('Delivery Partners Controller', () => {
             deliveryPartners: [
               { Id: 'test-delivery-partner', name: 'Test Delivery Partner' }
             ]
+          }
+        ],
+        breadcrumbs: [
+          {
+            text: 'Home',
+            href: '/'
+          },
+          {
+            text: 'Test Delivery Partner'
           }
         ]
       })

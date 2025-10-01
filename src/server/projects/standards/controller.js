@@ -25,6 +25,10 @@ import {
 import { SERVICE_STANDARD_STATUS_OPTIONS } from '~/src/server/constants/status.js'
 import { serviceStandardChecklists } from '~/src/server/data/service-standard-checklists.js'
 import { statusCodes } from '~/src/server/common/constants/status-codes.js'
+import {
+  getProjectSubPageBreadcrumbs,
+  truncateBreadcrumbText
+} from '~/src/server/common/helpers/breadcrumbs.js'
 
 export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND
@@ -113,7 +117,12 @@ function createAssessmentViewData(
     professionStandardMatrix: JSON.stringify(PROFESSION_STANDARD_MATRIX),
     serviceStandardChecklists: JSON.stringify(serviceStandardChecklists),
     values: {},
-    errors: {}
+    errors: {},
+    breadcrumbs: getProjectSubPageBreadcrumbs(
+      truncateBreadcrumbText(project.name),
+      project.id,
+      'Assessment'
+    )
   }
 }
 
@@ -604,7 +613,12 @@ function createStandardDetailView(
     standardSummary,
     assessments: assessmentsWithDetails,
     isAuthenticated: request.auth.isAuthenticated,
-    notification
+    notification,
+    breadcrumbs: getProjectSubPageBreadcrumbs(
+      truncateBreadcrumbText(project.name),
+      project.id,
+      `Standard ${standard.number}`
+    )
   })
 }
 
@@ -626,7 +640,12 @@ export const standardsController = {
       return h.view(VIEW_TEMPLATES.PROJECTS_STANDARDS_LIST, {
         pageTitle: `Standards Progress | ${project.name}`,
         project,
-        standards
+        standards,
+        breadcrumbs: getProjectSubPageBreadcrumbs(
+          truncateBreadcrumbText(project.name),
+          id,
+          'Standards'
+        )
       })
     } catch (error) {
       request.logger.error(error)
@@ -724,7 +743,12 @@ export const standardsController = {
         heading: `Standard ${standardId} History`,
         project,
         standard,
-        history
+        history,
+        breadcrumbs: getProjectSubPageBreadcrumbs(
+          truncateBreadcrumbText(project.name),
+          id,
+          `Standard ${standardId} History`
+        )
       })
     } catch (error) {
       request.logger.error(error)
@@ -901,7 +925,12 @@ export const standardsController = {
         project,
         standard,
         profession,
-        history
+        history,
+        breadcrumbs: getProjectSubPageBreadcrumbs(
+          truncateBreadcrumbText(project.name),
+          id,
+          `Standard ${standard.number} Assessment History`
+        )
       })
     } catch (error) {
       request.logger.error(
@@ -958,7 +987,12 @@ export const standardsController = {
         project,
         standard,
         profession,
-        historyEntry
+        historyEntry,
+        breadcrumbs: getProjectSubPageBreadcrumbs(
+          truncateBreadcrumbText(project.name),
+          id,
+          `Archive Assessment`
+        )
       })
     } catch (error) {
       request.logger.error({ error }, ERROR_MESSAGES.ERROR_LOADING_ARCHIVE_PAGE)

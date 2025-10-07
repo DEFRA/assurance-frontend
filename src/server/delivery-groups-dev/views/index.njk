@@ -1,0 +1,140 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "status-tag.njk" import renderStatusTag %}
+
+{% block beforeContent %}
+  {% if breadcrumbs and breadcrumbs.length > 1 %}
+    {{ govukBreadcrumbs({
+      items: breadcrumbs
+    }) }}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      {{ appHeading({
+        text: deliveryGroup.name,
+        classes: "govuk-heading-xl govuk-!-margin-bottom-4"
+      }) }}
+
+      {% if deliveryGroup.lead %}
+        <p class="govuk-body-m govuk-!-margin-bottom-4">
+          <strong>Delivery group lead:</strong> {{ deliveryGroup.lead }}
+        </p>
+      {% endif %}
+
+      {# Strategic Objective Inset #}
+      {% if strategicObjective %}
+        {{ govukInsetText({
+          text: strategicObjective,
+          classes: "govuk-!-margin-bottom-4"
+        }) }}
+      {% endif %}
+
+      {# Roadmap Link #}
+      {% if roadmapUrl %}
+        <p class="govuk-body govuk-!-margin-bottom-6">
+          <a href="{{ roadmapUrl }}" class="govuk-link">View delivery group roadmap</a>
+        </p>
+      {% endif %}
+
+      {# Prepare Projects Tab Content #}
+      {% set projectsTabContent %}
+        {% if projects and projects.length > 0 %}
+          {% set projectRows = [] %}
+          {% for project in projects %}
+            {% set projectRows = projectRows.concat([[
+              {
+                html: '<a href="/projects/' + project.id + '" class="govuk-link">' + project.name + '</a>'
+              },
+              {
+                html: renderStatusTag(project.status)
+              }
+            ]]) %}
+          {% endfor %}
+
+          {{ govukTable({
+            head: [
+              {
+                text: "Project name"
+              },
+              {
+                text: "RAG status"
+              }
+            ],
+            rows: projectRows,
+            classes: "govuk-!-margin-bottom-6"
+          }) }}
+
+        {% else %}
+          <p class="govuk-body">No projects are currently assigned to this delivery group.</p>
+        {% endif %}
+      {% endset %}
+
+      {# Prepare Progress Tab Content #}
+      {% set progressTabContent %}
+        {% if assessments and assessments.length > 0 %}
+          {% set assessmentRows = [] %}
+          {% for assessment in assessments %}
+            {% set assessmentRows = assessmentRows.concat([[
+              {
+                text: assessment.area
+              },
+              {
+                html: renderStatusTag(assessment.status)
+              },
+              {
+                text: assessment.commentary
+              }
+            ]]) %}
+          {% endfor %}
+
+          {{ govukTable({
+            head: [
+              {
+                text: "Assessment area"
+              },
+              {
+                text: "RAG status"
+              },
+              {
+                text: "Commentary"
+              }
+            ],
+            rows: assessmentRows,
+            classes: "govuk-!-margin-bottom-6"
+          }) }}
+
+        {% else %}
+          <p class="govuk-body">No assessment data available for this delivery group.</p>
+        {% endif %}
+      {% endset %}
+
+      {# Tabs Component #}
+      {{ govukTabs({
+        items: [
+          {
+            label: "Progress",
+            id: "progress",
+            panel: {
+              html: progressTabContent
+            }
+          },
+          {
+            label: "Projects",
+            id: "projects",
+            panel: {
+              html: projectsTabContent
+            }
+          }
+        ]
+      }) }}
+
+    </div>
+  </div>
+{% endblock %}

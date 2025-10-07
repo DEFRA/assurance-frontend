@@ -40,7 +40,7 @@ const mockDeliveryGroupAssessments = {
           'Roadmap is in place but requires refinement of timelines and resource allocation for Q2 deliverables.'
       },
       {
-        area: 'Service understanding',
+        area: 'Service landscape',
         status: 'GREEN',
         commentary:
           'Strong understanding of user needs and service requirements based on recent user research findings.'

@@ -1,4 +1,5 @@
 import inert from '@hapi/inert'
+import { config } from '~/src/config/config.js'
 import { health } from './health/index.js'
 import { home } from './home/index.js'
 import { about } from './about/index.js'
@@ -23,7 +24,7 @@ export const router = {
       await server.register([health])
 
       // Application specific routes, add your own routes here
-      await server.register([
+      const coreRoutes = [
         home,
         about,
         admin,
@@ -31,9 +32,19 @@ export const router = {
         projectsRoutes,
         professions,
         deliveryGroups,
-        deliveryGroupsDev,
         deliveryPartners
-      ])
+      ]
+
+      // Conditionally add development routes
+      if (config.get('isDevelopment')) {
+        coreRoutes.push(deliveryGroupsDev)
+        server.log(
+          ['info'],
+          'Development routes enabled: /delivery-groups-dev/*'
+        )
+      }
+
+      await server.register(coreRoutes)
 
       // Static assets
       await server.register([serveStaticFiles])

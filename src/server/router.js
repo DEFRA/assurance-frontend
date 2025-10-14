@@ -36,11 +36,16 @@ export const router = {
       ]
 
       // Conditionally add development routes
-      if (config.get('isDevelopment')) {
+      if (config.get('enableDevRoutes')) {
         coreRoutes.push(deliveryGroupsDev)
         server.log(
           ['info'],
           'Development routes enabled: /delivery-groups-dev/*'
+        )
+      } else {
+        server.log(
+          ['info'],
+          'Development routes disabled (set ENABLE_DEV_ROUTES=true to enable)'
         )
       }
 

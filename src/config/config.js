@@ -262,6 +262,12 @@ export const config = convict({
       default: 'http://localhost:3000/auth',
       env: 'AUTH_CALLBACK_URL'
     }
+  },
+  enableDevRoutes: {
+    doc: 'Enable development-only routes and features (must be explicitly enabled)',
+    format: Boolean,
+    default: false,
+    env: 'ENABLE_DEV_ROUTES'
   }
 })
 

@@ -6,8 +6,8 @@ import {
 } from '~/src/server/constants/notifications.js'
 import { PROJECT_STATUS_OPTIONS } from '~/src/server/constants/status.js'
 
-const PAGE_TITLE = `Add Project${DDTS_ASSURANCE_SUFFIX}`
-const PAGE_HEADING = 'Add Project'
+const PAGE_TITLE = `Add Delivery${DDTS_ASSURANCE_SUFFIX}`
+const PAGE_HEADING = 'Add Delivery'
 
 const PHASE_OPTIONS = [
   {

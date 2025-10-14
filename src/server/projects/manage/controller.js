@@ -740,7 +740,7 @@ export const manageController = {
       )
 
       return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
-        pageTitle: `Update Project Details | ${project.name}`,
+        pageTitle: `Update Delivery Details | ${project.name}`,
         project,
         phaseOptions,
         deliveryGroupOptions,
@@ -789,7 +789,7 @@ export const manageController = {
         )
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
-          pageTitle: `Update Project Details | ${project.name}`,
+          pageTitle: `Update Delivery Details | ${project.name}`,
           project,
           phaseOptions,
           deliveryGroupOptions,
@@ -835,7 +835,7 @@ export const manageController = {
         )
 
         return h.view(VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS, {
-          pageTitle: `Update Project Details | ${project.name}`,
+          pageTitle: `Update Delivery Details | ${project.name}`,
           project,
           phaseOptions,
           deliveryGroupOptions,

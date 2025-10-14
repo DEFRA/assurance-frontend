@@ -9,14 +9,14 @@
   {{ govukBreadcrumbs({
     items: [
       {
-        text: "Projects",
+        text: "Deliveries",
         href: "/projects"
       },
       {
         text: project.name
       },
       {
-        text: "Archive Project Update"
+        text: "Archive Delivery Update"
       }
     ]
   }) }}
@@ -24,7 +24,7 @@
 
 {% block content %}
   {{ appHeading({
-    text: "Archive Project Update",
+    text: "Archive Delivery Update",
     caption: project.name
   }) }}
 
@@ -56,14 +56,14 @@
       </div>
 
       {{ govukWarningText({
-        text: "Archiving this project update will hide it from the project timeline. The project's current status and commentary will revert to the most recent remaining update. This action cannot be undone.",
+        text: "Archiving this delivery update will hide it from the delivery timeline. The delivery's current status and commentary will revert to the most recent remaining update. This action cannot be undone.",
         iconFallbackText: "Warning"
       }) }}
 
       <form method="POST" novalidate>
         <div class="govuk-button-group">
           {{ govukButton({
-            text: "Archive Project Update",
+            text: "Archive Delivery Update",
             classes: "govuk-button--warning"
           }) }}
 

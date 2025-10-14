@@ -11,7 +11,7 @@ const BASE_BREADCRUMBS = {
     href: '/'
   },
   PROJECTS: {
-    text: 'Projects',
+    text: 'Deliveries',
     href: '/projects'
   },
   DELIVERY_GROUPS: {
@@ -43,7 +43,7 @@ export function getHomeBreadcrumbs() {
 export function getProjectsBreadcrumbs() {
   return [
     BASE_BREADCRUMBS.HOME,
-    { text: 'Projects' } // Current page, no href
+    { text: 'Deliveries' } // Current page, no href
   ]
 }
 

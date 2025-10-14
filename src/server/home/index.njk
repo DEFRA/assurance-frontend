@@ -135,7 +135,7 @@
       <form method="GET" action="/projects" class="govuk-!-margin-bottom-6">
         <div class="govuk-form-group">
           <label class="govuk-label govuk-label--s" for="search">
-            Find a project by name
+            Find a delivery by name
           </label>
           <div class="gem-c-search">
             <div class="gem-c-search__item-wrapper">
@@ -156,7 +156,7 @@
       </form>
 
       <p class="govuk-body">
-        <a href="/projects" class="govuk-link">View all projects</a>
+        <a href="/projects" class="govuk-link">View all deliveries</a>
       </p>
       
       <h2 class="govuk-heading-m">Team objectives</h2>
@@ -180,7 +180,7 @@
         Over time, we aim to enrich this service by integrating additional data sources. Combining objective delivery data with profession-based evaluations will give leaders and teams a more rounded view of delivery health.
       </p>
       <p class="govuk-body">
-        At present, our assurance activity focuses mainly on Defra's major projects. We are currently reviewing our engagement model so that we can scale our approach and maximise impact across the full delivery portfolio.
+        At present, our assurance activity focuses mainly on Defra's major deliveries. We are currently reviewing our engagement model so that we can scale our approach and maximise impact across the full delivery portfolio.
       </p>
     </div>
 
@@ -188,7 +188,7 @@
       <div class="delivery-groups-sidebar">
         {% if deliveryGroups and deliveryGroups.length > 0 %}
           <div class="govuk-!-margin-bottom-4">
-            <dt class="govuk-body govuk-!-font-weight-bold">Projects by Delivery Group</dt>
+            <dt class="govuk-body govuk-!-font-weight-bold">Deliveries by Delivery Group</dt>
             <dd class="govuk-body">
               {% for group in deliveryGroups %}
                 <a href="/delivery-groups/{{ group.id or group.Id }}" class="govuk-link">
@@ -200,14 +200,14 @@
           </div>
         {% else %}
           <div class="govuk-!-margin-bottom-4">
-            <dt class="govuk-body govuk-!-font-weight-bold">Projects by Delivery Group</dt>
+            <dt class="govuk-body govuk-!-font-weight-bold">Deliveries by Delivery Group</dt>
             <dd class="govuk-body">No delivery groups available.</dd>
           </div>
         {% endif %}
 
         {% if deliveryPartners and deliveryPartners.length > 0 %}
           <div class="govuk-!-margin-bottom-4">
-            <dt class="govuk-body govuk-!-font-weight-bold">Projects by Delivery Partner</dt>
+            <dt class="govuk-body govuk-!-font-weight-bold">Deliveries by Delivery Partner</dt>
             <dd class="govuk-body">
               {% for partner in deliveryPartners %}
                 <a href="/delivery-partners/{{ partner.id or partner.Id }}" class="govuk-link">
@@ -219,7 +219,7 @@
           </div>
         {% else %}
           <div class="govuk-!-margin-bottom-4">
-            <dt class="govuk-body govuk-!-font-weight-bold">Projects by Delivery Partner</dt>
+            <dt class="govuk-body govuk-!-font-weight-bold">Deliveries by Delivery Partner</dt>
             <dd class="govuk-body">No delivery partners available.</dd>
           </div>
         {% endif %}
@@ -260,7 +260,7 @@
 
     // Initialize autocomplete and form handling
     domContentLoadedHandler = function() {
-      // Create a list of project names for the autocomplete
+      // Create a list of delivery names for the autocomplete
       const projectNames = {{ projectNames | dump | safe }};
       
       // Initialize the GOV.UK accessible autocomplete
@@ -295,7 +295,7 @@
           }
         },
         tNoResults: function() { 
-          return 'No projects found';
+          return 'No deliveries found';
         },
         tStatusQueryTooShort: function(minQueryLength) {
           return `Type in ${minQueryLength} or more characters for results`;

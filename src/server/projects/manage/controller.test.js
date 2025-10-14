@@ -422,7 +422,7 @@ describe('Manage Controller', () => {
       // Assert
       expect(result).toBe('redirect-response')
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/project-123/manage/status?notification=Failed to update project. Please try again.'
+        '/projects/project-123/manage/status?notification=Failed to update delivery. Please try again.'
       )
       expect(mockRequest.logger.error).toHaveBeenCalledWith(
         { error: expect.any(Error) },
@@ -635,7 +635,7 @@ describe('Manage Controller', () => {
         mockRequest
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/project-123?notification=Project status and commentary updated successfully'
+        '/projects/project-123?notification=Delivery status and commentary updated successfully'
       )
     })
 
@@ -705,7 +705,7 @@ describe('Manage Controller', () => {
             status: true,
             commentary: true
           },
-          errorMessage: 'Failed to update project. Please try again.'
+          errorMessage: 'Failed to update delivery. Please try again.'
         })
       )
     })
@@ -780,7 +780,7 @@ describe('Manage Controller', () => {
         expect.objectContaining({
           pageTitle: 'Edit Status and Commentary | Test Project',
           isEditMode: true,
-          errorMessage: 'Failed to update project. Please try again.'
+          errorMessage: 'Failed to update delivery. Please try again.'
         })
       )
     })
@@ -814,7 +814,7 @@ describe('Manage Controller', () => {
         expect.objectContaining({
           pageTitle: 'Update Status and Commentary | Test Project',
           isEditMode: false,
-          errorMessage: 'Failed to update project. Please try again.'
+          errorMessage: 'Failed to update delivery. Please try again.'
         })
       )
     })
@@ -835,7 +835,7 @@ describe('Manage Controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         VIEW_TEMPLATES.PROJECTS_MANAGE_DETAILS,
         {
-          pageTitle: `Update Project Details | ${mockProject.name}`,
+          pageTitle: `Update Delivery Details | ${mockProject.name}`,
           project: mockProject,
           phaseOptions: expect.arrayContaining([
             expect.objectContaining({ text: 'Select phase', value: '' })
@@ -1265,7 +1265,7 @@ describe('Manage Controller', () => {
             status: true,
             commentary: true
           },
-          errorMessage: 'Failed to update project. Please try again.',
+          errorMessage: 'Failed to update delivery. Please try again.',
           standardsAtRisk: expect.any(Array)
         })
       )

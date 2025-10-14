@@ -61,7 +61,7 @@
           {{ govukTable({
             head: [
               {
-                text: "Project name"
+                text: "Delivery name"
               },
               {
                 text: "Status"
@@ -72,7 +72,7 @@
           }) }}
 
         {% else %}
-          <p class="govuk-body">No projects are currently assigned to this delivery group.</p>
+          <p class="govuk-body">No deliveries are currently assigned to this delivery group.</p>
         {% endif %}
       {% endset %}
 
@@ -126,7 +126,7 @@
             }
           },
           {
-            label: "Projects",
+            label: "Deliveries",
             id: "projects",
             panel: {
               html: projectsTabContent

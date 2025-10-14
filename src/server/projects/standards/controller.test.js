@@ -161,7 +161,7 @@ describe('Standards Controller', () => {
               href: '/'
             },
             {
-              text: 'Projects',
+              text: 'Deliveries',
               href: '/projects'
             },
             {
@@ -417,7 +417,7 @@ describe('Standards Controller', () => {
               href: '/'
             },
             {
-              text: 'Projects',
+              text: 'Deliveries',
               href: '/projects'
             },
             {
@@ -1287,7 +1287,7 @@ describe('Standards Controller', () => {
               href: '/'
             },
             {
-              text: 'Projects',
+              text: 'Deliveries',
               href: '/projects'
             },
             {
@@ -1453,7 +1453,7 @@ describe('Standards Controller', () => {
               href: '/'
             },
             {
-              text: 'Projects',
+              text: 'Deliveries',
               href: '/projects'
             },
             {

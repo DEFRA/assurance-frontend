@@ -61,8 +61,8 @@ describe('Add Project controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/add/views/index',
         expect.objectContaining({
-          pageTitle: 'Add Project | Defra Digital Assurance',
-          heading: 'Add Project',
+          pageTitle: 'Add Delivery | Defra Digital Assurance',
+          heading: 'Add Delivery',
           values: {},
           errors: {},
           statusOptions: expectedStatusOptions,
@@ -120,8 +120,8 @@ describe('Add Project controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/add/views/index',
         expect.objectContaining({
-          errorMessage: 'Failed to create project',
-          heading: 'Add Project',
+          errorMessage: 'Failed to create delivery',
+          heading: 'Add Delivery',
           values: mockRequest.payload
         })
       )
@@ -139,7 +139,7 @@ describe('Add Project controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/add/views/index',
         expect.objectContaining({
-          errorMessage: 'Failed to create project',
+          errorMessage: 'Failed to create delivery',
           values: mockRequest.payload
         })
       )
@@ -164,7 +164,7 @@ describe('Add Project controller', () => {
         mockRequest
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects?notification=Project created successfully'
+        '/projects?notification=Delivery created successfully'
       )
       expect(result).toBe('redirect-response')
     })
@@ -342,12 +342,12 @@ describe('Add Project controller', () => {
       // Assert
       expect(mockRequest.logger.error).toHaveBeenCalledWith(
         { error: expect.any(Error) },
-        'Failed to create project'
+        'Failed to create delivery'
       )
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/add/views/index',
         expect.objectContaining({
-          errorMessage: 'Failed to create project'
+          errorMessage: 'Failed to create delivery'
         })
       )
       expect(result).toBe('view-response')
@@ -366,7 +366,7 @@ describe('Add Project controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/add/views/index',
         expect.objectContaining({
-          errorMessage: 'Failed to create project',
+          errorMessage: 'Failed to create delivery',
           values: mockRequest.payload,
           errors: {}
         })
@@ -435,7 +435,7 @@ describe('Add Project controller', () => {
         mockRequest
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects?notification=Project created successfully'
+        '/projects?notification=Delivery created successfully'
       )
       expect(result).toBe('redirect-response')
     })
@@ -486,12 +486,12 @@ describe('Add Project controller', () => {
       // Assert
       expect(mockRequest.logger.error).toHaveBeenCalledWith(
         { error: expect.any(Error) },
-        'Failed to create project'
+        'Failed to create delivery'
       )
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/add/views/index',
         expect.objectContaining({
-          errorMessage: 'Failed to create project',
+          errorMessage: 'Failed to create delivery',
           values: mockRequest.payload
         })
       )

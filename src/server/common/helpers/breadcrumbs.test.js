@@ -28,7 +28,7 @@ describe('Breadcrumb Helpers', () => {
           href: '/'
         },
         {
-          text: 'Projects'
+          text: 'Deliveries'
         }
       ])
     })
@@ -45,7 +45,7 @@ describe('Breadcrumb Helpers', () => {
           href: '/'
         },
         {
-          text: 'Projects',
+          text: 'Deliveries',
           href: '/projects'
         },
         {
@@ -63,7 +63,7 @@ describe('Breadcrumb Helpers', () => {
           href: '/'
         },
         {
-          text: 'Projects',
+          text: 'Deliveries',
           href: '/projects'
         },
         {
@@ -81,7 +81,7 @@ describe('Breadcrumb Helpers', () => {
           href: '/'
         },
         {
-          text: 'Projects',
+          text: 'Deliveries',
           href: '/projects'
         },
         {
@@ -109,7 +109,7 @@ describe('Breadcrumb Helpers', () => {
           href: '/'
         },
         {
-          text: 'Projects',
+          text: 'Deliveries',
           href: '/projects'
         },
         {
@@ -139,7 +139,7 @@ describe('Breadcrumb Helpers', () => {
           href: '/'
         },
         {
-          text: 'Projects',
+          text: 'Deliveries',
           href: '/projects'
         },
         {
@@ -169,7 +169,7 @@ describe('Breadcrumb Helpers', () => {
           href: '/'
         },
         {
-          text: 'Projects',
+          text: 'Deliveries',
           href: '/projects'
         },
         {

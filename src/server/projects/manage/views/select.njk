@@ -9,21 +9,21 @@
   {{ govukBreadcrumbs({
     items: [
       {
-        text: "Projects",
+        text: "Deliveries",
         href: "/projects"
       },
       {
         text: project.name
       },
       {
-        text: "Manage project"
+        text: "Manage delivery"
       }
     ]
   }) }}
 {% endblock %}
 
 {% block content %}
-  <h1 class="govuk-heading-xl">Manage Project</h1>
+  <h1 class="govuk-heading-xl">Manage Delivery</h1>
   <h2 class="govuk-heading-l govuk-!-margin-bottom-6">{{ project.name }}</h2>
   
   {% if errorMessage %}
@@ -49,21 +49,21 @@
         }
       },
       hint: {
-        text: "Choose the type of update you want to make to this project"
+        text: "Choose the type of update you want to make to this delivery"
       },
       items: [
         {
           value: "status",
-          text: "Update the project status and commentary", 
+          text: "Update the delivery status and commentary", 
           hint: {
             text: "Change the current RAG status and add progress commentary. View standards requiring attention."
           }
         },
         {
           value: "details",
-          text: "Update project name, phase, ID, delivery group or delivery partners",
+          text: "Update delivery name, phase, ID, delivery group or delivery partners",
           hint: {
-            text: "Change the project name, GDS delivery phase, project identifier code, delivery group or delivery partners."
+            text: "Change the delivery name, GDS delivery phase, delivery identifier code, delivery group or delivery partners."
           }
         }
       ],

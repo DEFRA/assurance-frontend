@@ -6,7 +6,7 @@
 
 {% block content %}
   {{ appHeading({
-    text: "Projects"
+    text: "Deliveries"
   }) }}
 
   <div class="govuk-grid-row">
@@ -14,7 +14,7 @@
       <form method="GET" action="/projects" class="govuk-!-margin-bottom-6">
         <div class="govuk-form-group">
           <label class="govuk-label govuk-label--s" for="search">
-            Search projects
+            Search deliveries
           </label>
           <div class="gem-c-search">
             <div class="gem-c-search__item-wrapper">
@@ -41,30 +41,30 @@
 
       {% if isAuthenticated %}
         <p class="govuk-body govuk-!-margin-bottom-6">
-          <a href="/projects/add" class="govuk-link">Add new project</a>
+          <a href="/projects/add" class="govuk-link">Add new delivery</a>
         </p>
       {% endif %}
 
       {% if searchTerm %}
         <h2 class="govuk-heading-m">Search results for: "{{ searchTerm }}"</h2>
         {% if projects.length == 0 %}
-          <p class="govuk-body">No projects found matching your search.</p>
-          <p class="govuk-body"><a href="/projects" class="govuk-link">View all projects</a></p>
+          <p class="govuk-body">No deliveries found matching your search.</p>
+          <p class="govuk-body"><a href="/projects" class="govuk-link">View all deliveries</a></p>
         {% endif %}
       {% endif %}
 
       {% if projects.length > 0 %}
         {{ govukTable({
-          caption: "List of projects" if not searchTerm else "Search results",
+          caption: "List of deliveries" if not searchTerm else "Search results",
           captionClasses: "govuk-visually-hidden",
           head: [
-            { text: "Project name" },
+            { text: "Delivery name" },
             { text: "RAG status" }
           ],
           rows: projects | projectTableRows
         }) }}
       {% elif not searchTerm %}
-        <p class="govuk-body">No projects available.</p>
+        <p class="govuk-body">No deliveries available.</p>
       {% endif %}
     </div>
   </div>
@@ -179,7 +179,7 @@
 
     // Initialize autocomplete and form handling
     domContentLoadedHandler = function() {
-      // Create a source array with project names and IDs for easy lookup
+      // Create a source array with delivery names and IDs for easy lookup
       const projects = {{ projects | dump | safe }};
       const projectsById = {};
       const projectsByName = {};
@@ -190,7 +190,7 @@
         projectsByName[project.name] = project;
       });
       
-      // Create a list of project names for the autocomplete
+      // Create a list of delivery names for the autocomplete
       const projectNames = projects.map(project => project.name);
       
       // Initialize the GOV.UK accessible autocomplete
@@ -211,7 +211,7 @@
           const form = document.querySelector('form[method="GET"]');
           
           if (selectedProjectName && selectedProjectName.trim()) {
-            // Check if this is an exact project match for direct navigation
+            // Check if this is an exact delivery match for direct navigation
             const project = projectsByName[selectedProjectName];
             if (project && project.id && selectedProjectName === project.name) {
               // Direct navigation for exact matches
@@ -229,7 +229,7 @@
           }
         },
         tNoResults: function() { 
-          return 'No projects found';
+          return 'No deliveries found';
         },
         tStatusQueryTooShort: function(minQueryLength) {
           return `Type in ${minQueryLength} or more characters for results`;

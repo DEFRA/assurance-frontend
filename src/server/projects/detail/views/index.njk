@@ -82,7 +82,7 @@
     <div class="govuk-grid-column-full">
       {% if isAdmin %}
         <p class="govuk-body govuk-!-margin-bottom-4">
-          <a href="/projects/{{ project.id }}/manage" class="govuk-link">Manage project</a>
+          <a href="/projects/{{ project.id }}/manage" class="govuk-link">Manage delivery</a>
           <span class="govuk-!-margin-left-4">
             <a href="/projects/{{ project.id }}/assessment" class="govuk-link">Add Service Standard update</a>
           </span>
@@ -93,7 +93,7 @@
         <div class="project-sidebar">
           {% if project.defCode %}
             <div class="govuk-!-margin-bottom-4">
-              <dt class="govuk-body-s govuk-!-font-weight-bold">Project ID</dt>
+              <dt class="govuk-body-s govuk-!-font-weight-bold">Delivery ID</dt>
               <dd class="govuk-body-s">{{ project.defCode }}</dd>
             </div>
           {% endif %}
@@ -185,8 +185,8 @@
             {{ projectSidebarHtml | safe }}
           </div>
           <div class="govuk-grid-column-two-thirds">
-            <h2 class="govuk-heading-m">Project engagement</h2>
-            <p class="govuk-body">Timeline of key project changes and updates.</p>
+            <h2 class="govuk-heading-m">Delivery engagement</h2>
+            <p class="govuk-body">Timeline of key delivery changes and updates.</p>
             
             {% if projectHistory and projectHistory.length > 0 %}
               <div class="timeline">
@@ -205,7 +205,7 @@
                       
                       {% if entry.changes.name %}
                         <p class="govuk-body govuk-!-margin-bottom-2">
-                          <strong>Project name updated:</strong> {{ entry.changes.name.to }}
+                          <strong>Delivery name updated:</strong> {{ entry.changes.name.to }}
                         </p>
                       {% endif %}
                       
@@ -250,7 +250,7 @@
               </div>
             {% else %}
               <div class="govuk-inset-text">
-                <p class="govuk-body">No project updates found yet.</p>
+                <p class="govuk-body">No delivery updates found yet.</p>
               </div>
             {% endif %}
           </div>
@@ -268,7 +268,7 @@
           },
           {
             id: "engagement",
-            label: "Project engagement",
+            label: "Delivery engagement",
             panel: {
               html: engagementTabHtml
             }

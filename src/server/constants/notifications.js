@@ -3,23 +3,23 @@
  */
 
 export const NOTIFICATIONS = {
-  PROJECT_NOT_FOUND: 'Project not found',
+  PROJECT_NOT_FOUND: 'Delivery not found',
   STANDARD_NOT_FOUND: 'Standard not found',
   PROFESSION_NOT_FOUND: 'Profession not found',
-  PROJECT_UPDATED_SUCCESSFULLY: 'Project updated successfully',
-  PROJECT_CREATED_SUCCESSFULLY: 'Project created successfully',
+  PROJECT_UPDATED_SUCCESSFULLY: 'Delivery updated successfully',
+  PROJECT_CREATED_SUCCESSFULLY: 'Delivery created successfully',
   ASSESSMENT_SAVED_SUCCESSFULLY: 'Assessment saved successfully',
   ASSESSMENT_ARCHIVED_SUCCESSFULLY: 'Assessment entry archived successfully',
-  PROJECT_UPDATE_ARCHIVED_SUCCESSFULLY: 'Project update archived successfully',
+  PROJECT_UPDATE_ARCHIVED_SUCCESSFULLY: 'Delivery update archived successfully',
   VALIDATION_ERROR: 'Please check your input - some fields are invalid',
-  FAILED_TO_UPDATE_PROJECT: 'Failed to update project. Please try again.',
+  FAILED_TO_UPDATE_PROJECT: 'Failed to update delivery. Please try again.',
   FAILED_TO_SAVE_ASSESSMENT: 'Failed to save assessment. Please try again.',
   FAILED_TO_ARCHIVE_ASSESSMENT: 'Failed to archive assessment entry',
-  FAILED_TO_ARCHIVE_PROJECT_UPDATE: 'Failed to archive project update',
-  FAILED_TO_CREATE_PROJECT: 'Failed to create project',
+  FAILED_TO_ARCHIVE_PROJECT_UPDATE: 'Failed to archive delivery update',
+  FAILED_TO_CREATE_PROJECT: 'Failed to create delivery',
   HISTORY_ENTRY_NOT_FOUND: 'History entry not found',
   STANDARD_OR_PROFESSION_NOT_FOUND: 'Standard or profession not found',
-  PROFESSION_NOT_FOUND_IN_PROJECT: 'Profession not found in this project',
+  PROFESSION_NOT_FOUND_IN_PROJECT: 'Profession not found in this delivery',
   ONLY_STATUS_COMMENTARY_CAN_BE_ARCHIVED:
     'Only status and commentary updates can be archived',
   DELIVERY_UPDATE_ARCHIVED: 'Delivery update successfully archived',
@@ -27,14 +27,14 @@ export const NOTIFICATIONS = {
 }
 
 export const PAGE_TITLES = {
-  PROJECTS: 'Projects',
+  PROJECTS: 'Deliveries',
   PROFESSIONS: 'Professions',
   ABOUT: 'About',
   HOME: 'Home',
   DATA_MANAGEMENT: 'Data Management',
   PROFESSION_NOT_FOUND: 'Profession Not Found',
-  ARCHIVE_PROJECT_UPDATE: 'Archive Project Update',
-  CONFIRM_PROJECT_DELETION: 'Confirm Project Deletion',
+  ARCHIVE_PROJECT_UPDATE: 'Archive Delivery Update',
+  CONFIRM_PROJECT_DELETION: 'Confirm Delivery Deletion',
   CONFIRM_DELETE_ALL_STANDARDS: 'Confirm Delete All Standards',
   CONFIRM_DELETE_ALL_PROFESSIONS: 'Confirm Delete All Professions',
   ADD_DELIVERY_GROUP: 'Add Delivery Group',
@@ -46,11 +46,11 @@ export const PAGE_TITLES = {
 }
 
 export const HEADINGS = {
-  PROJECTS: 'Projects',
+  PROJECTS: 'Deliveries',
   PROFESSIONS: 'Professions',
   ABOUT: 'About',
   DATA_MANAGEMENT: 'Data Management',
-  DELETE_PROJECT: 'Delete Project',
+  DELETE_PROJECT: 'Delete Delivery',
   DELETE_ALL_STANDARDS: 'Delete All Standards',
   DELETE_ALL_PROFESSIONS: 'Delete All Professions',
   ADD_DELIVERY_GROUP: 'Add Delivery Group',
@@ -111,8 +111,8 @@ export const VIEW_TEMPLATES = {
 export const ADMIN_NOTIFICATIONS = {
   STANDARDS_DELETED_SUCCESSFULLY: 'Standards deleted successfully',
   FAILED_TO_DELETE_STANDARDS: 'Failed to delete standards',
-  PROJECT_DELETED_SUCCESSFULLY: 'Project deleted successfully',
-  FAILED_TO_DELETE_PROJECT: 'Failed to delete project',
+  PROJECT_DELETED_SUCCESSFULLY: 'Delivery deleted successfully',
+  FAILED_TO_DELETE_PROJECT: 'Failed to delete delivery',
   FAILED_TO_SHOW_DELETE_CONFIRMATION: 'Failed to show delete confirmation',
   PROFESSIONS_DELETED_SUCCESSFULLY: 'Professions deleted successfully',
   FAILED_TO_DELETE_PROFESSIONS: 'Failed to delete professions',
@@ -122,8 +122,8 @@ export const ADMIN_NOTIFICATIONS = {
   PROFESSIONS_SEEDED_SUCCESSFULLY: 'Professions seeded successfully',
   FAILED_TO_SEED_PROFESSIONS: 'Failed to seed professions',
   PROJECTS_SEEDED_SUCCESSFULLY:
-    'Projects and assessments seeded successfully with new system',
-  FAILED_TO_SEED_PROJECTS: 'Failed to seed projects and assessments',
+    'Deliveries and assessments seeded successfully with new system',
+  FAILED_TO_SEED_PROJECTS: 'Failed to seed deliveries and assessments',
 
   // Delivery Groups notifications
   DELIVERY_GROUP_CREATED_SUCCESSFULLY: 'Delivery group created successfully',
@@ -152,28 +152,28 @@ export const ADMIN_NOTIFICATIONS = {
 
 export const MANAGE_NOTIFICATIONS = {
   PROJECT_STATUS_UPDATED_SUCCESSFULLY:
-    'Project status and commentary updated successfully',
-  PROJECT_DETAILS_UPDATED_SUCCESSFULLY: 'Project details updated successfully'
+    'Delivery status and commentary updated successfully',
+  PROJECT_DETAILS_UPDATED_SUCCESSFULLY: 'Delivery details updated successfully'
 }
 
 export const LOG_MESSAGES = {
   STANDARDS_DELETED: 'Standards deleted successfully',
-  PROJECT_DELETED: 'Project deleted successfully',
+  PROJECT_DELETED: 'Delivery deleted successfully',
   FAILED_TO_DELETE_STANDARDS: 'Failed to delete standards',
-  FAILED_TO_DELETE_PROJECT: 'Failed to delete project',
+  FAILED_TO_DELETE_PROJECT: 'Failed to delete delivery',
   FAILED_TO_SHOW_DELETE_CONFIRMATION: 'Failed to show delete confirmation',
-  FAILED_TO_UPDATE_PROJECT_STATUS: 'Failed to update project status',
-  FAILED_TO_UPDATE_PROJECT_DETAILS: 'Failed to update project details',
-  PROJECT_DETAILS_UPDATED: 'Project details updated successfully',
+  FAILED_TO_UPDATE_PROJECT_STATUS: 'Failed to update delivery status',
+  FAILED_TO_UPDATE_PROJECT_DETAILS: 'Failed to update delivery details',
+  PROJECT_DETAILS_UPDATED: 'Delivery details updated successfully',
   SERVICE_STANDARDS_SEEDED: 'Service standards seeded successfully (dev only)',
   FAILED_TO_SEED_SERVICE_STANDARDS:
     'Failed to seed service standards (dev only)',
   FAILED_TO_SEED_PROFESSIONS: 'Failed to seed professions (dev only)',
-  PROJECTS_SEEDED: 'Projects seeded successfully with new assessment system',
+  PROJECTS_SEEDED: 'Deliveries seeded successfully with new assessment system',
   FAILED_TO_UPDATE_PROJECT_AFTER_ARCHIVING:
-    'Failed to update project after archiving',
-  FAILED_TO_UPDATE_PROJECT: 'Failed to update project',
-  PROJECT_NOT_FOUND_FOR_DELETION: 'Project not found for deletion'
+    'Failed to update delivery after archiving',
+  FAILED_TO_UPDATE_PROJECT: 'Failed to update delivery',
+  PROJECT_NOT_FOUND_FOR_DELETION: 'Delivery not found for deletion'
 }
 
 export const DDTS_ASSURANCE_SUFFIX = ' | Defra Digital Assurance'

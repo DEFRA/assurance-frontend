@@ -572,8 +572,8 @@ describe('Admin controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('admin/confirm-delete', {
-        pageTitle: 'Confirm Project Deletion',
-        heading: 'Delete Project',
+        pageTitle: 'Confirm Delivery Deletion',
+        heading: 'Delete Delivery',
         message: 'Are you sure you want to delete the project "Test Project"?',
         confirmUrl: '/admin/projects/123/delete',
         cancelUrl: '/projects/123',
@@ -592,8 +592,8 @@ describe('Admin controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('admin/confirm-delete', {
-        pageTitle: 'Confirm Project Deletion',
-        heading: 'Delete Project',
+        pageTitle: 'Confirm Delivery Deletion',
+        heading: 'Delete Delivery',
         message: 'Are you sure you want to delete the project "this project"?',
         confirmUrl: '/admin/projects/123/delete',
         cancelUrl: '/projects/123',
@@ -612,8 +612,8 @@ describe('Admin controller', () => {
 
       // Assert
       expect(mockH.view).toHaveBeenCalledWith('admin/confirm-delete', {
-        pageTitle: 'Confirm Project Deletion',
-        heading: 'Delete Project',
+        pageTitle: 'Confirm Delivery Deletion',
+        heading: 'Delete Delivery',
         message: 'Are you sure you want to delete the project "this project"?',
         confirmUrl: '/admin/projects/123/delete',
         cancelUrl: '/projects/123',
@@ -634,7 +634,7 @@ describe('Admin controller', () => {
       // Assert
       expect(deleteProject).toHaveBeenCalledWith('123', mockRequest)
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Project deleted successfully'
+        '/admin?notification=Delivery deleted successfully'
       )
     })
   })
@@ -948,7 +948,7 @@ describe('Admin controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Project not found'
+        '/admin?notification=Delivery not found'
       )
     })
 
@@ -967,7 +967,7 @@ describe('Admin controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Project not found'
+        '/admin?notification=Delivery not found'
       )
     })
   })

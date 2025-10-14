@@ -127,7 +127,7 @@ describe('Projects controller', () => {
       // Assert
       expect(mockGetProjects).toHaveBeenCalledWith(request)
       expect(mockH.view).toHaveBeenCalledWith('projects/views/index', {
-        pageTitle: 'Projects',
+        pageTitle: 'Deliveries',
         projects,
         projectNames: ['Project 1', 'Project 2'],
         isAuthenticated: false,
@@ -139,7 +139,7 @@ describe('Projects controller', () => {
             href: '/'
           },
           {
-            text: 'Projects'
+            text: 'Deliveries'
           }
         ]
       })
@@ -238,7 +238,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects?notification=Project not found'
+        '/projects?notification=Delivery not found'
       )
     })
 
@@ -386,7 +386,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects?notification=Project not found'
+        '/projects?notification=Delivery not found'
       )
     })
   })
@@ -583,7 +583,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1/edit?notification=Failed to update project. Please try again.'
+        '/projects/1/edit?notification=Failed to update delivery. Please try again.'
       )
     })
 
@@ -888,7 +888,7 @@ describe('Projects controller', () => {
       // Assert - Should process successfully
       expect(mockUpdateProject).toHaveBeenCalled()
       expect(mockH.redirect).toHaveBeenCalledWith(
-        expect.stringContaining('notification=Project updated successfully')
+        expect.stringContaining('notification=Delivery updated successfully')
       )
     })
   })
@@ -949,7 +949,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects?notification=Project not found'
+        '/projects?notification=Delivery not found'
       )
     })
 
@@ -973,7 +973,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1?notification=Profession not found in this project'
+        '/projects/1?notification=Profession not found in this delivery'
       )
     })
 
@@ -1102,7 +1102,7 @@ describe('Projects controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'errors/not-found',
         expect.objectContaining({
-          pageTitle: 'Project not found'
+          pageTitle: 'Delivery not found'
         })
       )
     })
@@ -1280,7 +1280,7 @@ describe('Projects controller', () => {
       expect(mockH.view).toHaveBeenCalledWith(
         'projects/detail/views/archive-project-history',
         expect.objectContaining({
-          pageTitle: 'Archive Project Update',
+          pageTitle: 'Archive Delivery Update',
           project: mockProject,
           historyEntry: mockHistory[0]
         })
@@ -1302,7 +1302,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects?notification=Project not found'
+        '/projects?notification=Delivery not found'
       )
     })
 
@@ -1410,7 +1410,7 @@ describe('Projects controller', () => {
         expect.any(Object)
       )
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1?notification=Project update archived successfully'
+        '/projects/1?notification=Delivery update archived successfully'
       )
     })
 
@@ -1452,7 +1452,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1/history?notification=Project update archived successfully'
+        '/projects/1/history?notification=Delivery update archived successfully'
       )
     })
 
@@ -1474,7 +1474,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1?notification=Failed to archive project update'
+        '/projects/1?notification=Failed to archive delivery update'
       )
     })
 
@@ -1518,7 +1518,7 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/projects/1/history?notification=Failed to archive project update'
+        '/projects/1/history?notification=Failed to archive delivery update'
       )
     })
   })
@@ -1649,7 +1649,7 @@ describe('Projects controller', () => {
         // Assert - Should process successfully
         expect(mockUpdateProject).toHaveBeenCalled()
         expect(mockH.redirect).toHaveBeenCalledWith(
-          expect.stringContaining('notification=Project updated successfully')
+          expect.stringContaining('notification=Delivery updated successfully')
         )
       })
     })

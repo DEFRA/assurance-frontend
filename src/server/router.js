@@ -9,6 +9,7 @@ import { projectsRoutes } from './projects/index.js'
 import { professions } from './professions/index.js'
 import { deliveryGroups } from './delivery-groups/index.js'
 import { deliveryGroupsDev } from './delivery-groups-dev/index.js'
+import { deliveryGroupStandards } from './delivery-group-standards/index.js'
 import { deliveryPartners } from './delivery-partners/index.js'
 import { serveStaticFiles } from './common/helpers/serve-static-files.js'
 /**
@@ -32,6 +33,7 @@ export const router = {
         projectsRoutes,
         professions,
         deliveryGroups,
+        deliveryGroupStandards,
         deliveryPartners
       ]
 

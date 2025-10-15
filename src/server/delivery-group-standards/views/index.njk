@@ -1,0 +1,65 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% block content %}
+  {{ appHeading({
+    text: "Delivery Group Standards",
+    classes: "govuk-heading-xl govuk-!-margin-bottom-6"
+  }) }}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <p class="govuk-body-l">
+        The Delivery Group Standards help teams run successful delivery groups. 
+        These standards ensure delivery groups have clarity on their outcomes, understand their current services,
+        have clear roadmaps for change and methods to measure the impact of change.
+      </p>
+
+      <ol class="govuk-list govuk-!-margin-top-6">
+        <li class="govuk-!-margin-bottom-4" style="border-top: 1px solid #b1b4b6; padding-top: 15px;">
+          <h2 class="govuk-heading-m" >
+            1. Define and circulate outcomes
+          </h2>
+          <p class="govuk-body">
+            <a href="/delivery-group-standards/1" class="govuk-link govuk-link--no-visited-state">
+              Read more about point 1
+            </a>
+          </p>
+        </li>
+        <li class="govuk-!-margin-bottom-4" style="border-top: 1px solid #b1b4b6; padding-top: 15px;">
+          <h2 class="govuk-heading-m">
+            2. Maintain an inventory of products and services
+          </h2>
+          <p class="govuk-body">
+            <a href="/delivery-group-standards/2" class="govuk-link govuk-link--no-visited-state">
+              Read more about point 2
+            </a>
+          </p>
+        </li>
+        <li class="govuk-!-margin-bottom-4" style="border-top: 1px solid #b1b4b6; padding-top: 15px;">
+          <h2 class="govuk-heading-m">
+            3. Publish a plan for change
+          </h2>
+          <p class="govuk-body">
+            <a href="/delivery-group-standards/3" class="govuk-link govuk-link--no-visited-state">
+              Read more about point 3
+            </a>
+          </p>
+        </li>
+        <li class="govuk-!-margin-bottom-4" style="border-top: 1px solid #b1b4b6; padding-top: 15px;">
+          <h2 class="govuk-heading-m">
+            4. Define success measures and share progress
+          </h2>
+          <p class="govuk-body">
+            <a href="/delivery-group-standards/4" class="govuk-link govuk-link--no-visited-state">
+              Read more about point 4
+            </a>
+          </p>
+        </li>
+      </ol>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,241 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Home",
+        href: "/"
+      },
+      {
+        text: "Delivery Group Standards",
+        href: "/delivery-group-standards"
+      },
+      {
+        text: "Standard 4"
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block content %}
+  <style>
+    /* Contents list styling to match GDS Service Standard */
+    .gem-c-contents-list {
+      position: -webkit-sticky;
+      position: sticky;
+      top: 20px;
+      background: white;
+    }
+    
+    .gem-c-contents-list__title {
+      font-family: "GDS Transport", arial, sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      line-height: 1.25;
+      margin-bottom: 10px;
+      color: #0b0c0c;
+    }
+    
+    .gem-c-contents-list__list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .gem-c-contents-list__list-item {
+      margin-bottom: 5px;
+    }
+    
+    .gem-c-contents-list__list-item--dashed {
+      position: relative;
+      padding-left: 20px;
+    }
+    
+    .gem-c-contents-list__list-item-dash {
+      position: absolute;
+      left: 0;
+      color: #505a5f;
+    }
+    
+    .gem-c-contents-list__list-item-dash::before {
+      content: "—";
+    }
+    
+    .gem-c-contents-list__link {
+      font-family: "GDS Transport", arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.25;
+      color: #1d70b8;
+      text-decoration: underline;
+    }
+    
+    .gem-c-contents-list__link:hover {
+      color: #003078;
+    }
+    
+    /* Remove visited state to prevent purple links */
+    .gem-c-contents-list__link:visited {
+      color: #1d70b8;
+    }
+  </style>
+
+  <!-- Page title and header -->
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <div class="app-page-header">
+        <span class="govuk-caption-xl">Delivery Group Standards</span>
+        <h1 class="govuk-heading-xl">4. Define success measures and share progress</h1>
+        <p class="govuk-body-l app-page-header__summary">
+          Robust systems for measuring progress and sharing results with stakeholders.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-one-third app-sticky-element">
+      <!-- Page contents -->
+      <nav class="gem-c-contents-list govuk-!-margin-bottom-8" aria-label="Contents">
+        <h2 class="gem-c-contents-list__title">Contents</h2>
+        <ol class="gem-c-contents-list__list">
+          <li class="gem-c-contents-list__list-item gem-c-contents-list__list-item--dashed">
+            <span class="gem-c-contents-list__list-item-dash" aria-hidden="true"></span>
+            <a class="gem-c-contents-list__link govuk-link" href="#why-its-important">Why it's important</a>
+          </li>
+          <li class="gem-c-contents-list__list-item gem-c-contents-list__list-item--dashed">
+            <span class="gem-c-contents-list__list-item-dash" aria-hidden="true"></span>
+            <a class="gem-c-contents-list__link govuk-link" href="#what-you-should-show">What you should be able to show</a>
+          </li>
+          <li class="gem-c-contents-list__list-item gem-c-contents-list__list-item--dashed">
+            <span class="gem-c-contents-list__list-item-dash" aria-hidden="true"></span>
+            <a class="gem-c-contents-list__link govuk-link" href="#how-it-is-measured">How it is measured</a>
+          </li>
+          <li class="gem-c-contents-list__list-item gem-c-contents-list__list-item--dashed">
+            <span class="gem-c-contents-list__list-item-dash" aria-hidden="true"></span>
+            <a class="gem-c-contents-list__link govuk-link" href="#delivery-group-standards">Delivery group standards</a>
+          </li>
+        </ol>
+      </nav>
+    </div>
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-l" id="why-its-important">Why it's important</h2>
+      
+      <p class="govuk-body">
+        Delivery groups that measure and share progress build trust with stakeholders, 
+        learn faster from what works, and can course-correct before small problems become 
+        big failures. Regular measurement creates accountability and helps teams celebrate 
+        genuine achievements.
+      </p>
+
+      <p class="govuk-body">
+        Without measurement, delivery groups can't demonstrate their value, miss opportunities 
+        to improve, and lose stakeholder support. Teams work in the dark, unable to tell 
+        if their efforts are making a difference or if they need to change direction.
+      </p>
+
+      <h2 class="govuk-heading-l" id="what-you-should-show">What you should be able to show</h2>
+      
+      <p class="govuk-body">
+        To demonstrate that your delivery group meets this standard, you should be able to:
+      </p>
+
+      <ul class="govuk-list govuk-list--bullet">
+        <li>Define 3-5 key success indicators that directly relate to your outcomes, with baseline data and realistic targets</li>
+        <li>Show regular measurement and reporting of progress against these indicators</li>
+        <li>Demonstrate reliable data collection processes and systems with documented methodology</li>
+        <li>Provide evidence that measurement data actively informs decisions and priorities</li>
+        <li>Show regular review cycles with stakeholders to assess progress and adjust course</li>
+        <li>Present clear examples of impact and value delivered to users and the organisation</li>
+        <li>Demonstrate how you've improved performance based on measurement insights</li>
+      </ul>
+
+      <h2 class="govuk-heading-l" id="how-it-is-measured">How it is measured</h2>
+      
+      <p class="govuk-body">
+        Each standard is measured using a RAG (Red, Amber, Green) rating system.
+      </p>
+
+      <div class="govuk-!-margin-bottom-6">
+        <h3 class="govuk-heading-m">
+          {{ govukTag({
+            text: "Green",
+            classes: "govuk-tag--green govuk-!-margin-right-2"
+          }) }}
+          Comprehensive measurement system with regular review and data-driven decisions
+        </h3>
+        <p class="govuk-body">
+          Delivery group has established clear success indicators with baseline data and targets. 
+          Regular measurement and reporting processes are in place. Progress data is actively 
+          used to guide decisions and demonstrate impact to stakeholders.
+        </p>
+        <h4 class="govuk-heading-s">Evidence you might provide:</h4>
+        <ul class="govuk-list govuk-list--bullet">
+          <li>Dashboard or regular reports showing progress against success indicators</li>
+          <li>Baseline data and target setting documentation</li>
+          <li>Meeting minutes or decision records showing how data influenced priorities</li>
+          <li>Evidence of regular review cycles with stakeholders</li>
+          <li>Documentation of measurement methodology and data sources</li>
+        </ul>
+      </div>
+
+      <div class="govuk-!-margin-bottom-6">
+        <h3 class="govuk-heading-m">
+          {{ govukTag({
+            text: "Amber",
+            classes: "govuk-tag--yellow govuk-!-margin-right-2"
+          }) }}
+          Some measurement in place but incomplete or inconsistently used
+        </h3>
+        <p class="govuk-body">
+          Some indicators exist but measurement may be incomplete, irregular, or not 
+          consistently used for decision-making. Data collection processes may be 
+          informal or unreliable.
+        </p>
+        <h4 class="govuk-heading-s">Common issues:</h4>
+        <ul class="govuk-list govuk-list--bullet">
+          <li>Some metrics exist but data collection is inconsistent or manual</li>
+          <li>Limited evidence of how measurement data influences decisions</li>
+          <li>Irregular or infrequent review of progress against targets</li>
+          <li>Metrics focus on outputs rather than outcome measures</li>
+          <li>Baseline data or targets are missing or unrealistic</li>
+        </ul>
+      </div>
+
+      <div class="govuk-!-margin-bottom-6">
+        <h3 class="govuk-heading-m">
+          {{ govukTag({
+            text: "Red",
+            classes: "govuk-tag--red govuk-!-margin-right-2"
+          }) }}
+          No systematic measurement or tracking of progress
+        </h3>
+        <p class="govuk-body">
+          No clear success indicators or measurement processes. Limited ability to 
+          demonstrate progress or impact. Decisions are not informed by data about 
+          progress towards outcomes.
+        </p>
+        <h4 class="govuk-heading-s">Indicators of this rating:</h4>
+        <ul class="govuk-list govuk-list--bullet">
+          <li>No defined success indicators or measurement framework</li>
+          <li>No regular data collection or progress tracking</li>
+          <li>Unable to demonstrate impact or progress towards outcomes</li>
+          <li>Decisions made without reference to progress data</li>
+          <li>No baseline data or understanding of starting position</li>
+          <li>Focus is purely on activity measures rather than outcome indicators</li>
+        </ul>
+      </div>
+
+      <h2 class="govuk-heading-l" id="delivery-group-standards">Delivery group standards</h2>
+      <ol class="govuk-list govuk-list--number">
+        <li><a href="/delivery-group-standards/1" class="govuk-link">Define and circulate outcomes</a></li>
+        <li><a href="/delivery-group-standards/2" class="govuk-link">Maintain an inventory of products and services</a></li>
+        <li><a href="/delivery-group-standards/3" class="govuk-link">Publish a plan for change</a></li>
+        <li><strong>Define success measures and share progress</strong></li>
+      </ol>
+    </div>
+  </div>
+{% endblock %}

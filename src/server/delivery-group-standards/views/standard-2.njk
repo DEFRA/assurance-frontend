@@ -1,0 +1,238 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Home",
+        href: "/"
+      },
+      {
+        text: "Delivery Group Standards",
+        href: "/delivery-group-standards"
+      },
+      {
+        text: "Standard 2"
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block content %}
+  <style>
+    /* Contents list styling to match GDS Service Standard */
+    .gem-c-contents-list {
+      position: -webkit-sticky;
+      position: sticky;
+      top: 20px;
+      background: white;
+    }
+    
+    .gem-c-contents-list__title {
+      font-family: "GDS Transport", arial, sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      line-height: 1.25;
+      margin-bottom: 10px;
+      color: #0b0c0c;
+    }
+    
+    .gem-c-contents-list__list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .gem-c-contents-list__list-item {
+      margin-bottom: 5px;
+    }
+    
+    .gem-c-contents-list__list-item--dashed {
+      position: relative;
+      padding-left: 20px;
+    }
+    
+    .gem-c-contents-list__list-item-dash {
+      position: absolute;
+      left: 0;
+      color: #505a5f;
+    }
+    
+    .gem-c-contents-list__list-item-dash::before {
+      content: "—";
+    }
+    
+    .gem-c-contents-list__link {
+      font-family: "GDS Transport", arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.25;
+      color: #1d70b8;
+      text-decoration: underline;
+    }
+    
+    .gem-c-contents-list__link:hover {
+      color: #003078;
+    }
+    
+    /* Remove visited state to prevent purple links */
+    .gem-c-contents-list__link:visited {
+      color: #1d70b8;
+    }
+  </style>
+
+  <!-- Page title and header -->
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <div class="app-page-header">
+        <span class="govuk-caption-xl">Delivery Group Standards</span>
+        <h1 class="govuk-heading-xl">2. Maintain an inventory of products and services</h1>
+        <p class="govuk-body-l app-page-header__summary">
+          A comprehensive view of all services and products your delivery group operates.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-one-third app-sticky-element">
+      <!-- Page contents -->
+      <nav class="gem-c-contents-list govuk-!-margin-bottom-8" aria-label="Contents">
+        <h2 class="gem-c-contents-list__title">Contents</h2>
+        <ol class="gem-c-contents-list__list">
+          <li class="gem-c-contents-list__list-item gem-c-contents-list__list-item--dashed">
+            <span class="gem-c-contents-list__list-item-dash" aria-hidden="true"></span>
+            <a class="gem-c-contents-list__link govuk-link" href="#why-its-important">Why it's important</a>
+          </li>
+          <li class="gem-c-contents-list__list-item gem-c-contents-list__list-item--dashed">
+            <span class="gem-c-contents-list__list-item-dash" aria-hidden="true"></span>
+            <a class="gem-c-contents-list__link govuk-link" href="#what-you-should-show">What you should be able to show</a>
+          </li>
+          <li class="gem-c-contents-list__list-item gem-c-contents-list__list-item--dashed">
+            <span class="gem-c-contents-list__list-item-dash" aria-hidden="true"></span>
+            <a class="gem-c-contents-list__link govuk-link" href="#how-it-is-measured">How it is measured</a>
+          </li>
+          <li class="gem-c-contents-list__list-item gem-c-contents-list__list-item--dashed">
+            <span class="gem-c-contents-list__list-item-dash" aria-hidden="true"></span>
+            <a class="gem-c-contents-list__link govuk-link" href="#delivery-group-standards">Delivery group standards</a>
+          </li>
+        </ol>
+      </nav>
+    </div>
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-l" id="why-its-important">Why it's important</h2>
+      
+      <p class="govuk-body">
+        Successful delivery groups know exactly what they're responsible for and how well 
+        it's performing. This visibility prevents services from being neglected, helps 
+        identify opportunities for improvement, and ensures resources are allocated where 
+        they'll have the most impact.
+      </p>
+
+      <p class="govuk-body">
+        Without this inventory, delivery groups operate blindly - unable to spot problems 
+        early, missing opportunities to leverage existing assets, and struggling to make 
+        informed decisions about where to focus effort.
+      </p>
+
+      <h2 class="govuk-heading-l" id="what-you-should-show">What you should be able to show</h2>
+      
+      <p class="govuk-body">
+        To demonstrate that your delivery group meets this standard, you should be able to:
+      </p>
+
+      <ul class="govuk-list govuk-list--bullet">
+        <li>Provide a complete inventory or service map of all live services and products</li>
+        <li>Show clear ownership and accountability for each service with named individuals</li>
+        <li>Present performance data and user satisfaction metrics for each service</li>
+        <li>Demonstrate how services connect through user journeys and dependencies</li>
+        <li>Explain how each service contributes to your delivery group's outcomes</li>
+        <li>Show evidence of regular review and updating of your service inventory</li>
+        <li>Demonstrate a shift from project-focused to service-focused operations</li>
+      </ul>
+
+      <h2 class="govuk-heading-l" id="how-it-is-measured">How it is measured</h2>
+      
+      <p class="govuk-body">
+        Each standard is measured using a RAG (Red, Amber, Green) rating system.
+      </p>
+
+      <div class="govuk-!-margin-bottom-6">
+        <h3 class="govuk-heading-m">
+          {{ govukTag({
+            text: "Green",
+            classes: "govuk-tag--green govuk-!-margin-right-2"
+          }) }}
+          Clear service map with ownership, performance data, and alignment to outcomes
+        </h3>
+        <p class="govuk-body">
+          The group maintains a defined inventory or map of live services and products with clear ownership, 
+          performance measures, and user journeys. Relationships between services and outcomes are explicit.
+        </p>
+        <h4 class="govuk-heading-s">Evidence you might provide:</h4>
+        <ul class="govuk-list govuk-list--bullet">
+          <li>Service map or inventory document showing all live services</li>
+          <li>RACI matrix or ownership documentation for each service</li>
+          <li>Performance dashboards showing key metrics for each service</li>
+          <li>User journey maps showing how services connect</li>
+          <li>Documentation linking each service to specific outcomes</li>
+        </ul>
+      </div>
+
+      <div class="govuk-!-margin-bottom-6">
+        <h3 class="govuk-heading-m">
+          {{ govukTag({
+            text: "Amber",
+            classes: "govuk-tag--yellow govuk-!-margin-right-2"
+          }) }}
+          Partial view of services; ownership or alignment unclear
+        </h3>
+        <p class="govuk-body">
+          Some services or products are defined, but documentation is incomplete or ownership unclear. 
+          The connection between services and intended outcomes is only partially articulated.
+        </p>
+        <h4 class="govuk-heading-s">Common issues:</h4>
+        <ul class="govuk-list govuk-list--bullet">
+          <li>Service inventory exists but is incomplete or out of date</li>
+          <li>Ownership is unclear or disputed for some services</li>
+          <li>Performance data is patchy or inconsistent across services</li>
+          <li>Limited understanding of how services connect to deliver user value</li>
+          <li>Weak links between services and strategic outcomes</li>
+        </ul>
+      </div>
+
+      <div class="govuk-!-margin-bottom-6">
+        <h3 class="govuk-heading-m">
+          {{ govukTag({
+            text: "Red",
+            classes: "govuk-tag--red govuk-!-margin-right-2"
+          }) }}
+          No defined or coherent view of services
+        </h3>
+        <p class="govuk-body">
+          No coherent view of services or products. Operations are fragmented across projects or systems 
+          without a unified service or product model. Ownership and accountability are unclear.
+        </p>
+        <h4 class="govuk-heading-s">Indicators of this rating:</h4>
+        <ul class="govuk-list govuk-list--bullet">
+          <li>No service inventory or map exists</li>
+          <li>Different teams have different views of what services exist</li>
+          <li>Unclear who owns or is accountable for services</li>
+          <li>No systematic collection of performance data</li>
+          <li>Services operate in isolation without clear connection to outcomes</li>
+          <li>Focus is on individual projects rather than ongoing services</li>
+        </ul>
+      </div>
+
+      <h2 class="govuk-heading-l" id="delivery-group-standards">Delivery group standards</h2>
+      <ol class="govuk-list govuk-list--number">
+        <li><a href="/delivery-group-standards/1" class="govuk-link">Define and circulate outcomes</a></li>
+        <li><strong>Maintain an inventory of products and services</strong></li>
+        <li><a href="/delivery-group-standards/3" class="govuk-link">Publish a plan for change</a></li>
+        <li><a href="/delivery-group-standards/4" class="govuk-link">Define success measures and share progress</a></li>
+      </ol>
+    </div>
+  </div>
+{% endblock %}

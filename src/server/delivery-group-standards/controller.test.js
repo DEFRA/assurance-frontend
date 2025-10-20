@@ -41,8 +41,8 @@ describe('Delivery Group Standards controller', () => {
         'delivery-group-standards/views/standard-1',
         {
           pageTitle:
-            '1. Define and circulate outcomes | Delivery Group Standards | Defra Digital Assurance',
-          heading: '1. Define and circulate outcomes',
+            '1. Define and share outcomes | Delivery Group Standards | Defra Digital Assurance',
+          heading: '1. Define and share outcomes',
           standardNumber: 1
         }
       )
@@ -79,8 +79,8 @@ describe('Delivery Group Standards controller', () => {
         'delivery-group-standards/views/standard-3',
         {
           pageTitle:
-            '3. Publish a plan for change | Delivery Group Standards | Defra Digital Assurance',
-          heading: '3. Publish a plan for change',
+            '3. Publish a roadmap for change | Delivery Group Standards | Defra Digital Assurance',
+          heading: '3. Publish a roadmap for change',
           standardNumber: 3
         }
       )

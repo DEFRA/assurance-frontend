@@ -12,9 +12,9 @@ const VIEW_TEMPLATES = {
 }
 
 const STANDARD_TITLES = {
-  1: '1. Define and circulate outcomes',
+  1: '1. Define and share outcomes',
   2: '2. Maintain an inventory of products and services',
-  3: '3. Publish a plan for change',
+  3: '3. Publish a roadmap for change',
   4: '4. Define success measures and share progress'
 }
 

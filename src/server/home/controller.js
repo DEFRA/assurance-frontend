@@ -529,19 +529,17 @@ export const homeController = {
         const sevenDaysAgo = new Date()
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
         sevenDaysAgo.setHours(0, 0, 0, 0) // Set to start of day
-        const startDate = sevenDaysAgo.toISOString() // Full ISO format: 2024-01-15T00:00:00.000Z
+        // const startDate = sevenDaysAgo.toISOString() // Full ISO format: 2024-01-15T00:00:00.000Z
 
-        // Fetch only projects with recent changes for timeline views
-        const recentlyChangedProjects = await getProjects(request, {
-          startDate
-        })
+        // Fetch all projects for timeline views (frontend filtering will handle date ranges)
+        const allProjectsForTimeline = await getProjects(request)
 
         request.logger.info(
-          `Found ${recentlyChangedProjects.length} projects with activity in last 7 days (out of ${allProjects.length} total projects). Fetching their recent changes plus previous changes for context.`
+          `Processing ${allProjectsForTimeline.length} total projects for timeline analysis. Frontend filtering will show changes from last 7 days plus context.`
         )
 
         const historyData = await fetchAllProjectHistory(
-          recentlyChangedProjects,
+          allProjectsForTimeline,
           request,
           sevenDaysAgo
         )

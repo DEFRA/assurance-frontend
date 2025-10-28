@@ -501,6 +501,50 @@
             }
           }) }}
           
+          {{ govukTextarea({
+            label: {
+              text: "Outcome",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Overall outcome for the delivery group (optional)"
+            },
+            id: "delivery-group-outcome",
+            name: "outcome",
+            rows: 3,
+            classes: "govuk-!-width-two-thirds"
+          }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "Roadmap Name",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Name for the delivery group's roadmap (optional)"
+            },
+            id: "delivery-group-roadmap-name",
+            name: "roadmapName",
+            classes: "govuk-!-width-two-thirds",
+            attributes: {
+              maxlength: "200"
+            }
+          }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "Roadmap Link",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "URL link to the delivery group's roadmap (optional)"
+            },
+            id: "delivery-group-roadmap-link",
+            name: "roadmapLink",
+            type: "url",
+            classes: "govuk-!-width-two-thirds"
+          }) }}
+          
           {{ govukButton({
             text: "Add Delivery Group",
             classes: "govuk-button--secondary"
@@ -544,7 +588,7 @@
               classes: "govuk-label--s"
             },
             hint: {
-              text: "Leave empty to keep current name"
+              text: "Update the name or leave as is"
             },
             id: "update-delivery-group-name",
             name: "name",
@@ -560,7 +604,7 @@
               classes: "govuk-label--s"
             },
             hint: {
-              text: "Leave empty to keep current lead"
+              text: "Update the lead or leave as is"
             },
             id: "update-delivery-group-lead",
             name: "lead",
@@ -568,6 +612,50 @@
             attributes: {
               maxlength: "100"
             }
+          }) }}
+          
+          {{ govukTextarea({
+            label: {
+              text: "New Outcome",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Update the outcome or leave as is"
+            },
+            id: "update-delivery-group-outcome",
+            name: "outcome",
+            rows: 3,
+            classes: "govuk-!-width-two-thirds"
+          }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "New Roadmap Name",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Update the roadmap name or leave as is"
+            },
+            id: "update-delivery-group-roadmap-name",
+            name: "roadmapName",
+            classes: "govuk-!-width-two-thirds",
+            attributes: {
+              maxlength: "200"
+            }
+          }) }}
+          
+          {{ govukInput({
+            label: {
+              text: "New Roadmap Link",
+              classes: "govuk-label--s"
+            },
+            hint: {
+              text: "Update the roadmap link or leave as is"
+            },
+            id: "update-delivery-group-roadmap-link",
+            name: "roadmapLink",
+            type: "url",
+            classes: "govuk-!-width-two-thirds"
           }) }}
           
           {{ govukButton({
@@ -586,6 +674,8 @@
           <tr class="govuk-table__row">
             <th scope="col" class="govuk-table__header">Name</th>
             <th scope="col" class="govuk-table__header">Lead</th>
+            <th scope="col" class="govuk-table__header">Outcome</th>
+            <th scope="col" class="govuk-table__header">Roadmap</th>
             <th scope="col" class="govuk-table__header">Status</th>
             <th scope="col" class="govuk-table__header">State</th>
             <th scope="col" class="govuk-table__header">Actions</th>
@@ -596,6 +686,26 @@
             <tr class="govuk-table__row">
               <td class="govuk-table__cell">{{ group.Name or group.name }}</td>
               <td class="govuk-table__cell">{{ group.Lead or group.lead or '-' }}</td>
+              <td class="govuk-table__cell">
+                {% if group.Outcome or group.outcome %}
+                  <span class="govuk-body-s" title="{{ group.Outcome or group.outcome }}">
+                    {{ (group.Outcome or group.outcome) | truncate(50) }}
+                  </span>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                {% if group.RoadmapLink or group.roadmapLink %}
+                  <a href="{{ group.RoadmapLink or group.roadmapLink }}" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                    {{ group.RoadmapName or group.roadmapName or 'View Roadmap' }}
+                  </a>
+                {% elif group.RoadmapName or group.roadmapName %}
+                  {{ group.RoadmapName or group.roadmapName }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
               <td class="govuk-table__cell">
                 {% set statusText = group.Status or group.status or 'Pending' %}
                 {% if statusText == 'Pending' %}
@@ -840,6 +950,60 @@
         }
       }
     }, 100); // Small delay to ensure GOV.UK tabs are initialized
+
+    // Handle delivery group selection for pre-populating update form
+    const deliveryGroupSelect = document.getElementById('update-delivery-group-id');
+    if (deliveryGroupSelect) {
+      // Create a lookup object for delivery groups
+      const deliveryGroups = {
+        {% for group in deliveryGroups %}
+        '{{ group.Id or group.id }}': {
+          name: '{{ (group.Name or group.name) | replace("'", "\\'") }}',
+          lead: '{{ (group.Lead or group.lead or "") | replace("'", "\\'") }}',
+          outcome: '{{ (group.Outcome or group.outcome or "") | replace("'", "\\'") | replace("\n", "\\n") | replace("\r", "") }}',
+          roadmapName: '{{ (group.RoadmapName or group.roadmapName or "") | replace("'", "\\'") }}',
+          roadmapLink: '{{ (group.RoadmapLink or group.roadmapLink or "") | replace("'", "\\'") }}'
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      };
+
+      deliveryGroupSelect.addEventListener('change', function() {
+        const selectedId = this.value;
+        const nameField = document.getElementById('update-delivery-group-name');
+        const leadField = document.getElementById('update-delivery-group-lead');
+        const outcomeField = document.getElementById('update-delivery-group-outcome');
+        const roadmapNameField = document.getElementById('update-delivery-group-roadmap-name');
+        const roadmapLinkField = document.getElementById('update-delivery-group-roadmap-link');
+
+        if (selectedId && deliveryGroups[selectedId]) {
+          const group = deliveryGroups[selectedId];
+          
+          // Populate fields with current values
+          if (nameField) {
+            nameField.value = group.name;
+          }
+          if (leadField) {
+            leadField.value = group.lead || '';
+          }
+          if (outcomeField) {
+            outcomeField.value = group.outcome || '';
+          }
+          if (roadmapNameField) {
+            roadmapNameField.value = group.roadmapName || '';
+          }
+          if (roadmapLinkField) {
+            roadmapLinkField.value = group.roadmapLink || '';
+          }
+        } else {
+          // Clear fields if no selection
+          [nameField, leadField, outcomeField, roadmapNameField, roadmapLinkField].forEach(field => {
+            if (field) {
+              field.value = '';
+            }
+          });
+        }
+      });
+    }
   });
 </script>
 {% endblock %}

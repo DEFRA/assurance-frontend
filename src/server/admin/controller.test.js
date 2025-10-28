@@ -1568,6 +1568,9 @@ describe('Admin controller', () => {
           Name: 'Frontend Team',
           Status: 'Pending',
           Lead: 'John Doe',
+          Outcome: null,
+          RoadmapName: null,
+          RoadmapLink: null,
           IsActive: true,
           CreatedAt: expect.any(String),
           UpdatedAt: expect.any(String)
@@ -1613,6 +1616,9 @@ describe('Admin controller', () => {
           Name: 'Backend Team',
           Status: 'Pending',
           Lead: '',
+          Outcome: null,
+          RoadmapName: null,
+          RoadmapLink: null,
           IsActive: true,
           CreatedAt: expect.any(String),
           UpdatedAt: expect.any(String)
@@ -1660,6 +1666,9 @@ describe('Admin controller', () => {
         {
           Name: 'Updated Frontend Team',
           Lead: 'New Lead',
+          Outcome: null,
+          RoadmapName: null,
+          RoadmapLink: null,
           UpdatedAt: expect.any(String)
         },
         mockRequest
@@ -1685,6 +1694,10 @@ describe('Admin controller', () => {
         'frontend-team',
         {
           Name: 'Updated Frontend Team',
+          Lead: '',
+          Outcome: null,
+          RoadmapName: null,
+          RoadmapLink: null,
           UpdatedAt: expect.any(String)
         },
         mockRequest
@@ -1706,7 +1719,11 @@ describe('Admin controller', () => {
       expect(updateDeliveryGroup).toHaveBeenCalledWith(
         'frontend-team',
         {
+          Name: '',
           Lead: 'New Lead',
+          Outcome: null,
+          RoadmapName: null,
+          RoadmapLink: null,
           UpdatedAt: expect.any(String)
         },
         mockRequest
@@ -1731,7 +1748,7 @@ describe('Admin controller', () => {
       )
     })
 
-    it('should handle missing name and lead', async () => {
+    it('should handle missing name and lead (now allows empty values)', async () => {
       // Arrange
       mockRequest.payload = {
         id: 'frontend-team',
@@ -1742,10 +1759,21 @@ describe('Admin controller', () => {
       // Act
       await adminController.updateDeliveryGroup(mockRequest, mockH)
 
-      // Assert
-      expect(updateDeliveryGroup).not.toHaveBeenCalled()
+      // Assert - With form pre-population, empty values are now allowed
+      expect(updateDeliveryGroup).toHaveBeenCalledWith(
+        'frontend-team',
+        {
+          Name: '',
+          Lead: '',
+          Outcome: null,
+          RoadmapName: null,
+          RoadmapLink: null,
+          UpdatedAt: expect.any(String)
+        },
+        mockRequest
+      )
       expect(mockH.redirect).toHaveBeenCalledWith(
-        '/admin?notification=Please provide at least a name or lead to update&tab=delivery-groups'
+        '/admin?notification=Delivery group updated successfully&tab=delivery-groups'
       )
     })
 

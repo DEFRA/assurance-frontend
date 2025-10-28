@@ -627,7 +627,7 @@ export const adminController = {
   // Delivery Groups CRUD operations
   createDeliveryGroup: async (request, h) => {
     try {
-      const { name, lead } = request.payload
+      const { name, lead, outcome, roadmapName, roadmapLink } = request.payload
 
       if (!name?.trim()) {
         return h.redirect(
@@ -646,6 +646,9 @@ export const adminController = {
         Name: name.trim(),
         Status: 'Pending', // Default status is now Pending
         Lead: lead?.trim() || '', // Handle optional lead field
+        Outcome: outcome?.trim() || null, // Handle optional outcome field
+        RoadmapName: roadmapName?.trim() || null, // Handle optional roadmap name field
+        RoadmapLink: roadmapLink?.trim() || null, // Handle optional roadmap link field
         IsActive: true,
         CreatedAt: new Date().toISOString(),
         UpdatedAt: new Date().toISOString()
@@ -670,7 +673,8 @@ export const adminController = {
 
   updateDeliveryGroup: async (request, h) => {
     try {
-      const { id, name, lead } = request.payload
+      const { id, name, lead, outcome, roadmapName, roadmapLink } =
+        request.payload
 
       if (!id) {
         return h.redirect(
@@ -678,37 +682,23 @@ export const adminController = {
         )
       }
 
-      if (!name?.trim() && !lead?.trim()) {
-        return h.redirect(
-          `${ADMIN_BASE_URL}?notification=Please provide at least a name or lead to update&tab=delivery-groups`
-        )
-      }
+      // We'll always have values now since form is pre-populated, so we don't need this check
+      // The backend will handle detecting actual changes
 
-      // Build update payload with only the fields that are provided
+      // Build update payload with all fields (form is pre-populated so we always get values)
       const updateData = {
+        Name: name?.trim() || '',
+        Lead: lead?.trim() || '',
+        Outcome: outcome?.trim() || null,
+        RoadmapName: roadmapName?.trim() || null,
+        RoadmapLink: roadmapLink?.trim() || null,
         UpdatedAt: new Date().toISOString()
-      }
-
-      if (name?.trim()) {
-        updateData.Name = name.trim()
-      }
-
-      if (lead?.trim()) {
-        updateData.Lead = lead.trim()
       }
 
       await updateDeliveryGroup(id, updateData, request)
 
-      const updatedFields = []
-      if (name?.trim()) {
-        updatedFields.push('name')
-      }
-      if (lead?.trim()) {
-        updatedFields.push('lead')
-      }
-
       request.logger.info(
-        { id, name, lead, updatedFields },
+        { id, name, lead, outcome, roadmapName, roadmapLink },
         'Delivery group updated successfully'
       )
       return h.redirect(

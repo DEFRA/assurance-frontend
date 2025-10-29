@@ -42,7 +42,7 @@
         }) }}
       {% else %}
         {{ govukInsetText({
-          text: "You can update the status and commentary for this assessment. The profession and standard cannot be changed."
+          text: "You can change the status and commentary for this update. The profession and standard cannot be changed."
         }) }}
       {% endif %}
 
@@ -196,7 +196,7 @@
 
         <div class="govuk-button-group">
           {{ govukButton({
-            text: "Save update" if not isEditMode else "Update assessment"
+            text: "Save update" if not isEditMode else "Update"
           }) }}
 
           {{ govukButton({

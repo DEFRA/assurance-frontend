@@ -23,64 +23,64 @@ const NOTIFICATIONS = {
 // Mock data for delivery group assessments (temporary)
 const mockDeliveryGroupAssessments = {
   'another-delivery-group': {
-    strategicObjective:
+    outcome:
       'To deliver high-quality digital services that support environmental protection and sustainability initiatives across Defra.',
     roadmapUrl: '/delivery-groups/another-delivery-group/roadmap',
     assessments: [
       {
-        area: 'Outcome clarity',
+        area: 'Define and share outcomes',
         status: 'GREEN',
         commentary:
-          'Clear understanding of desired outcomes with well-defined success metrics and stakeholder alignment.'
+          'Has 4 specific outcomes aligned with strategic roadmap, with regular monthly updates shared with senior leaders and named owners for each outcome.'
       },
       {
-        area: 'Roadmap readiness',
+        area: 'Maintain a list of products and services',
+        status: 'GREEN',
+        commentary:
+          'Complete service map exists showing all services with clear owners, understood relationships between services, and explicit links to outcomes.'
+      },
+      {
+        area: 'Publish a roadmap for change',
+        status: 'GREEN',
+        commentary:
+          'Published roadmap links change initiatives to outcomes and services, uses clear prioritisation process, has regular reviews, and all team members understand their role.'
+      },
+      {
+        area: 'Define success measures and share progress',
         status: 'AMBER',
         commentary:
-          'Roadmap is in place but requires refinement of timelines and resource allocation for Q2 deliverables.'
-      },
-      {
-        area: 'Service landscape',
-        status: 'GREEN',
-        commentary:
-          'Strong understanding of user needs and service requirements based on recent user research findings.'
-      },
-      {
-        area: 'Value realisation',
-        status: 'RED',
-        commentary:
-          'Some concerns about measuring value delivery. Benefits realisation framework needs strengthening.'
+          'Measurable indicators defined for each outcome but performance data analysis could be more regular and progress updates need better stakeholder accessibility.'
       }
     ]
   },
   'the-best-group': {
-    strategicObjective:
+    outcome:
       'To lead innovation in digital transformation while maintaining the highest standards of service delivery and user experience.',
     roadmapUrl: '/delivery-groups/the-best-group/roadmap',
     assessments: [
       {
-        area: 'Outcome clarity',
-        status: 'AMBER',
-        commentary:
-          'Outcomes are defined but need better alignment with business objectives and clearer success criteria.'
-      },
-      {
-        area: 'Roadmap readiness',
+        area: 'Define and share outcomes',
         status: 'GREEN',
         commentary:
-          'Comprehensive roadmap with clear milestones, dependencies, and resource planning in place.'
+          'Has 5 specific outcomes aligned with strategic roadmap, regular quarterly updates shared with colleagues and senior leaders, and named owners tracking progress for each outcome.'
       },
       {
-        area: 'Service understanding',
-        status: 'AMBER',
-        commentary:
-          'Good understanding of current services but user research for new initiatives is still in progress.'
-      },
-      {
-        area: 'Value realisation',
+        area: 'Maintain a list of products and services',
         status: 'GREEN',
         commentary:
-          'Strong value delivery with clear metrics and regular measurement of benefits realisation.'
+          'Comprehensive service map showing all services with designated owners, clear understanding of service relationships, and explicit links to delivery group outcomes.'
+      },
+      {
+        area: 'Publish a roadmap for change',
+        status: 'GREEN',
+        commentary:
+          'Roadmap clearly links initiatives to outcomes and services, established prioritisation process, monthly review cycle, and excellent team understanding of roadmap and roles.'
+      },
+      {
+        area: 'Define success measures and share progress',
+        status: 'GREEN',
+        commentary:
+          'Measurable indicators defined and shared for each outcome, measures linked to outcomes not just activity, regular data analysis, accessible progress updates, and data-driven roadmap decisions.'
       }
     ]
   }
@@ -88,31 +88,32 @@ const mockDeliveryGroupAssessments = {
 
 // Default mock data for any delivery group not specifically defined above
 const getDefaultMockData = (deliveryGroupId) => ({
-  strategicObjective: `To accelerate the transition to zero-waste, circular economy by delivering user-centered, data-driven services that enable efficient waste tracking, empower businesses and citizens to reduce waste, and support evidence-based policymaking through accessible, real-time environmental data.`,
+  outcome: `To accelerate the transition to zero-waste, circular economy by delivering user-centered, data-driven services that enable efficient waste tracking, empower businesses and citizens to reduce waste, and support evidence-based policymaking through accessible, real-time environmental data.`,
   roadmapUrl: `/delivery-groups/${deliveryGroupId}/roadmap`,
   assessments: [
     {
-      area: 'Outcome clarity',
-      status: 'AMBER',
+      area: 'Define and share outcomes',
+      status: 'GREEN',
       commentary:
-        'Outcomes are generally well understood but may benefit from further refinement and stakeholder alignment.'
+        'Has 3 specific outcomes aligned with strategic roadmap priorities, regular updates shared with senior leaders, and named owners tracking progress for each outcome.'
     },
     {
-      area: 'Roadmap readiness',
-      status: 'RED',
-      commentary: 'Roadmap is not in place.'
-    },
-    {
-      area: 'Service understanding',
+      area: 'Maintain a list of products and services',
       status: 'AMBER',
       commentary:
-        'Good understanding of current service requirements with ongoing user research to validate assumptions.'
+        'Service map exists showing most services with owners, but relationships between services need better documentation and some services lack clear links to outcomes.'
     },
     {
-      area: 'Value realisation',
+      area: 'Publish a roadmap for change',
       status: 'AMBER',
       commentary:
-        'Value delivery is on track but monitoring and measurement processes could be enhanced.'
+        'Roadmap exists but lacks detail on how initiatives link to outcomes and services. Prioritisation process needs strengthening and team understanding could be improved.'
+    },
+    {
+      area: 'Define success measures and share progress',
+      status: 'GREEN',
+      commentary:
+        'Measurable indicators defined for each outcome and clearly linked to delivery group outcomes, with regular performance data analysis and accessible progress updates to stakeholders.'
     }
   ]
 })
@@ -163,7 +164,7 @@ export const deliveryGroupsDevController = {
           lead: groupLead
         },
         projects: projects || [],
-        strategicObjective: assessmentData.strategicObjective,
+        outcome: assessmentData.outcome,
         roadmapUrl: assessmentData.roadmapUrl,
         assessments: assessmentData.assessments,
         breadcrumbs: getDeliveryGroupDetailBreadcrumbs(

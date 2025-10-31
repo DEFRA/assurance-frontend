@@ -28,10 +28,10 @@
         </p>
       {% endif %}
 
-      {# Strategic Objective Inset #}
-      {% if strategicObjective %}
+      {# Outcome Inset #}
+      {% if outcome %}
         {{ govukInsetText({
-          text: strategicObjective,
+          text: outcome,
           classes: "govuk-!-margin-bottom-4"
         }) }}
       {% endif %}
@@ -97,7 +97,7 @@
           {{ govukTable({
             head: [
               {
-                text: "Criteria"
+                text: "Standard"
               },
               {
                 text: "Status"

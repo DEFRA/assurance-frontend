@@ -102,7 +102,7 @@ describe('Profession Standard Matrix Service', () => {
       // Assert
       expect(Array.isArray(result)).toBe(true)
       // The function should parse string numbers correctly now
-      expect(result).toHaveLength(6) // Should include standards 1, 2, 3, 4, 5, 6
+      expect(result).toHaveLength(7) // Should include standards 1, 2, 3, 4, 5, 6, 7
 
       // Verify that all returned standards are included in the matrix for this profession/phase
       const expectedStandardNumbers =
@@ -122,7 +122,7 @@ describe('Profession Standard Matrix Service', () => {
 
       // Assert
       expect(Array.isArray(result)).toBe(true)
-      expect(result).toHaveLength(7) // Should include standards 6, 8, 9, 11, 12, 13, 14
+      expect(result).toHaveLength(8) // Should include standards 6, 7, 8, 9, 11, 12, 13, 14
 
       const expectedStandardNumbers =
         PROFESSION_STANDARD_MATRIX.Alpha['technical-architecture']
@@ -254,7 +254,7 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      expect(resultLowerCase).toHaveLength(6) // Should have 6 standards for user-centred-design in Discovery
+      expect(resultLowerCase).toHaveLength(7) // Should have 7 standards for user-centred-design in Discovery
       expect(resultUpperCase).toHaveLength(0) // Should be case-sensitive
     })
 
@@ -273,7 +273,7 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      expect(resultCorrectCase).toHaveLength(6) // Should have 6 standards for user-centred-design in Discovery
+      expect(resultCorrectCase).toHaveLength(7) // Should have 7 standards for user-centred-design in Discovery
       expect(resultWrongCase).toHaveLength(0) // Should be case-sensitive
     })
 
@@ -292,9 +292,9 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      // Discovery should have 6 standards [1,2,3,4,5,6], Live should have 5 standards [1,2,3,4,5]
-      expect(discoveryResults).toHaveLength(6)
-      expect(liveResults).toHaveLength(5)
+      // Discovery should have 7 standards [1,2,3,4,5,6,7], Live should have 6 standards [1,2,3,4,5,7]
+      expect(discoveryResults).toHaveLength(7)
+      expect(liveResults).toHaveLength(6)
       expect(discoveryResults).not.toEqual(liveResults)
     })
 
@@ -313,8 +313,8 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      // user-centred-design has [1,2,3,4,5,6], delivery-management has [4,5,6,7,8]
-      expect(userCentredResults).toHaveLength(6)
+      // user-centred-design has [1,2,3,4,5,6,7], delivery-management has [4,5,6,7,8]
+      expect(userCentredResults).toHaveLength(7)
       expect(deliveryResults).toHaveLength(5)
       expect(userCentredResults).not.toEqual(deliveryResults)
     })
@@ -363,7 +363,7 @@ describe('Profession Standard Matrix Service', () => {
       )
 
       // Assert
-      expect(result).toHaveLength(6) // Should have 6 standards for user-centred-design in Discovery
+      expect(result).toHaveLength(7) // Should have 7 standards for user-centred-design in Discovery
 
       // Test the first standard's structure
       const firstStandard = result[0]
@@ -448,7 +448,7 @@ describe('Profession Standard Matrix Service', () => {
 
       // Assert
       expect(discoveryResult).toHaveLength(2) // business-analysis has [6,7] in Discovery
-      expect(liveResult).toEqual([]) // business-analysis has [] in Live
+      expect(liveResult).toHaveLength(1) // business-analysis now has [7] in Live
     })
   })
 })

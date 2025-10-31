@@ -5,61 +5,61 @@ export const PROFESSION_STANDARD_MATRIX = {
   Discovery: {
     'business-analysis': [6, 7],
     'delivery-management': [4, 5, 6, 7, 8],
-    'product-management': [2, 6, 10],
-    'quality-assurance': [6, 14],
-    'release-management': [],
-    'technical-architecture': [6, 11, 12, 13, 14],
-    architecture: [6, 11, 12, 13, 14], // Same as technical-architecture
-    'software-development': [6, 9, 11, 12, 13, 14], // Added standard 9
-    'user-centred-design': [1, 2, 3, 4, 5, 6]
+    'product-management': [2, 6, 7, 10],
+    'quality-assurance': [6, 7, 14],
+    'release-management': [7],
+    'technical-architecture': [6, 7, 11, 12, 13, 14],
+    architecture: [6, 7, 11, 12, 13, 14], // Same as technical-architecture
+    'software-development': [6, 7, 9, 11, 12, 13, 14], // Added standard 9
+    'user-centred-design': [1, 2, 3, 4, 5, 6, 7]
   },
 
   Alpha: {
     'business-analysis': [7, 11],
     'delivery-management': [4, 5, 6, 7, 8],
     'product-management': [2, 3, 6, 7, 10],
-    'quality-assurance': [3, 4, 5, 8, 9, 11, 14],
-    'release-management': [14],
-    'technical-architecture': [6, 8, 9, 11, 12, 13, 14],
-    architecture: [6, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
-    'software-development': [6, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
-    'user-centred-design': [1, 2, 3, 4, 5]
+    'quality-assurance': [3, 4, 5, 7, 8, 9, 11, 14],
+    'release-management': [7, 14],
+    'technical-architecture': [6, 7, 8, 9, 11, 12, 13, 14],
+    architecture: [6, 7, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
+    'software-development': [6, 7, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
+    'user-centred-design': [1, 2, 3, 4, 5, 7]
   },
 
   'Private Beta': {
     'business-analysis': [7, 11],
     'delivery-management': [4, 5, 6, 7, 8],
     'product-management': [2, 3, 6, 7, 10, 14],
-    'quality-assurance': [3, 4, 5, 8, 9, 11, 14],
+    'quality-assurance': [3, 4, 5, 7, 8, 9, 11, 14],
     'release-management': [7, 14],
-    'technical-architecture': [8, 9, 11, 12, 13, 14],
-    architecture: [8, 9, 11, 12, 13, 14], // Same as technical-architecture
-    'software-development': [8, 9, 11, 12, 13, 14], // Same as technical-architecture
-    'user-centred-design': [1, 2, 3, 4, 5]
+    'technical-architecture': [7, 8, 9, 11, 12, 13, 14],
+    architecture: [7, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
+    'software-development': [7, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
+    'user-centred-design': [1, 2, 3, 4, 5, 7]
   },
 
   'Public Beta': {
     'business-analysis': [7],
     'delivery-management': [4, 5, 6, 7, 8],
     'product-management': [2, 3, 6, 7, 10, 14],
-    'quality-assurance': [3, 4, 5, 8, 9, 11, 14],
-    'release-management': [14],
-    'technical-architecture': [8, 9, 11, 12, 13, 14],
-    architecture: [8, 9, 11, 12, 13, 14], // Same as technical-architecture
-    'software-development': [8, 9, 11, 12, 13, 14], // Same as technical-architecture
-    'user-centred-design': [1, 2, 3, 4, 5]
+    'quality-assurance': [3, 4, 5, 7, 8, 9, 11, 14],
+    'release-management': [7, 14],
+    'technical-architecture': [7, 8, 9, 11, 12, 13, 14],
+    architecture: [7, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
+    'software-development': [7, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
+    'user-centred-design': [1, 2, 3, 4, 5, 7]
   },
 
   Live: {
-    'business-analysis': [],
+    'business-analysis': [7],
     'delivery-management': [7, 8, 10, 14],
-    'product-management': [3, 6, 8, 10, 14],
-    'quality-assurance': [3, 8, 9, 11, 14],
-    'release-management': [14],
-    'technical-architecture': [8, 9, 11, 12, 13, 14],
-    architecture: [8, 9, 11, 12, 13, 14], // Same as technical-architecture
-    'software-development': [8, 9, 11, 12, 13, 14], // Same as technical-architecture
-    'user-centred-design': [1, 2, 3, 4, 5]
+    'product-management': [3, 6, 7, 8, 10, 14],
+    'quality-assurance': [3, 7, 8, 9, 11, 14],
+    'release-management': [7, 14],
+    'technical-architecture': [7, 8, 9, 11, 12, 13, 14],
+    architecture: [7, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
+    'software-development': [7, 8, 9, 11, 12, 13, 14], // Same as technical-architecture
+    'user-centred-design': [1, 2, 3, 4, 5, 7]
   }
 }
 

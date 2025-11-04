@@ -1,0 +1,83 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Home",
+        href: "/"
+      },
+      {
+        text: "Accessibility"
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Accessibility Statement</h1>
+      
+      <p class="govuk-body-l">
+        This accessibility statement applies to the internal Defra Digital Assurance service.
+      </p>
+
+      <h2 class="govuk-heading-l">How you should be able to use this service</h2>
+      
+      <p class="govuk-body">
+        We want as many people as possible to be able to use this service. For example, that means you should be able to:
+      </p>
+
+      <ul class="govuk-list govuk-list--bullet">
+        <li>change colours, contrast levels and fonts using browser or device settings</li>
+        <li>zoom in up to 400% without the text spilling off the screen</li>
+        <li>navigate most of the website using a keyboard or speech recognition software</li>
+        <li>listen to most of the website using a screen reader (including the most recent versions of JAWS, NVDA and VoiceOver)</li>
+      </ul>
+
+      <h2 class="govuk-heading-l">Our approach</h2>
+      
+      <p class="govuk-body">
+        The DDTS Assurance service is used by a small, known group of internal stakeholders – including the director of digital delivery, deputy directors, profession heads, and programme/delivery leads – comprising fewer than 100 users in total.
+      </p>
+
+      <p class="govuk-body">
+        Due to the nature of this user group, we have not been able to identify specific accessibility needs or conduct user testing with people who have a range of access needs. However, we are committed to ensuring the service is as accessible as possible.
+      </p>
+
+      <p class="govuk-body">
+        We have conducted technical accessibility testing using widely adopted tools, specifically WAVE and Axe DevTools, and have remediated the issues these tools identified.
+      </p>
+
+      <p class="govuk-body">
+        We will continue to monitor the service's accessibility and respond to feedback or changes in user needs.
+      </p>
+
+      <h2 class="govuk-heading-l">Accessibility compliance</h2>
+      
+      <p class="govuk-body">
+        The DDTS Assurance service aims to meet WCAG 2.1 AA accessibility standards, as far as they are applicable to an internal service with a known user base. Technical testing was last completed in June 2025 using automated tools.
+      </p>
+
+      <h2 class="govuk-heading-l">How to request support or report accessibility issues</h2>
+      
+      <p class="govuk-body">
+        If you experience any issues using the service or need the content in an alternative format, please contact the Assurance Team at <a href="mailto:CCTSAssurance@defra.gov.uk" class="govuk-link">CCTSAssurance@defra.gov.uk</a>.
+      </p>
+
+      <p class="govuk-body">
+        We'll review your request and get back to you as soon as possible.
+      </p>
+
+      <h2 class="govuk-heading-l">Statement information</h2>
+      
+      <ul class="govuk-list">
+        <li>Accessibility statement published: July 2025</li>
+        <li>Last reviewed: July 2025</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}

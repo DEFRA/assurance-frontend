@@ -1,0 +1,71 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: [
+      {
+        text: "Home",
+        href: "/"
+      },
+      {
+        text: "Cookie Policy"
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Cookie Policy</h1>
+      
+      <p class="govuk-body">
+        Cookies are small files saved on your phone, tablet or computer when you visit a website.
+      </p>
+
+      <h2 class="govuk-heading-l">We use cookies to:</h2>
+      
+      <ul class="govuk-list govuk-list--bullet">
+        <li>enable users to sign in</li>
+        <li>provide messaging to all users, signed in or not</li>
+        <li>protect submissions to our forms</li>
+      </ul>
+
+      <h2 class="govuk-heading-l">Essential cookies</h2>
+      
+      <p class="govuk-body">
+        These cookies are essential for the service to work. We do not need to ask permission to use them.
+      </p>
+
+      {{ govukTable({
+        head: [
+          {
+            text: "Name"
+          },
+          {
+            text: "Purpose"
+          },
+          {
+            text: "Expires"
+          }
+        ],
+        rows: [
+          [
+            {
+              text: "assurance-session"
+            },
+            {
+              text: "To keep users signed in and identify user sessions"
+            },
+            {
+              text: "8 hours"
+            }
+          ]
+        ]
+      }) }}
+    </div>
+  </div>
+{% endblock %}

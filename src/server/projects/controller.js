@@ -278,10 +278,13 @@ export const projectsController = {
       request.logger.info('Projects page - fetching projects')
       const projects = await getProjects(request)
 
-      // Filter out TBC projects for unauthenticated users
+      // Filter out TBC and Pending projects for unauthenticated users
       const visibleProjects = isAuthenticated
         ? projects // Authenticated users see all projects
-        : projects.filter((project) => project.status !== 'TBC')
+        : projects.filter((project) => {
+            const status = project.status?.toUpperCase()
+            return status !== 'TBC' && status !== 'PENDING'
+          })
 
       // Get all project names for autocomplete (from visible projects only)
       const projectNames = visibleProjects.map((project) => project.name)

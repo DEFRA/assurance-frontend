@@ -84,9 +84,15 @@ function createStatusOptions(selectedStatus = '') {
     ...STATUS_OPTIONS
   ]
 
+  // Normalize both values for comparison (uppercase, replace spaces with underscores)
+  const normalizedSelected = selectedStatus
+    ?.toUpperCase()
+    .replaceAll(/\s+/g, '_')
+
   // Mark the current values as selected
   statusOptions.forEach((option) => {
-    if (option.value === selectedStatus) {
+    const normalizedOption = option.value?.toUpperCase().replaceAll(/\s+/g, '_')
+    if (normalizedOption === normalizedSelected) {
       option.selected = true
     }
   })

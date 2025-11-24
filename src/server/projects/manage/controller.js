@@ -594,8 +594,25 @@ export const manageController = {
           .code(statusCodes.notFound)
       }
 
+      // Normalize status to match dropdown options exactly
+      // This handles case/whitespace differences between DB and constants
+      let canonicalStatus = project.status
+      if (project.status) {
+        const normalizedProjectStatus = project.status
+          .toUpperCase()
+          .replaceAll(/\s+/g, '_')
+        const matchingOption = STATUS_OPTIONS.find(
+          (opt) =>
+            opt.value.toUpperCase().replaceAll(/\s+/g, '_') ===
+            normalizedProjectStatus
+        )
+        if (matchingOption) {
+          canonicalStatus = matchingOption.value
+        }
+      }
+
       let selectedValues = {
-        status: project.status,
+        status: canonicalStatus,
         commentary: project.commentary
       }
       let existingHistoryEntry = null

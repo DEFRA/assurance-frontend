@@ -79,23 +79,25 @@ function createProfessionMap(professions) {
 
 // Helper function to create status options with selection
 function createStatusOptions(selectedStatus = '') {
-  const statusOptions = [
-    { text: SELECT_STATUS_TEXT, value: '' },
-    ...STATUS_OPTIONS
-  ]
-
-  // Normalize both values for comparison (uppercase, replace spaces with underscores)
+  // Normalize the selected status for comparison (uppercase, replace spaces with underscores)
   const normalizedSelected = selectedStatus
     ?.toUpperCase()
     .replaceAll(/\s+/g, '_')
 
-  // Mark the current values as selected
-  statusOptions.forEach((option) => {
-    const normalizedOption = option.value?.toUpperCase().replaceAll(/\s+/g, '_')
-    if (normalizedOption === normalizedSelected) {
-      option.selected = true
-    }
-  })
+  // Create new option objects to avoid mutating the shared STATUS_OPTIONS array
+  const statusOptions = [
+    { text: SELECT_STATUS_TEXT, value: '' },
+    ...STATUS_OPTIONS.map((option) => {
+      const normalizedOption = option.value
+        ?.toUpperCase()
+        .replaceAll(/\s+/g, '_')
+      return {
+        text: option.text,
+        value: option.value,
+        selected: normalizedOption === normalizedSelected
+      }
+    })
+  ]
 
   return statusOptions
 }
@@ -597,6 +599,7 @@ export const manageController = {
       // Normalize status to match dropdown options exactly
       // This handles case/whitespace differences between DB and constants
       let canonicalStatus = project.status
+
       if (project.status) {
         const normalizedProjectStatus = project.status
           .toUpperCase()
@@ -606,6 +609,7 @@ export const manageController = {
             opt.value.toUpperCase().replaceAll(/\s+/g, '_') ===
             normalizedProjectStatus
         )
+
         if (matchingOption) {
           canonicalStatus = matchingOption.value
         }
@@ -615,6 +619,7 @@ export const manageController = {
         status: canonicalStatus,
         commentary: project.commentary
       }
+
       let existingHistoryEntry = null
 
       // Handle edit mode logic
@@ -694,6 +699,7 @@ export const manageController = {
       try {
         // Process the status update
         const projectData = { status, commentary }
+
         const successMessage = await processProjectStatusUpdate(
           id,
           projectData,

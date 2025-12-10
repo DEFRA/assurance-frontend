@@ -13,6 +13,7 @@ import { deliveryGroupStandards } from './delivery-group-standards/index.js'
 import { deliveryPartners } from './delivery-partners/index.js'
 import { accessibility } from './accessibility/index.js'
 import { cookies } from './cookies/index.js'
+import { insights } from './insights/index.js'
 import { serveStaticFiles } from './common/helpers/serve-static-files.js'
 /**
  * @satisfies {ServerRegisterPluginObject<void>}
@@ -38,7 +39,8 @@ export const router = {
         deliveryGroupStandards,
         deliveryPartners,
         accessibility,
-        cookies
+        cookies,
+        insights
       ]
 
       // Conditionally add development routes

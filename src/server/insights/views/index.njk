@@ -1,0 +1,180 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "status-tag.njk" import renderStatusTag %}
+
+{% block content %}
+  {{ appHeading({
+    text: heading
+  }) }}
+
+  <p class="govuk-body-l">{{ subheading }}</p>
+
+  {# Section 1: Deliveries without recent service standard updates #}
+  <h2 class="govuk-heading-m">Deliveries without recent service standard updates</h2>
+
+  {% if deliveriesNeedingStandardUpdates.length > 0 %}
+    <p class="govuk-body">{{ deliveriesNeedingStandardUpdates.length }} deliver{% if deliveriesNeedingStandardUpdates.length > 1 %}ies have{% else %}y has{% endif %} not had a service standard update in the last {{ thresholds.standard }} days.</p>
+
+    <table class="govuk-table">
+      <thead class="govuk-table__head">
+        <tr class="govuk-table__row">
+          <th scope="col" class="govuk-table__header">Delivery</th>
+          <th scope="col" class="govuk-table__header">Last standard update</th>
+          <th scope="col" class="govuk-table__header">Status</th>
+        </tr>
+      </thead>
+      <tbody class="govuk-table__body">
+        {% for project in deliveriesNeedingStandardUpdates %}
+          <tr class="govuk-table__row">
+            <td class="govuk-table__cell">
+              <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
+            </td>
+            <td class="govuk-table__cell">{% if project.daysSinceStandardUpdate > 10000 %}Never{% else %}{{ project.daysSinceStandardUpdate }} days ago{% endif %}</td>
+            <td class="govuk-table__cell">{{ renderStatusTag(project.status) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="govuk-body">All deliveries have had a service standard update within the last {{ thresholds.standard }} days.</p>
+  {% endif %}
+
+  {# Section 2: Deliveries with worsening standards #}
+  <h2 class="govuk-heading-m govuk-!-margin-top-8">Deliveries with worsening service standards</h2>
+
+  {% if deliveriesWithWorseningStandards.length > 0 %}
+    <p class="govuk-body">{{ deliveriesWithWorseningStandards.length }} deliver{% if deliveriesWithWorseningStandards.length > 1 %}ies have{% else %}y has{% endif %} had service standards get worse recently.</p>
+
+    {% for delivery in deliveriesWithWorseningStandards %}
+      {% set detailsContent %}
+        <table class="govuk-table govuk-!-margin-bottom-0">
+          <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+              <th scope="col" class="govuk-table__header" style="width: 60%">Standard</th>
+              <th scope="col" class="govuk-table__header" style="width: 40%">Trend</th>
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body">
+            {% for change in delivery.standardChanges %}
+              <tr class="govuk-table__row">
+                <td class="govuk-table__cell">
+                  <a href="/projects/{{ delivery.id }}/standards/standard-{{ change.standardNumber }}" class="govuk-link">
+                    {{ change.standardNumber }}. {{ change.standardName }}
+                  </a>
+                </td>
+                <td class="govuk-table__cell">
+                  {% set historyLen = change.statusHistory.length %}
+                  {% set prevStatus = change.statusHistory[historyLen - 2] if historyLen > 1 else 'PENDING' %}
+                  {% set currentStatus = change.statusHistory[historyLen - 1] %}
+                  <div class="app-sparkline" role="img" aria-label="Status trend: {{ change.statusHistory | join(', ') }}. Latest change: {{ prevStatus }} to {{ currentStatus }}">
+                    {% for status in change.statusHistory %}
+                      <span class="app-sparkline__dot app-sparkline__dot--{{ status | lower }}" aria-hidden="true"></span>
+                    {% endfor %}
+                    <span class="app-sparkline__label" aria-hidden="true">{{ prevStatus }} → {{ currentStatus }}</span>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endset %}
+
+      {% set summaryHtml %}
+        <span class="app-details-summary">
+          <span class="app-details-summary__name">{{ delivery.name }}</span>
+          {{ renderStatusTag(delivery.status) }}
+          <span class="app-details-summary__count">({{ delivery.standardChanges.length }} standard{% if delivery.standardChanges.length > 1 %}s{% endif %})</span>
+        </span>
+      {% endset %}
+
+      <details class="govuk-details govuk-!-margin-bottom-2">
+        <summary class="govuk-details__summary">
+          <span class="govuk-details__summary-text">
+            {{ summaryHtml | safe }}
+          </span>
+        </summary>
+        <div class="govuk-details__text">
+          {{ detailsContent | safe }}
+        </div>
+      </details>
+    {% endfor %}
+
+  {% else %}
+    <p class="govuk-body">No deliveries have had service standards get worse recently.</p>
+  {% endif %}
+{% endblock %}
+
+{% block pageStyles %}
+<style>
+  /* Details summary with status tag */
+  .app-details-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .app-details-summary__name {
+    font-weight: 400;
+  }
+
+  .app-details-summary__count {
+    color: #505a5f;
+  }
+
+  /* Sparkline - accessible version with shapes and letters */
+  .app-sparkline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .app-sparkline__dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #0b0c0c;
+  }
+
+  /* Green: Circle with G */
+  .app-sparkline__dot--green {
+    background-color: #cce2d8;
+    border-radius: 50%;
+  }
+  .app-sparkline__dot--green::after {
+    content: "G";
+  }
+
+  /* Amber: Square with A */
+  .app-sparkline__dot--amber {
+    background-color: #fff7bf;
+    border-radius: 0;
+  }
+  .app-sparkline__dot--amber::after {
+    content: "A";
+  }
+
+  /* Red: Diamond with R */
+  .app-sparkline__dot--red {
+    background-color: #f4cdc6;
+    border-radius: 0;
+    transform: rotate(45deg);
+  }
+  .app-sparkline__dot--red::after {
+    content: "R";
+    transform: rotate(-45deg);
+  }
+
+  .app-sparkline__label {
+    margin-left: 10px;
+    color: #0b0c0c;
+    font-size: 16px;
+  }
+</style>
+{% endblock %}

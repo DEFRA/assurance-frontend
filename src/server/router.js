@@ -14,6 +14,7 @@ import { deliveryPartners } from './delivery-partners/index.js'
 import { accessibility } from './accessibility/index.js'
 import { cookies } from './cookies/index.js'
 import { insights } from './insights/index.js'
+import { themes } from './themes/index.js'
 import { serveStaticFiles } from './common/helpers/serve-static-files.js'
 /**
  * @satisfies {ServerRegisterPluginObject<void>}
@@ -40,7 +41,8 @@ export const router = {
         deliveryPartners,
         accessibility,
         cookies,
-        insights
+        insights,
+        themes
       ]
 
       // Conditionally add development routes

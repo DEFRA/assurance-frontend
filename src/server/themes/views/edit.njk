@@ -1,0 +1,95 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% block content %}
+  {{ appHeading({
+    text: "Edit Theme"
+  }) }}
+
+  {% if error %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: [
+        {
+          text: error,
+          href: "#name"
+        }
+      ]
+    }) }}
+  {% endif %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <form method="post" action="/themes/{{ theme.id }}/edit">
+        {{ govukInput({
+          label: {
+            text: "Theme name",
+            classes: "govuk-label--m"
+          },
+          id: "name",
+          name: "name",
+          value: theme.name,
+          errorMessage: {
+            text: "Enter a theme name"
+          } if error and not theme.name else undefined,
+          hint: {
+            text: "Give your theme a clear, descriptive name"
+          }
+        }) }}
+
+        {{ govukTextarea({
+          label: {
+            text: "Description",
+            classes: "govuk-label--m"
+          },
+          id: "description",
+          name: "description",
+          value: theme.description,
+          rows: 5,
+          hint: {
+            text: "Describe what this theme covers and why it's important"
+          }
+        }) }}
+
+        {% if projects.length > 0 %}
+          <div class="govuk-form-group">
+            <fieldset class="govuk-fieldset">
+              <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                <h2 class="govuk-fieldset__heading">
+                  Tag deliveries
+                </h2>
+              </legend>
+              <div id="project-hint" class="govuk-hint">
+                Select the deliveries that are affected by this theme
+              </div>
+              <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
+                {% for project in projects %}
+                  <div class="govuk-checkboxes__item">
+                    <input class="govuk-checkboxes__input" id="project-{{ loop.index }}" name="projectIds" type="checkbox" value="{{ project.id }}"
+                      {% if theme.projectIds and project.id in theme.projectIds %}checked{% endif %}>
+                    <label class="govuk-label govuk-checkboxes__label" for="project-{{ loop.index }}">
+                      {{ project.name }}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
+            </fieldset>
+          </div>
+        {% endif %}
+
+        <div class="govuk-button-group">
+          {{ govukButton({
+            text: "Save changes"
+          }) }}
+          <a class="govuk-link" href="/themes/{{ theme.id }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+

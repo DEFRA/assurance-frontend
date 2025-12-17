@@ -1,0 +1,113 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+
+{% block content %}
+  {{ appHeading({
+    text: "Key themes"
+  }) }}
+
+  <p class="govuk-body-l">Themes are cross-cutting concerns that affect multiple deliveries.</p>
+
+  {# Show notification if present #}
+  {% if query.notification == 'created' %}
+    {{ govukNotificationBanner({
+      type: "success",
+      html: "<p class=\"govuk-notification-banner__heading\">Theme created successfully</p>"
+    }) }}
+  {% elif query.notification == 'archived' %}
+    {{ govukNotificationBanner({
+      type: "success",
+      html: "<p class=\"govuk-notification-banner__heading\">Theme archived successfully</p>"
+    }) }}
+  {% elif query.notification == 'restored' %}
+    {{ govukNotificationBanner({
+      type: "success",
+      html: "<p class=\"govuk-notification-banner__heading\">Theme restored successfully</p>"
+    }) }}
+  {% endif %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <div class="govuk-button-group">
+        {{ govukButton({
+          text: "Add theme",
+          href: "/themes/add"
+        }) }}
+      </div>
+
+      <form method="get" action="/themes" class="govuk-!-margin-bottom-6">
+        {{ govukCheckboxes({
+          name: "showArchived",
+          classes: "govuk-checkboxes--small",
+          items: [
+            {
+              value: "true",
+              text: "Show archived themes",
+              checked: showArchived
+            }
+          ]
+        }) }}
+        {{ govukButton({
+          text: "Apply filter",
+          classes: "govuk-button--secondary"
+        }) }}
+      </form>
+
+      {% if themes.length > 0 %}
+        {% set tableRows = [] %}
+        {% for theme in themes %}
+          {% set statusTag %}
+            {% if theme.isActive %}
+              {{ govukTag({
+                text: "Active",
+                classes: "govuk-tag--green"
+              }) }}
+            {% else %}
+              {{ govukTag({
+                text: "Archived",
+                classes: "govuk-tag--grey"
+              }) }}
+            {% endif %}
+          {% endset %}
+
+          {% set tableRows = (tableRows.push([
+            {
+              html: '<a href="/themes/' + theme.id + '" class="govuk-link govuk-link--no-visited-state">' + theme.name + '</a>'
+            },
+            {
+              text: theme.projectIds.length
+            },
+            {
+              html: statusTag
+            }
+          ]), tableRows) %}
+        {% endfor %}
+
+        {{ govukTable({
+          head: [
+            {
+              text: "Theme"
+            },
+            {
+              text: "Deliveries impacted"
+            },
+            {
+              text: "Status"
+            }
+          ],
+          rows: tableRows
+        }) }}
+      {% else %}
+        <p class="govuk-body">No themes found.</p>
+        <p class="govuk-body">
+          <a href="/themes/add" class="govuk-link">Add your first theme</a> to start tracking cross-cutting concerns.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

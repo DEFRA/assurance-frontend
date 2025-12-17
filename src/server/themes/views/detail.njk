@@ -1,0 +1,77 @@
+{% extends 'layouts/page.njk' %}
+
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "status-tag.njk" import renderStatusTag %}
+
+{% block content %}
+  {{ appHeading({
+    text: theme.name
+  }) }}
+
+  {# Show notification if present #}
+  {% if query.notification == 'updated' %}
+    {{ govukNotificationBanner({
+      type: "success",
+      html: "<p class=\"govuk-notification-banner__heading\">Theme updated successfully</p>"
+    }) }}
+  {% endif %}
+
+  {% if not theme.isActive %}
+    {{ govukWarningText({
+      text: "This theme has been archived",
+      iconFallbackText: "Warning"
+    }) }}
+  {% endif %}
+
+  {{ govukInsetText({
+    text: theme.description
+  }) }}
+
+  <p class="govuk-body-s govuk-!-margin-bottom-6">
+    Last updated: {{ theme.updatedAt | formatDate if theme.updatedAt else "Unknown" }}
+  </p>
+
+  <h2 class="govuk-heading-m">Deliveries impacted</h2>
+
+  {% if taggedProjects.length > 0 %}
+    {% set tableRows = [] %}
+    {% for project in taggedProjects %}
+      {% set tableRows = (tableRows.push([
+        {
+          html: '<a href="/projects/' + project.id + '" class="govuk-link govuk-link--no-visited-state">' + project.name + '</a>'
+        },
+        {
+          html: renderStatusTag(project.status)
+        }
+      ]), tableRows) %}
+    {% endfor %}
+
+    {{ govukTable({
+      head: [
+        {
+          text: "Delivery"
+        },
+        {
+          text: "Status"
+        }
+      ],
+      rows: tableRows
+    }) }}
+  {% else %}
+    <p class="govuk-body govuk-!-margin-bottom-6">No deliveries have been tagged with this theme yet.</p>
+  {% endif %}
+
+  <p class="govuk-body">
+    <a href="/themes/{{ theme.id }}/edit" class="govuk-link govuk-link--no-visited-state">Edit theme</a>
+    <span class="govuk-!-margin-left-4">
+      {% if theme.isActive %}
+        <a href="/themes/{{ theme.id }}/archive" class="govuk-link govuk-link--no-visited-state">Archive theme</a>
+      {% else %}
+        <a href="/themes/{{ theme.id }}/restore" class="govuk-link govuk-link--no-visited-state">Restore theme</a>
+      {% endif %}
+    </span>
+  </p>
+{% endblock %}

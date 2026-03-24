@@ -59,6 +59,7 @@ services:
       - 'compose/aws.env'
     environment:
       API_BASE_URL: http://your-backend:8080
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
       PORT: 3000
       NODE_ENV: development
       REDIS_HOST: redis
@@ -87,6 +88,8 @@ services:
     environment:
       PORT: 8085
       NODE_ENV: development
+      AZURE__TENANTID: "6f504113-6b64-43f2-ade9-242e05780007"
+      AZURE__CLIENTID: "a741690c-cc36-410d-a83a-b64a1bbc635a"
       LOCALSTACK_ENDPOINT: http://localstack:4566
       Mongo__DatabaseUri: mongodb://mongodb:27017
     networks:

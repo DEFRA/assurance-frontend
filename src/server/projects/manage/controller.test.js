@@ -847,6 +847,7 @@ describe('Manage Controller', () => {
             })
           ]),
           deliveryPartners: undefined,
+          nextServiceAssessmentDateValue: '',
           notification: undefined,
           values: {},
           errors: {}
@@ -898,6 +899,7 @@ describe('Manage Controller', () => {
           name: 'Updated Project',
           phase: 'Alpha',
           defCode: 'UPD001',
+          nextServiceAssessmentDate: null,
           deliveryGroupId: null
         },
         mockRequest

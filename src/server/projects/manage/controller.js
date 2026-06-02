@@ -152,6 +152,15 @@ function createDeliveryGroupOptions(
   return deliveryGroupOptions
 }
 
+function formatDateInputValue(dateValue) {
+  if (!dateValue) {
+    return ''
+  }
+
+  const date = new Date(dateValue)
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10)
+}
+
 // Helper function to process profession comments
 function processProfessionComments(professions, professionMap) {
   return (
@@ -775,6 +784,9 @@ export const manageController = {
         deliveryGroupOptions,
         deliveryPartners,
         notification,
+        nextServiceAssessmentDateValue: formatDateInputValue(
+          project.nextServiceAssessmentDate
+        ),
         values: {},
         errors: {}
       })
@@ -789,7 +801,8 @@ export const manageController = {
 
   postManageProjectDetails: async (request, h) => {
     const { id } = request.params
-    const { name, phase, defCode, deliveryGroupId } = request.payload
+    const { name, phase, defCode, deliveryGroupId, nextServiceAssessmentDate } =
+      request.payload
 
     try {
       const [project, deliveryPartners, deliveryGroups] = await Promise.all([
@@ -823,6 +836,9 @@ export const manageController = {
           phaseOptions,
           deliveryGroupOptions,
           deliveryPartners,
+          nextServiceAssessmentDateValue: formatDateInputValue(
+            project.nextServiceAssessmentDate
+          ),
           values: request.payload,
           errors: {
             name: !name,
@@ -834,7 +850,12 @@ export const manageController = {
 
       try {
         // Prepare update data - only include deliveryGroupId if it's not empty
-        const updateData = { name, phase, defCode }
+        const updateData = {
+          name,
+          phase,
+          defCode,
+          nextServiceAssessmentDate: nextServiceAssessmentDate || null
+        }
         if (deliveryGroupId && deliveryGroupId.trim() !== '') {
           updateData.deliveryGroupId = deliveryGroupId
         } else {
@@ -869,6 +890,9 @@ export const manageController = {
           phaseOptions,
           deliveryGroupOptions,
           deliveryPartners,
+          nextServiceAssessmentDateValue: formatDateInputValue(
+            project.nextServiceAssessmentDate
+          ),
           values: request.payload,
           errors: {},
           errorMessage: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT

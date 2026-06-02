@@ -16,7 +16,7 @@ const BASE_BREADCRUMBS = {
   },
   DELIVERY_GROUPS: {
     text: 'Delivery Groups',
-    href: '/delivery-groups'
+    href: '/#delivery-groups'
   },
   DELIVERY_PARTNERS: {
     text: 'Delivery Partners',
@@ -97,13 +97,13 @@ export function getDeliveryGroupsBreadcrumbs() {
 
 /**
  * Generate breadcrumbs for a specific delivery group page
- * Delivery groups are accessed directly from home sidebar, so parent is Home
  * @param {string} groupName - The name of the delivery group
  * @returns {Array} Breadcrumb items
  */
 export function getDeliveryGroupDetailBreadcrumbs(groupName) {
   return [
     BASE_BREADCRUMBS.HOME,
+    BASE_BREADCRUMBS.DELIVERY_GROUPS,
     { text: groupName } // Current page, no href
   ]
 }

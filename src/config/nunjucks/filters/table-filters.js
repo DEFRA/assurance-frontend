@@ -7,6 +7,7 @@ import {
   STATUS_LABEL,
   STATUS_CLASS
 } from '~/src/server/constants/status.js'
+import { formatDate } from './format-date.js'
 
 /**
  * Create status tag HTML for JavaScript contexts
@@ -51,6 +52,17 @@ export function projectTableRows(projects) {
     },
     {
       html: createStatusTagHTML(project.status)
+    },
+    {
+      text: project.lastUpdated
+        ? formatDate(project.lastUpdated)
+        : 'Not available'
+    },
+    {
+      text: project.deliveryGroupName || 'Not assigned'
+    },
+    {
+      text: project.phase || 'Not set'
     }
   ])
 }

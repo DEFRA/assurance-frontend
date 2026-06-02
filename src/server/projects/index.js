@@ -27,6 +27,15 @@ export const projectsRoutes = {
           path: '/projects',
           handler: projectsController.getAll
         },
+        {
+          method: 'GET',
+          path: '/projects/archive',
+          handler: projectsController.getArchivedProjects,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
 
         // Add project
         {
@@ -53,6 +62,42 @@ export const projectsRoutes = {
           method: 'GET',
           path: '/projects/{id}',
           handler: projectsController.get
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/review',
+          handler: projectsController.postReviewProject,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'GET',
+          path: '/projects/{id}/archive',
+          handler: projectsController.getArchiveProject,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/archive',
+          handler: projectsController.postArchiveProject,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/restore',
+          handler: projectsController.postRestoreProject,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            pre: [{ method: requireRole('admin') }]
+          }
         },
 
         // Edit project (form)

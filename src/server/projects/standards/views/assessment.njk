@@ -224,6 +224,31 @@
     const greenCommentary = document.getElementById('green-commentary');
     const nonGreenCommentary = document.getElementById('non-green-commentary');
     const form = document.querySelector('form');
+    const draftSaveDelayMs = 500;
+    let draftSaveTimer;
+    let isRestoringDraft = false;
+
+    function getSelectedProfessionId() {
+      if (professionSelect) return professionSelect.value;
+
+      const hiddenProfession = form.querySelector('input[name="professionId"]');
+      return hiddenProfession ? hiddenProfession.value : '';
+    }
+
+    function getSelectedStandardId() {
+      if (standardSelect) return standardSelect.value;
+
+      const hiddenStandard = form.querySelector('input[name="standardId"]');
+      return hiddenStandard ? hiddenStandard.value : '';
+    }
+
+    function getAssessmentDraftUrl(professionId, standardId) {
+      return `/projects/{{ projectId }}/standards/${standardId}/professions/${professionId}/assessment-draft`;
+    }
+
+    function hasDraftableSelection() {
+      return Boolean(getSelectedProfessionId() && getSelectedStandardId());
+    }
 
     // Function to get standard number from standard ID
     function getStandardNumber(standardId) {
@@ -285,16 +310,22 @@
     async function fetchCurrentAssessment(professionId, standardId) {
       if (!professionId || !standardId) {
         clearFormFields();
-        return;
+        return false;
       }
       
       try {
         const response = await fetch(`/projects/{{ projectId }}/standards/${standardId}/professions/${professionId}/assessment`);
-        
+
+        if (response.status === 204) {
+          clearFormFields();
+          return false;
+        }
+
         if (response.ok) {
           const assessment = await response.json();
           if (assessment) {
             populateFormFields(assessment);
+            return true;
           } else {
             clearFormFields();
           }
@@ -305,13 +336,73 @@
         console.log('Could not fetch current assessment:', error);
         clearFormFields();
       }
+
+      return false;
+    }
+
+    async function fetchAssessmentDraft(professionId, standardId) {
+      if (!professionId || !standardId) {
+        return null;
+      }
+
+      try {
+        const response = await fetch(getAssessmentDraftUrl(professionId, standardId), {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (response.status === 204) {
+          return null;
+        }
+
+        if (!response.ok) {
+          return null;
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.log('Could not fetch assessment draft:', error);
+        return null;
+      }
+    }
+
+    async function restoreAssessmentDraft(professionId, standardId) {
+      const draft = await fetchAssessmentDraft(professionId, standardId);
+
+      if (!draft) {
+        return false;
+      }
+
+      isRestoringDraft = true;
+      populateFormFields(draft);
+      isRestoringDraft = false;
+      return true;
+    }
+
+    async function loadAssessmentForSelection(professionId, standardId) {
+      if (!professionId || !standardId) {
+        clearFormFields();
+        return;
+      }
+
+      await fetchCurrentAssessment(professionId, standardId);
+      await restoreAssessmentDraft(professionId, standardId);
     }
     
     // Function to populate form fields with current assessment data
     function populateFormFields(assessment) {
+      const greenCommentary = document.getElementById('commentary-green');
+      const issueField = document.getElementById('issue-description');
+      const pathField = document.getElementById('path-to-green');
+
+      if (greenCommentary) greenCommentary.value = '';
+      if (issueField) issueField.value = '';
+      if (pathField) pathField.value = '';
+
       // Set the status dropdown
-      if (assessment.status && statusSelect) {
-        statusSelect.value = assessment.status;
+      if (statusSelect) {
+        statusSelect.value = assessment.status || '';
         // Trigger change event to show/hide appropriate commentary fields
         updateCommentaryFields();
       }
@@ -332,21 +423,17 @@
             const issue = parts[0] ? parts[0].trim() : '';
             const path = parts[1] ? parts[1].trim() : '';
             
-            const issueField = document.getElementById('issue-description');
-            const pathField = document.getElementById('path-to-green');
-            
             if (issueField) issueField.value = issue;
             if (pathField) pathField.value = path;
           } else {
             // No "Path to green:" separator, put all in issue description
-            const issueField = document.getElementById('issue-description');
             if (issueField) issueField.value = commentary;
           }
         }
-        
-        // Update the combined commentary field
-        updateCommentaryField();
       }
+
+      // Update the combined commentary field
+      updateCommentaryField();
     }
     
     // Function to clear form fields
@@ -430,7 +517,7 @@
       
       // Update help section and check for current assessment
       if (standardSelect.value) {
-        fetchCurrentAssessment(selectedProfession, standardSelect.value);
+        loadAssessmentForSelection(selectedProfession, standardSelect.value);
       } else {
         clearFormFields();
       }
@@ -485,10 +572,52 @@
       combineCommentaryFields();
     }
 
+    async function saveAssessmentDraftNow() {
+      if (isRestoringDraft || !hasDraftableSelection()) {
+        return;
+      }
+
+      updateCommentaryField();
+
+      try {
+        await fetch(getAssessmentDraftUrl(getSelectedProfessionId(), getSelectedStandardId()), {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            status: statusSelect.value,
+            commentary: document.getElementById('final-commentary').value
+          })
+        });
+      } catch (error) {
+        console.log('Could not save assessment draft:', error);
+      }
+    }
+
+    function queueAssessmentDraftSave() {
+      if (isRestoringDraft || !hasDraftableSelection()) {
+        return;
+      }
+
+      window.clearTimeout(draftSaveTimer);
+      draftSaveTimer = window.setTimeout(saveAssessmentDraftNow, draftSaveDelayMs);
+    }
+
+    function saveAssessmentDraftOnBlur() {
+      if (isRestoringDraft || !hasDraftableSelection()) {
+        return;
+      }
+
+      window.clearTimeout(draftSaveTimer);
+      saveAssessmentDraftNow();
+    }
+
     // Initialize after DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
       // Convert string to boolean
-      const editMode = isEditMode === 'true';
+      const editMode = isEditMode === true || isEditMode === 'true';
       
       // Add event listeners
       if (!editMode) {
@@ -500,7 +629,7 @@
           standardSelect.addEventListener('change', function() {
             updateStandardHelp(this.value);
             if (this.value && professionSelect.value) {
-              fetchCurrentAssessment(professionSelect.value, this.value);
+              loadAssessmentForSelection(professionSelect.value, this.value);
             } else {
               clearFormFields();
             }
@@ -509,13 +638,24 @@
       }
       
       // Always add status and form listeners
-      statusSelect.addEventListener('change', updateCommentaryFields);
+      statusSelect.addEventListener('change', function() {
+        updateCommentaryFields();
+        queueAssessmentDraftSave();
+      });
       form.addEventListener('submit', combineCommentaryFields);
 
       // Add real-time update listeners for commentary fields
-      document.getElementById('commentary-green').addEventListener('input', updateCommentaryField);
-      document.getElementById('issue-description').addEventListener('input', updateCommentaryField);
-      document.getElementById('path-to-green').addEventListener('input', updateCommentaryField);
+      ['commentary-green', 'issue-description', 'path-to-green'].forEach(function(fieldId) {
+        const field = document.getElementById(fieldId);
+
+        if (field) {
+          field.addEventListener('input', function() {
+            updateCommentaryField();
+            queueAssessmentDraftSave();
+          });
+          field.addEventListener('blur', saveAssessmentDraftOnBlur);
+        }
+      });
 
       // Initialize on page load
       if (!editMode && professionSelect && professionSelect.value) {
@@ -528,7 +668,7 @@
         const selectedProfessionId = '{{ selectedValues.professionId if selectedValues else "" }}';
         if (selectedStandardId) {
           updateStandardHelp(selectedStandardId);
-          // In edit mode, form fields are already pre-populated, so no need to fetch current assessment
+          restoreAssessmentDraft(selectedProfessionId, selectedStandardId);
         }
       }
       

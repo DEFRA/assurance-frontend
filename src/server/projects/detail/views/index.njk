@@ -73,7 +73,12 @@
       
       <!-- Last updated date below inset box -->
       {% if project.lastUpdated %}
-        <p class="govuk-body govuk-!-margin-top-3">Last updated: {{ project.lastUpdated | formatDate }}</p>
+        <p class="govuk-body govuk-!-margin-top-3 govuk-!-margin-bottom-1">
+          Last updated: {{ project.lastUpdated | formatDate }}
+        </p>
+        <p class="govuk-body-s govuk-!-margin-bottom-4">
+          Last updated by: {{ project.lastUpdatedBy or "Unknown" }}
+        </p>
       {% endif %}
     </div>
   </div>
@@ -86,7 +91,23 @@
           <span class="govuk-!-margin-left-4">
             <a href="/projects/{{ project.id }}/assessment" class="govuk-link">Add Service Standard update</a>
           </span>
+          <span class="govuk-!-margin-left-4">
+            <a href="/projects/{{ project.id }}/archive" class="govuk-link govuk-link--no-visited-state">Archive delivery</a>
+          </span>
         </p>
+
+        <form method="POST" action="/projects/{{ project.id }}/review" class="govuk-!-margin-bottom-6">
+          <div class="govuk-form-group">
+            <label class="govuk-label govuk-label--s" for="nextReviewDate">
+              Next review date
+            </label>
+            <input class="govuk-input govuk-input--width-10" id="nextReviewDate" name="nextReviewDate" type="date" value="{{ reviewValues.nextReviewDate }}">
+          </div>
+          {{ govukButton({
+            text: "Mark as reviewed",
+            classes: "govuk-button--secondary"
+          }) }}
+        </form>
       {% endif %}
 
       {% set projectSidebarHtml %}
@@ -101,7 +122,53 @@
           {% if project.phase %}
             <div class="govuk-!-margin-bottom-4">
               <dt class="govuk-body-s govuk-!-font-weight-bold">Phase</dt>
-              <dd class="govuk-body-s">{{ project.phase }}</dd>
+              <dd class="govuk-body-s">
+                <strong class="govuk-tag govuk-tag--blue">{{ project.phase }}</strong>
+              </dd>
+            </div>
+          {% endif %}
+
+          <div class="govuk-!-margin-bottom-4">
+            <dt class="govuk-body-s govuk-!-font-weight-bold">Last reviewed</dt>
+            <dd class="govuk-body-s">
+              {% if project.lastReviewed %}
+                {{ project.lastReviewed | formatDate }}
+                {% if project.lastReviewedBy %}
+                  <br>by {{ project.lastReviewedBy }}
+                {% endif %}
+              {% else %}
+                Not reviewed
+              {% endif %}
+            </dd>
+          </div>
+
+          {% if project.nextReviewDate %}
+            <div class="govuk-!-margin-bottom-4">
+              <dt class="govuk-body-s govuk-!-font-weight-bold">Next review</dt>
+              <dd class="govuk-body-s">{{ project.nextReviewDate | formatDate }}</dd>
+            </div>
+          {% endif %}
+
+          {% if project.nextServiceAssessmentDate %}
+            <div class="govuk-!-margin-bottom-4">
+              <dt class="govuk-body-s govuk-!-font-weight-bold">Next service assessment</dt>
+              <dd class="govuk-body-s">
+                {{ project.nextServiceAssessmentDate | formatDate }}
+                {% if project.nextServiceAssessmentDueSoon %}
+                  <strong class="govuk-tag govuk-tag--yellow govuk-!-margin-left-1">Due soon</strong>
+                {% endif %}
+              </dd>
+            </div>
+          {% endif %}
+
+          {% if project.tags and project.tags.length > 0 %}
+            <div class="govuk-!-margin-bottom-4">
+              <dt class="govuk-body-s govuk-!-font-weight-bold">Tags</dt>
+              <dd class="govuk-body-s">
+                {% for tag in project.tags %}
+                  <strong class="govuk-tag govuk-tag--blue govuk-!-margin-bottom-1">{{ tag }}</strong>
+                {% endfor %}
+              </dd>
             </div>
           {% endif %}
           
@@ -212,6 +279,45 @@
                       {% if entry.changes.phase %}
                         <p class="govuk-body govuk-!-margin-bottom-2">
                           <strong>Phase updated:</strong> {{ entry.changes.phase.to }}
+                        </p>
+                      {% endif %}
+
+                      {% if entry.changes.lastReviewed %}
+                        <p class="govuk-body govuk-!-margin-bottom-2">
+                          <strong>Delivery reviewed:</strong> {{ entry.changes.lastReviewed.to | formatDate }}
+                        </p>
+                      {% endif %}
+
+                      {% if entry.changes.nextReviewDate %}
+                        <p class="govuk-body govuk-!-margin-bottom-2">
+                          <strong>Next review date:</strong>
+                          {% if entry.changes.nextReviewDate.to %}
+                            {{ entry.changes.nextReviewDate.to | formatDate }}
+                          {% else %}
+                            Not set
+                          {% endif %}
+                        </p>
+                      {% endif %}
+
+                      {% if entry.changes.nextServiceAssessmentDate %}
+                        <p class="govuk-body govuk-!-margin-bottom-2">
+                          <strong>Next service assessment date:</strong>
+                          {% if entry.changes.nextServiceAssessmentDate.to %}
+                            {{ entry.changes.nextServiceAssessmentDate.to | formatDate }}
+                          {% else %}
+                            Not set
+                          {% endif %}
+                        </p>
+                      {% endif %}
+
+                      {% if entry.changes.archive %}
+                        <p class="govuk-body govuk-!-margin-bottom-2">
+                          <strong>Archive status:</strong>
+                          {% if entry.changes.archive.to %}
+                            Archived{% if entry.changes.archive.reason %} - {{ entry.changes.archive.reason }}{% endif %}
+                          {% else %}
+                            Restored
+                          {% endif %}
                         </p>
                       {% endif %}
                       

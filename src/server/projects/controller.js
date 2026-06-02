@@ -10,11 +10,18 @@ import {
   getProjectHistory,
   getProfessionHistory,
   archiveProjectHistoryEntry,
-  getProjectDeliveryPartners
+  getProjectDeliveryPartners,
+  reviewProject,
+  archiveProject,
+  restoreProject,
+  getArchivedProjects as getArchivedProjectsFromApi
 } from '~/src/server/services/projects.js'
 import { getServiceStandards } from '~/src/server/services/service-standards.js'
 import { getProfessions } from '~/src/server/services/professions.js'
-import { getDeliveryGroupById } from '~/src/server/services/delivery-groups.js'
+import {
+  getDeliveryGroupById,
+  getDeliveryGroups
+} from '~/src/server/services/delivery-groups.js'
 import {
   STATUS,
   STATUS_CLASS,
@@ -35,8 +42,10 @@ import {
 import {
   getProjectsBreadcrumbs,
   getProjectDetailBreadcrumbs,
+  getProjectSubPageBreadcrumbs,
   truncateBreadcrumbText
 } from '~/src/server/common/helpers/breadcrumbs.js'
+import { hasAdminRole } from '~/src/server/common/helpers/auth.js'
 
 export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND,
@@ -46,6 +55,80 @@ export const NOTIFICATIONS_LEGACY = {
   GENERAL_ERROR: NOTIFICATIONS.FAILED_TO_UPDATE_PROJECT,
   ARCHIVED: NOTIFICATIONS.DELIVERY_UPDATE_ARCHIVED,
   ARCHIVE_FAILED: NOTIFICATIONS.FAILED_TO_ARCHIVE_DELIVERY_UPDATE
+}
+
+function getFieldValue(item, camelName, pascalName = null) {
+  return item?.[camelName] ?? item?.[pascalName ?? camelName]
+}
+
+function buildDeliveryGroupNameMap(deliveryGroups = []) {
+  return new Map(
+    deliveryGroups
+      .map((group) => [
+        getFieldValue(group, 'id', 'Id'),
+        getFieldValue(group, 'name', 'Name')
+      ])
+      .filter(([id, name]) => id && name)
+  )
+}
+
+function addDeliveryGroupNames(projects = [], deliveryGroups = []) {
+  const deliveryGroupNames = buildDeliveryGroupNameMap(deliveryGroups)
+
+  return projects.map((project) => {
+    const deliveryGroupId = getFieldValue(
+      project,
+      'deliveryGroupId',
+      'DeliveryGroupId'
+    )
+
+    return {
+      ...project,
+      deliveryGroupName: deliveryGroupId
+        ? deliveryGroupNames.get(deliveryGroupId) || deliveryGroupId
+        : null
+    }
+  })
+}
+
+function getLastUpdatedBy(history = []) {
+  const latestEntry = history
+    .filter((entry) => entry && !entry.archived && !entry.isArchived)
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0]
+
+  return (
+    latestEntry?.changedByName ||
+    latestEntry?.ChangedByName ||
+    latestEntry?.changedBy ||
+    latestEntry?.ChangedBy ||
+    'Unknown'
+  )
+}
+
+function formatDateInputValue(dateValue) {
+  if (!dateValue) {
+    return ''
+  }
+
+  const date = new Date(dateValue)
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10)
+}
+
+function isDateDueWithin30Days(dateValue) {
+  if (!dateValue) {
+    return false
+  }
+
+  const date = new Date(dateValue)
+  if (Number.isNaN(date.getTime())) {
+    return false
+  }
+
+  const now = new Date()
+  const thirtyDaysFromNow = new Date()
+  thirtyDaysFromNow.setDate(now.getDate() + 30)
+
+  return date >= now && date <= thirtyDaysFromNow
 }
 
 // Constants for repeated literals
@@ -273,15 +356,29 @@ export const projectsController = {
   getAll: async (request, h) => {
     const { notification } = request.query
     const isAuthenticated = request.auth.isAuthenticated
+    const isAdmin = hasAdminRole(request.auth?.credentials?.user)
 
     try {
       request.logger.info('Projects page - fetching projects')
-      const projects = await getProjects(request)
+      const [projects, deliveryGroups] = await Promise.all([
+        getProjects(request),
+        getDeliveryGroups(request).catch((error) => {
+          request.logger.warn(
+            { error },
+            'Failed to fetch delivery groups for projects list'
+          )
+          return []
+        })
+      ])
+      const projectsWithDeliveryGroups = addDeliveryGroupNames(
+        projects,
+        deliveryGroups
+      )
 
       // Filter out TBC and Pending projects for unauthenticated users
       const visibleProjects = isAuthenticated
-        ? projects // Authenticated users see all projects
-        : projects.filter((project) => {
+        ? projectsWithDeliveryGroups // Authenticated users see all projects
+        : projectsWithDeliveryGroups.filter((project) => {
             const status = project.status?.toUpperCase()
             return status !== 'TBC' && status !== 'PENDING'
           })
@@ -308,6 +405,7 @@ export const projectsController = {
         searchTerm: search,
         projectNames,
         isAuthenticated,
+        isAdmin,
         notification,
         breadcrumbs: getProjectsBreadcrumbs()
       })
@@ -367,9 +465,11 @@ export const projectsController = {
 
       // Get project history for the engagement timeline
       let projectHistory = []
+      let lastUpdatedBy = 'Unknown'
       try {
         const history = await getProjectHistory(id, request)
         if (history && history.length > 0) {
+          lastUpdatedBy = getLastUpdatedBy(history)
           // Filter for project-level changes only (name, phase, status, commentary)
           // Exclude service standard and profession assessments
           projectHistory = history
@@ -382,7 +482,11 @@ export const projectsController = {
                 entry.changes?.name ||
                 entry.changes?.phase ||
                 entry.changes?.status ||
-                entry.changes?.commentary
+                entry.changes?.commentary ||
+                entry.changes?.lastReviewed ||
+                entry.changes?.nextReviewDate ||
+                entry.changes?.nextServiceAssessmentDate ||
+                entry.changes?.archive
               )
             })
             .map((entry) => ({
@@ -402,7 +506,11 @@ export const projectsController = {
       // Add delivery group to project object for template access
       const projectWithDeliveryGroup = {
         ...project,
-        deliveryGroup
+        deliveryGroup,
+        lastUpdatedBy,
+        nextServiceAssessmentDueSoon: isDateDueWithin30Days(
+          project.nextServiceAssessmentDate
+        )
       }
 
       return h.view(VIEW_TEMPLATES.PROJECTS_DETAIL_INDEX, {
@@ -413,6 +521,9 @@ export const projectsController = {
         professions,
         deliveryPartners,
         projectHistory,
+        reviewValues: {
+          nextReviewDate: formatDateInputValue(project.nextReviewDate)
+        },
         isAuthenticated,
         statusClassMap: STATUS_CLASS,
         statusLabelMap: STATUS_LABEL,
@@ -846,6 +957,144 @@ export const projectsController = {
           `/projects/${id}/history?notification=${NOTIFICATIONS.FAILED_TO_ARCHIVE_PROJECT_UPDATE}`
         )
       }
+    }
+  },
+
+  postReviewProject: async (request, h) => {
+    const { id } = request.params
+    const { nextReviewDate } = request.payload ?? {}
+
+    try {
+      const reviewData = {}
+      if (nextReviewDate) {
+        reviewData.nextReviewDate = nextReviewDate
+      }
+
+      await reviewProject(id, reviewData, request)
+
+      return h.redirect(
+        `/projects/${id}?notification=${encodeURIComponent('Delivery marked as reviewed')}`
+      )
+    } catch (error) {
+      request.logger.error({ error, id }, 'Error marking project as reviewed')
+      return h.redirect(
+        `/projects/${id}?notification=${encodeURIComponent('Failed to mark delivery as reviewed')}`
+      )
+    }
+  },
+
+  getArchivedProjects: async (request, h) => {
+    const { notification } = request.query
+
+    try {
+      const projects = await getArchivedProjectsFromApi(request)
+
+      return h.view('projects/views/archive', {
+        pageTitle: 'Archived deliveries',
+        projects,
+        notification,
+        breadcrumbs: [
+          { text: 'Home', href: '/' },
+          { text: 'Deliveries', href: '/projects' },
+          { text: 'Archived deliveries' }
+        ]
+      })
+    } catch (error) {
+      request.logger.error({ error }, 'Error loading archived projects')
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
+    }
+  },
+
+  getArchiveProject: async (request, h) => {
+    const { id } = request.params
+
+    try {
+      const project = await getProjectById(id, request)
+
+      if (!project) {
+        return h
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
+          })
+          .code(statusCodes.notFound)
+      }
+
+      return h.view('projects/detail/views/archive-project', {
+        pageTitle: `Archive ${project.name}`,
+        project,
+        errors: {},
+        values: {},
+        breadcrumbs: getProjectSubPageBreadcrumbs(
+          truncateBreadcrumbText(project.name),
+          project.id,
+          'Archive delivery'
+        )
+      })
+    } catch (error) {
+      request.logger.error({ error, id }, 'Error loading archive project page')
+      throw Boom.boomify(error, { statusCode: statusCodes.internalServerError })
+    }
+  },
+
+  postArchiveProject: async (request, h) => {
+    const { id } = request.params
+    const { archiveReason } = request.payload ?? {}
+
+    try {
+      const project = await getProjectById(id, request)
+
+      if (!project) {
+        return h
+          .view(VIEW_TEMPLATES.ERRORS_NOT_FOUND, {
+            pageTitle: NOTIFICATIONS.PROJECT_NOT_FOUND
+          })
+          .code(statusCodes.notFound)
+      }
+
+      if (!archiveReason?.trim()) {
+        return h.view('projects/detail/views/archive-project', {
+          pageTitle: `Archive ${project.name}`,
+          project,
+          errors: {
+            archiveReason: {
+              text: 'Enter a reason for archiving this delivery'
+            }
+          },
+          values: { archiveReason },
+          breadcrumbs: getProjectSubPageBreadcrumbs(
+            truncateBreadcrumbText(project.name),
+            project.id,
+            'Archive delivery'
+          )
+        })
+      }
+
+      await archiveProject(id, archiveReason.trim(), request)
+
+      return h.redirect(
+        `/projects/archive?notification=${encodeURIComponent('Delivery archived successfully')}`
+      )
+    } catch (error) {
+      request.logger.error({ error, id }, 'Error archiving project')
+      return h.redirect(
+        `/projects/${id}?notification=${encodeURIComponent('Failed to archive delivery')}`
+      )
+    }
+  },
+
+  postRestoreProject: async (request, h) => {
+    const { id } = request.params
+
+    try {
+      await restoreProject(id, request)
+      return h.redirect(
+        `/projects/archive?notification=${encodeURIComponent('Delivery restored successfully')}`
+      )
+    } catch (error) {
+      request.logger.error({ error, id }, 'Error restoring project')
+      return h.redirect(
+        `/projects/archive?notification=${encodeURIComponent('Failed to restore delivery')}`
+      )
     }
   }
 }

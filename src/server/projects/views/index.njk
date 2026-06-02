@@ -42,6 +42,11 @@
       {% if isAuthenticated %}
         <p class="govuk-body govuk-!-margin-bottom-6">
           <a href="/projects/add" class="govuk-link">Add new delivery</a>
+          {% if isAdmin %}
+            <span class="govuk-!-margin-left-4">
+              <a href="/projects/archive" class="govuk-link">View archived deliveries</a>
+            </span>
+          {% endif %}
         </p>
       {% endif %}
 
@@ -59,7 +64,10 @@
           captionClasses: "govuk-visually-hidden",
           head: [
             { text: "Delivery name" },
-            { text: "RAG status" }
+            { text: "RAG status" },
+            { text: "Last updated" },
+            { text: "Delivery group" },
+            { text: "Phase" }
           ],
           rows: projects | projectTableRows
         }) }}

@@ -108,6 +108,22 @@
       required: false
     }) }}
 
+    {{ govukInput({
+      label: {
+        text: "Next service assessment date",
+        classes: "govuk-label--m"
+      },
+      hint: {
+        text: "For example, 2026-07-31"
+      },
+      id: "nextServiceAssessmentDate",
+      name: "nextServiceAssessmentDate",
+      type: "date",
+      value: values.nextServiceAssessmentDate or nextServiceAssessmentDateValue,
+      errorMessage: errors.nextServiceAssessmentDate,
+      required: false
+    }) }}
+
     <div class="govuk-button-group">
       {{ govukButton({
         text: "Save changes"
@@ -144,4 +160,4 @@
   <p class="govuk-body govuk-!-margin-top-4">
     <a href="/projects/{{ project.id }}/manage/delivery-partners/add" class="govuk-link">Add a delivery partner</a>
   </p>
-{% endblock %} 
+{% endblock %}

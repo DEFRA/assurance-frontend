@@ -1,0 +1,69 @@
+{% extends "layouts/page.njk" %}
+
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% block beforeContent %}
+  {{ govukBreadcrumbs({
+    items: breadcrumbs
+  }) }}
+{% endblock %}
+
+{% block content %}
+  {% if notification %}
+    {{ govukNotificationBanner({
+      type: "success",
+      titleText: "Success",
+      text: notification
+    }) }}
+  {% endif %}
+
+  <h1 class="govuk-heading-xl">Archived deliveries</h1>
+
+  {% if projects and projects.length > 0 %}
+    <table class="govuk-table">
+      <caption class="govuk-table__caption govuk-visually-hidden">Archived deliveries</caption>
+      <thead class="govuk-table__head">
+        <tr class="govuk-table__row">
+          <th scope="col" class="govuk-table__header">Delivery</th>
+          <th scope="col" class="govuk-table__header">Archived</th>
+          <th scope="col" class="govuk-table__header">Reason</th>
+          <th scope="col" class="govuk-table__header">Action</th>
+        </tr>
+      </thead>
+      <tbody class="govuk-table__body">
+        {% for project in projects %}
+          <tr class="govuk-table__row">
+            <td class="govuk-table__cell">{{ project.name }}</td>
+            <td class="govuk-table__cell">
+              {% if project.archivedAt %}
+                {{ project.archivedAt | formatDate }}
+                {% if project.archivedBy %}
+                  <br><span class="govuk-hint govuk-!-margin-bottom-0">by {{ project.archivedBy }}</span>
+                {% endif %}
+              {% else %}
+                Not available
+              {% endif %}
+            </td>
+            <td class="govuk-table__cell">{{ project.archiveReason or "Not provided" }}</td>
+            <td class="govuk-table__cell">
+              <form method="POST" action="/projects/{{ project.id }}/restore">
+                {{ govukButton({
+                  text: "Restore",
+                  classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+                }) }}
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="govuk-body">There are no archived deliveries.</p>
+  {% endif %}
+
+  <p class="govuk-body">
+    <a href="/projects" class="govuk-link">Back to deliveries</a>
+  </p>
+{% endblock %}

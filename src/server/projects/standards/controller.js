@@ -29,6 +29,11 @@ import {
   getProjectSubPageBreadcrumbs,
   truncateBreadcrumbText
 } from '~/src/server/common/helpers/breadcrumbs.js'
+import {
+  deleteAssessmentDraft as deleteSessionAssessmentDraft,
+  getAssessmentDraft as getSessionAssessmentDraft,
+  saveAssessmentDraft as saveSessionAssessmentDraft
+} from './assessment-drafts.js'
 
 export const NOTIFICATIONS_LEGACY = {
   NOT_FOUND: NOTIFICATIONS.PROJECT_NOT_FOUND
@@ -869,6 +874,7 @@ export const standardsController = {
         assessmentData,
         request
       )
+      await deleteSessionAssessmentDraft(request, id, standardId, professionId)
 
       // Create success redirect
       return createSuccessRedirect(h, isEditMode, id, standardId)
@@ -1056,7 +1062,7 @@ export const standardsController = {
       )
 
       if (!assessment) {
-        return h.response().code(statusCodes.notFound)
+        return h.response().code(statusCodes.noContent)
       }
 
       return h.response(assessment).code(statusCodes.ok)
@@ -1064,6 +1070,83 @@ export const standardsController = {
       request.logger.error(
         { error, projectId, standardId, professionId },
         'Error fetching assessment data'
+      )
+      return h.response().code(statusCodes.internalServerError)
+    }
+  },
+
+  getAssessmentDraft: async (request, h) => {
+    const { id: projectId, standardId, professionId } = request.params
+
+    try {
+      const draft = await getSessionAssessmentDraft(
+        request,
+        projectId,
+        standardId,
+        professionId
+      )
+
+      if (!draft) {
+        return h.response().code(statusCodes.noContent)
+      }
+
+      return h.response(draft).code(statusCodes.ok)
+    } catch (error) {
+      request.logger.error(
+        { error, projectId, standardId, professionId },
+        'Error loading assessment draft'
+      )
+      return h.response().code(statusCodes.internalServerError)
+    }
+  },
+
+  saveAssessmentDraft: async (request, h) => {
+    const { id: projectId, standardId, professionId } = request.params
+    const { status, commentary } = request.payload ?? {}
+
+    try {
+      const draft = await saveSessionAssessmentDraft(
+        request,
+        projectId,
+        standardId,
+        professionId,
+        { status, commentary }
+      )
+
+      if (!draft) {
+        return h.response().code(statusCodes.badRequest)
+      }
+
+      return h.response(draft).code(statusCodes.ok)
+    } catch (error) {
+      request.logger.error(
+        { error, projectId, standardId, professionId },
+        'Error saving assessment draft'
+      )
+      return h.response().code(statusCodes.internalServerError)
+    }
+  },
+
+  deleteAssessmentDraft: async (request, h) => {
+    const { id: projectId, standardId, professionId } = request.params
+
+    try {
+      const deleted = await deleteSessionAssessmentDraft(
+        request,
+        projectId,
+        standardId,
+        professionId
+      )
+
+      if (!deleted) {
+        return h.response().code(statusCodes.badRequest)
+      }
+
+      return h.response().code(statusCodes.noContent)
+    } catch (error) {
+      request.logger.error(
+        { error, projectId, standardId, professionId },
+        'Error deleting assessment draft'
       )
       return h.response().code(statusCodes.internalServerError)
     }

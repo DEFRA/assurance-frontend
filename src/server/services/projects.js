@@ -30,6 +30,12 @@ const buildQueryParams = (options) => {
   if (options.tag) {
     queryParams.append('tag', options.tag)
   }
+  if (options.deliveryGroupId) {
+    queryParams.append('delivery-group-id', options.deliveryGroupId)
+  }
+  if (options.includeArchived) {
+    queryParams.append('includeArchived', 'true')
+  }
   return queryParams
 }
 
@@ -244,6 +250,11 @@ export async function createProject(projectData, request) {
 
 // Helper function to build base project object
 function buildBaseProject(currentProject, projectData) {
+  const hasNextServiceAssessmentDate = Object.hasOwn(
+    projectData,
+    'nextServiceAssessmentDate'
+  )
+
   return {
     id: currentProject.id, // Explicitly preserve the ID
     name: projectData.name || currentProject.name,
@@ -251,6 +262,9 @@ function buildBaseProject(currentProject, projectData) {
     defCode: projectData.defCode || currentProject.defCode,
     status: projectData.status || currentProject.status,
     commentary: projectData.commentary || currentProject.commentary,
+    nextServiceAssessmentDate: hasNextServiceAssessmentDate
+      ? projectData.nextServiceAssessmentDate
+      : currentProject.nextServiceAssessmentDate,
     // Preserve other important fields that shouldn't be overwritten
     tags: projectData.tags || currentProject.tags
   }
@@ -402,6 +416,107 @@ export async function updateProject(
     )
     throw error
   }
+}
+
+export async function reviewProject(id, reviewData, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}/review`
+
+    logger.info({ id, reviewData }, 'Recording project review')
+
+    const requestOptions = {
+      method: 'POST',
+      body: JSON.stringify(reviewData ?? {})
+    }
+
+    const result = request
+      ? await authedFetchJsonDecorator(request)(endpoint, requestOptions)
+      : await fetcher(endpoint, requestOptions)
+
+    logger.info({ projectId: id }, 'Project review recorded successfully')
+    return result
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id,
+        reviewData
+      },
+      'Failed to record project review'
+    )
+    throw error
+  }
+}
+
+export async function archiveProject(id, archiveReason, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}/archive`
+
+    logger.info({ id }, 'Archiving project')
+
+    const requestOptions = {
+      method: 'PUT',
+      body: JSON.stringify({ archiveReason })
+    }
+
+    const result = request
+      ? await authedFetchJsonDecorator(request)(endpoint, requestOptions)
+      : await fetcher(endpoint, requestOptions)
+
+    logger.info({ projectId: id }, 'Project archived successfully')
+    return result
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to archive project'
+    )
+    throw error
+  }
+}
+
+export async function restoreProject(id, request) {
+  try {
+    const apiVersion = config.get(API_VERSION_KEY)
+    const endpoint = `${API_BASE_PREFIX}/${apiVersion}/${API_BASE_PATH}/${id}/restore`
+
+    logger.info({ id }, 'Restoring project')
+
+    const requestOptions = {
+      method: 'PUT'
+    }
+
+    const result = request
+      ? await authedFetchJsonDecorator(request)(endpoint, requestOptions)
+      : await fetcher(endpoint, requestOptions)
+
+    logger.info({ projectId: id }, 'Project restored successfully')
+    return result
+  } catch (error) {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        id
+      },
+      'Failed to restore project'
+    )
+    throw error
+  }
+}
+
+export async function getArchivedProjects(request) {
+  const projects = await getProjects(request, { includeArchived: true })
+  return projects.filter((project) => project.isArchived || project.IsArchived)
 }
 
 export async function getProjectById(id, request) {

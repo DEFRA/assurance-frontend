@@ -77,6 +77,10 @@ describe('Delivery Groups Controller', () => {
             href: '/'
           },
           {
+            text: 'Delivery Groups',
+            href: '/#delivery-groups'
+          },
+          {
             text: 'Test Delivery Group'
           }
         ]
@@ -111,6 +115,10 @@ describe('Delivery Groups Controller', () => {
           {
             text: 'Home',
             href: '/'
+          },
+          {
+            text: 'Delivery Groups',
+            href: '/#delivery-groups'
           },
           {
             text: 'Test Delivery Group'
@@ -163,6 +171,10 @@ describe('Delivery Groups Controller', () => {
             href: '/'
           },
           {
+            text: 'Delivery Groups',
+            href: '/#delivery-groups'
+          },
+          {
             text: 'Test Delivery Group'
           }
         ]
@@ -195,6 +207,10 @@ describe('Delivery Groups Controller', () => {
           {
             text: 'Home',
             href: '/'
+          },
+          {
+            text: 'Delivery Groups',
+            href: '/#delivery-groups'
           },
           {
             text: 'Test Delivery Group'

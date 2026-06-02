@@ -14,7 +14,12 @@ const mockGetProfessionHistory = jest.fn()
 const mockArchiveProjectHistoryEntry = jest.fn()
 const mockArchiveProfessionHistoryEntry = jest.fn()
 const mockGetProjectDeliveryPartners = jest.fn()
+const mockReviewProject = jest.fn()
+const mockArchiveProject = jest.fn()
+const mockRestoreProject = jest.fn()
+const mockGetArchivedProjects = jest.fn()
 const mockGetDeliveryGroupById = jest.fn()
+const mockGetDeliveryGroups = jest.fn()
 
 jest.mock('~/src/server/services/projects.js', () => ({
   getProjects: (...args) => mockGetProjects(...args),
@@ -28,7 +33,11 @@ jest.mock('~/src/server/services/projects.js', () => ({
   archiveProfessionHistoryEntry: (...args) =>
     mockArchiveProfessionHistoryEntry(...args),
   getProjectDeliveryPartners: (...args) =>
-    mockGetProjectDeliveryPartners(...args)
+    mockGetProjectDeliveryPartners(...args),
+  reviewProject: (...args) => mockReviewProject(...args),
+  archiveProject: (...args) => mockArchiveProject(...args),
+  restoreProject: (...args) => mockRestoreProject(...args),
+  getArchivedProjects: (...args) => mockGetArchivedProjects(...args)
 }))
 
 jest.mock('~/src/server/services/service-standards.js', () => ({
@@ -40,7 +49,8 @@ jest.mock('~/src/server/services/professions.js', () => ({
 }))
 
 jest.mock('~/src/server/services/delivery-groups.js', () => ({
-  getDeliveryGroupById: (...args) => mockGetDeliveryGroupById(...args)
+  getDeliveryGroupById: (...args) => mockGetDeliveryGroupById(...args),
+  getDeliveryGroups: (...args) => mockGetDeliveryGroups(...args)
 }))
 
 // Add mock for authedFetchJsonDecorator
@@ -76,6 +86,11 @@ describe('Projects controller', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetProfessions.mockResolvedValue([])
+    mockGetDeliveryGroups.mockResolvedValue([])
+    mockReviewProject.mockResolvedValue({})
+    mockArchiveProject.mockResolvedValue({})
+    mockRestoreProject.mockResolvedValue({})
+    mockGetArchivedProjects.mockResolvedValue([])
 
     // Add validation mock behavior
     mockUpdateProject.mockImplementation((id, data) => {
@@ -118,7 +133,7 @@ describe('Projects controller', () => {
       const request = {
         auth: { isAuthenticated: false },
         query: {},
-        logger: { error: jest.fn(), info: jest.fn() }
+        logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() }
       }
 
       // Act
@@ -126,23 +141,30 @@ describe('Projects controller', () => {
 
       // Assert
       expect(mockGetProjects).toHaveBeenCalledWith(request)
-      expect(mockH.view).toHaveBeenCalledWith('projects/views/index', {
-        pageTitle: 'Deliveries',
-        projects,
-        projectNames: ['Project 1', 'Project 2'],
-        isAuthenticated: false,
-        notification: undefined,
-        searchTerm: undefined,
-        breadcrumbs: [
-          {
-            text: 'Home',
-            href: '/'
-          },
-          {
-            text: 'Deliveries'
-          }
-        ]
-      })
+      expect(mockH.view).toHaveBeenCalledWith(
+        'projects/views/index',
+        expect.objectContaining({
+          pageTitle: 'Deliveries',
+          projects: [
+            expect.objectContaining({ id: '1', deliveryGroupName: null }),
+            expect.objectContaining({ id: '2', deliveryGroupName: null })
+          ],
+          projectNames: ['Project 1', 'Project 2'],
+          isAuthenticated: false,
+          isAdmin: false,
+          notification: undefined,
+          searchTerm: undefined,
+          breadcrumbs: [
+            {
+              text: 'Home',
+              href: '/'
+            },
+            {
+              text: 'Deliveries'
+            }
+          ]
+        })
+      )
     })
 
     test('should handle errors when fetching projects', async () => {
@@ -216,7 +238,8 @@ describe('Projects controller', () => {
           heading: 'Test Project',
           project: expect.objectContaining({
             ...mockProject,
-            deliveryGroup: null
+            deliveryGroup: null,
+            lastUpdatedBy: 'Unknown'
           }),
           standards: mockStandards,
           professions: mockProfessions,

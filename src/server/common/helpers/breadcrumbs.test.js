@@ -209,6 +209,10 @@ describe('Breadcrumb Helpers', () => {
           href: '/'
         },
         {
+          text: 'Delivery Groups',
+          href: '/#delivery-groups'
+        },
+        {
           text: 'Digital Services Group'
         }
       ])
@@ -223,6 +227,10 @@ describe('Breadcrumb Helpers', () => {
           href: '/'
         },
         {
+          text: 'Delivery Groups',
+          href: '/#delivery-groups'
+        },
+        {
           text: ''
         }
       ])
@@ -235,6 +243,10 @@ describe('Breadcrumb Helpers', () => {
         {
           text: 'Home',
           href: '/'
+        },
+        {
+          text: 'Delivery Groups',
+          href: '/#delivery-groups'
         },
         {
           text: null

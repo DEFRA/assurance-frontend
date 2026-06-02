@@ -39,6 +39,36 @@ export const standardsRoutes = {
           handler: standardsController.getAssessmentData
         },
         {
+          method: 'GET',
+          path: '/projects/{id}/standards/{standardId}/professions/{professionId}/assessment-draft',
+          handler: standardsController.getAssessmentDraft,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            // Keep aligned with the assessment-save route when delivery-group scoped writes land.
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'POST',
+          path: '/projects/{id}/standards/{standardId}/professions/{professionId}/assessment-draft',
+          handler: standardsController.saveAssessmentDraft,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            // Keep aligned with the assessment-save route when delivery-group scoped writes land.
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
+          method: 'DELETE',
+          path: '/projects/{id}/standards/{standardId}/professions/{professionId}/assessment-draft',
+          handler: standardsController.deleteAssessmentDraft,
+          options: {
+            auth: { strategy: 'session', mode: 'required' },
+            // Keep aligned with the assessment-save route when delivery-group scoped writes land.
+            pre: [{ method: requireRole('admin') }]
+          }
+        },
+        {
           method: 'POST',
           path: '/projects/{id}/assessment',
           handler: standardsController.postAssessmentScreen,

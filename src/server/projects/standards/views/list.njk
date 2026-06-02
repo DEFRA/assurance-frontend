@@ -51,7 +51,7 @@
               <td class="govuk-table__cell">
                 {# Example: show a link for each profession to the assessment update screen #}
                 {% for profession in project.professions %}
-                  <a href="/projects/{{ project.id }}/standards/{{ standard.standardId }}/professions/{{ profession.professionId }}/assessment" class="govuk-link govuk-link--no-visited-state">
+                  <a href="/projects/{{ project.id }}/assessment?standardId={{ standard.standardId }}&professionId={{ profession.professionId }}" class="govuk-link govuk-link--no-visited-state">
                     Update as {{ profession.name or profession.professionId }}
                   </a><br>
                 {% endfor %}

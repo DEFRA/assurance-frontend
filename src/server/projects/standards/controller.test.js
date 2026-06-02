@@ -1995,6 +1995,9 @@ describe('Standards Controller', () => {
 
       // Mock h.response() to return the response object
       mockH.response = jest.fn().mockReturnValue(mockResponseObject)
+      getProjectById.mockResolvedValue(mockProject)
+      getProfessions.mockResolvedValue(mockProfessions)
+      getServiceStandards.mockResolvedValue(mockServiceStandards)
     })
 
     test('should return assessment data as JSON when assessment exists', async () => {
@@ -2024,12 +2027,15 @@ describe('Standards Controller', () => {
         'prof-1',
         mockRequest
       )
+      expect(getProjectById).not.toHaveBeenCalled()
+      expect(getProfessions).not.toHaveBeenCalled()
+      expect(getServiceStandards).not.toHaveBeenCalled()
       expect(mockH.response).toHaveBeenCalledWith(mockAssessment)
       expect(mockResponseObject.code).toHaveBeenCalledWith(200)
       expect(result).toBe(mockResponseObject)
     })
 
-    test('should return 404 when assessment does not exist', async () => {
+    test('should return 204 when assessment does not exist', async () => {
       // Arrange
       getAssessment.mockResolvedValue(null)
 
@@ -2046,8 +2052,11 @@ describe('Standards Controller', () => {
         'prof-1',
         mockRequest
       )
+      expect(getProjectById).not.toHaveBeenCalled()
+      expect(getProfessions).not.toHaveBeenCalled()
+      expect(getServiceStandards).not.toHaveBeenCalled()
       expect(mockH.response).toHaveBeenCalledWith()
-      expect(mockResponseObject.code).toHaveBeenCalledWith(404)
+      expect(mockResponseObject.code).toHaveBeenCalledWith(204)
       expect(result).toBe(mockResponseObject)
     })
 
@@ -2093,6 +2102,17 @@ describe('Standards Controller', () => {
           professionId: 'different-profession'
         }
       }
+
+      getProfessions.mockResolvedValue([
+        { id: 'different-profession', name: 'Different Profession' }
+      ])
+      getServiceStandards.mockResolvedValue([
+        {
+          id: 'different-standard',
+          number: '3',
+          name: 'Different Standard'
+        }
+      ])
 
       const mockAssessment = {
         id: 'assessment-456',
@@ -2170,6 +2190,110 @@ describe('Standards Controller', () => {
       // Assert
       expect(mockH.response).toHaveBeenCalledWith(mockAssessment)
       expect(mockResponseObject.code).toHaveBeenCalledWith(200)
+      expect(result).toBe(mockResponseObject)
+    })
+  })
+
+  describe('assessment draft handlers', () => {
+    let mockResponseObject
+    let sessionCache
+
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-05-26T10:00:00.000Z'))
+
+      mockResponseObject = {
+        code: jest.fn().mockReturnThis()
+      }
+      mockH.response = jest.fn().mockReturnValue(mockResponseObject)
+
+      sessionCache = {
+        get: jest.fn().mockResolvedValue({
+          user: { id: 'user-1' },
+          accessToken: 'access-token',
+          assessmentDrafts: {
+            'project-123:std-1:prof-1': {
+              status: 'AMBER',
+              commentary: 'Draft commentary',
+              timestamp: '2026-05-26T09:00:00.000Z'
+            }
+          }
+        }),
+        set: jest.fn().mockResolvedValue(true)
+      }
+
+      mockRequest.server = {
+        app: {
+          sessionCache
+        }
+      }
+      mockRequest.auth.credentials = {
+        id: 'session-1',
+        user: { roles: ['admin'] }
+      }
+    })
+
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    test('should return an assessment draft when one exists', async () => {
+      const result = await standardsController.getAssessmentDraft(
+        mockRequest,
+        mockH
+      )
+
+      expect(mockH.response).toHaveBeenCalledWith({
+        status: 'AMBER',
+        commentary: 'Draft commentary',
+        timestamp: '2026-05-26T09:00:00.000Z'
+      })
+      expect(mockResponseObject.code).toHaveBeenCalledWith(200)
+      expect(result).toBe(mockResponseObject)
+    })
+
+    test('should save an assessment draft to the existing session', async () => {
+      mockRequest.payload = {
+        status: 'GREEN',
+        commentary: 'Updated draft'
+      }
+
+      const result = await standardsController.saveAssessmentDraft(
+        mockRequest,
+        mockH
+      )
+
+      expect(sessionCache.set).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          user: { id: 'user-1' },
+          accessToken: 'access-token',
+          assessmentDrafts: expect.objectContaining({
+            'project-123:std-1:prof-1': {
+              status: 'GREEN',
+              commentary: 'Updated draft',
+              timestamp: '2026-05-26T10:00:00.000Z'
+            }
+          })
+        })
+      )
+      expect(mockResponseObject.code).toHaveBeenCalledWith(200)
+      expect(result).toBe(mockResponseObject)
+    })
+
+    test('should delete only the requested assessment draft', async () => {
+      const result = await standardsController.deleteAssessmentDraft(
+        mockRequest,
+        mockH
+      )
+
+      expect(sessionCache.set).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          assessmentDrafts: {}
+        })
+      )
+      expect(mockH.response).toHaveBeenCalledWith()
+      expect(mockResponseObject.code).toHaveBeenCalledWith(204)
       expect(result).toBe(mockResponseObject)
     })
   })

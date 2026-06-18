@@ -75,22 +75,22 @@
         </div>
 
         <div class="govuk-table-container">
-          <table class="govuk-table">
+          <table class="govuk-table" data-module="insights-sort">
             <caption class="govuk-table__caption govuk-table__caption--m">
                 Project insights and analytics
             </caption>
             <thead class="govuk-table__head">
               <tr class="govuk-table__row">
-                <th scope="col" class="govuk-table__header sortable" data-sort="text">Project name</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">Standards completed</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">R</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">A</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">G</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">All standards score</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="number">Completed standards score</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="rag">Manual RAG</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="rag">Lowest RAG</th>
-                <th scope="col" class="govuk-table__header sortable" data-sort="date">Last updated</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort-type="text" data-sort-default-direction="asc">Project name</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort-type="number" data-sort-default-direction="desc">Standards completed</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort-type="number" data-sort-default-direction="desc">R</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort-type="number" data-sort-default-direction="desc">A</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort-type="number" data-sort-default-direction="desc">G</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort-type="number" data-sort-default-direction="desc">All standards score</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort-type="number" data-sort-default-direction="desc">Completed standards score</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort-type="rag" data-sort-default-direction="asc">Manual RAG</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort-type="rag" data-sort-default-direction="asc">Lowest RAG</th>
+                <th scope="col" class="govuk-table__header sortable" data-sort-type="date" data-sort-default-direction="desc">Last updated</th>
               </tr>
             </thead>
             <tbody class="govuk-table__body">
@@ -111,38 +111,38 @@
                 {% endif %}
                 
                 <tr class="govuk-table__row">
-                  <td class="govuk-table__cell">
+                  <td class="govuk-table__cell" data-sort-value="{{ project.name }}">
                     <a href="/projects/{{ project.id }}" class="govuk-link">{{ project.name }}</a>
                   </td>
-                  <td class="govuk-table__cell">
+                  <td class="govuk-table__cell" data-sort-value="{{ project.projectStatus.numberOfStandardsCompleted if project.projectStatus else 0 }}">
                     {% if project.projectStatus %}
                       {{ project.projectStatus.numberOfStandardsCompleted }}/14
                     {% else %}
                       <span class="govuk-hint">No data available</span>
                     {% endif %}
                   </td>
-                  <td class="govuk-table__cell govuk-table__cell--numeric">
+                  <td class="govuk-table__cell govuk-table__cell--numeric" data-sort-value="{{ redCount }}">
                     {% if redCount > 0 %}
                       {{ govukTag({ text: redCount, classes: "govuk-tag--red" }) }}
                     {% else %}
                       <span class="govuk-body-s">0</span>
                     {% endif %}
                   </td>
-                  <td class="govuk-table__cell govuk-table__cell--numeric">
+                  <td class="govuk-table__cell govuk-table__cell--numeric" data-sort-value="{{ amberCount }}">
                     {% if amberCount > 0 %}
                       {{ govukTag({ text: amberCount, classes: "govuk-tag--yellow" }) }}
                     {% else %}
                       <span class="govuk-body-s">0</span>
                     {% endif %}
                   </td>
-                  <td class="govuk-table__cell govuk-table__cell--numeric">
+                  <td class="govuk-table__cell govuk-table__cell--numeric" data-sort-value="{{ greenCount }}">
                     {% if greenCount > 0 %}
                       {{ govukTag({ text: greenCount, classes: "govuk-tag--green" }) }}
                     {% else %}
                       <span class="govuk-body-s">0</span>
                     {% endif %}
                   </td>
-                  <td class="govuk-table__cell">
+                  <td class="govuk-table__cell" data-sort-value="{{ project.projectStatus.percentageAcrossAllStandards if project.projectStatus else 0 }}">
                     {% if project.projectStatus %}
                       <div class="progress-bar">
                         <div class="progress-bar__fill" style="width: {{ project.projectStatus.percentageAcrossAllStandards }}%"></div>
@@ -152,7 +152,7 @@
                       <span class="govuk-hint">No data</span>
                     {% endif %}
                   </td>
-                  <td class="govuk-table__cell">
+                  <td class="govuk-table__cell" data-sort-value="{{ project.projectStatus.percentageAcrossCompletedStandards if project.projectStatus else 0 }}">
                     {% if project.projectStatus %}
                       <div class="progress-bar">
                         <div class="progress-bar__fill progress-bar__fill--quality" style="width: {{ project.projectStatus.percentageAcrossCompletedStandards }}%"></div>
@@ -162,17 +162,17 @@
                       <span class="govuk-hint">No data</span>
                     {% endif %}
                   </td>
-                  <td class="govuk-table__cell">
+                  <td class="govuk-table__cell" data-sort-value="{{ project.status if project.status else '' }}">
                     {{ renderStatusTag(project.status) }}
                   </td>
-                  <td class="govuk-table__cell">
+                  <td class="govuk-table__cell" data-sort-value="{{ project.projectStatus.lowestRag if project.projectStatus and project.projectStatus.lowestRag else '' }}">
                     {% if project.projectStatus and project.projectStatus.lowestRag %}
                       {{ renderStatusTag(project.projectStatus.lowestRag) }}
                     {% else %}
                       <span class="govuk-hint">No data</span>
                     {% endif %}
                   </td>
-                  <td class="govuk-table__cell">
+                  <td class="govuk-table__cell" data-sort-value="{{ project.lastUpdated if project.lastUpdated else '' }}">
                     {% if project.lastUpdated %}
                       <span class="govuk-body-s">{{ project.lastUpdated | formatDate }}</span>
                     {% else %}
@@ -537,182 +537,3 @@
   }
 </style>
 {% endblock %}
-
-{% block pageScripts %}
-<script>
-  (function() {
-    // Store event handlers in variables for cleanup
-    let domContentLoadedHandler = null;
-    let sortHandlers = [];
-
-    // Table sorting functionality
-    function initTableSort() {
-      const table = document.querySelector('.govuk-table');
-      if (!table) return;
-
-      const headers = table.querySelectorAll('.sortable');
-      
-      headers.forEach((header, index) => {
-        // Make headers keyboard accessible
-        header.setAttribute('tabindex', '0');
-        header.setAttribute('role', 'button');
-        header.setAttribute('aria-label', `Sort by ${header.textContent.trim()}`);
-        
-        const clickHandler = (e) => sortTable(index, header);
-        const keyHandler = (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            sortTable(index, header);
-          }
-        };
-        
-        header.addEventListener('click', clickHandler);
-        header.addEventListener('keydown', keyHandler);
-        
-        // Store handlers for cleanup
-        sortHandlers.push({ element: header, click: clickHandler, key: keyHandler });
-      });
-    }
-
-    function sortTable(columnIndex, header) {
-      const table = document.querySelector('.govuk-table');
-      const tbody = table.querySelector('tbody');
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      const sortType = header.getAttribute('data-sort');
-      
-      // Determine sort direction
-      const currentSort = header.classList.contains('sort-asc') ? 'asc' : 
-                         header.classList.contains('sort-desc') ? 'desc' : '';
-      
-      // For RAG columns, default to ascending (worst statuses first: RED=1, PENDING=6)
-      // For other columns, default to ascending as normal
-      let newSort;
-      if (currentSort === '') {
-        // First click - for RAG columns, show worst first (ascending: 1,2,3,5,6)
-        newSort = 'asc';
-      } else {
-        // Subsequent clicks - toggle direction
-        newSort = currentSort === 'asc' ? 'desc' : 'asc';
-      }
-      
-      // Clear all sort classes
-      document.querySelectorAll('.sortable').forEach(h => {
-        h.classList.remove('sort-asc', 'sort-desc');
-        h.setAttribute('aria-label', `Sort by ${h.textContent.trim()}`);
-      });
-      
-      // Set new sort class and aria-label
-      header.classList.add(`sort-${newSort}`);
-      header.setAttribute('aria-label', `Sort by ${header.textContent.trim()} (${newSort}ending)`);
-      
-      // Sort rows
-      rows.sort((a, b) => {
-        const aVal = getCellValue(a, columnIndex, sortType);
-        const bVal = getCellValue(b, columnIndex, sortType);
-        
-        let result = 0;
-        if (sortType === 'number' || sortType === 'rag') {
-          // For numbers and RAG values (which return numeric sort orders)
-          result = parseFloat(aVal || 0) - parseFloat(bVal || 0);
-        } else if (sortType === 'date') {
-          const aDate = new Date(aVal || 0);
-          const bDate = new Date(bVal || 0);
-          result = aDate.getTime() - bDate.getTime();
-        } else {
-          result = (aVal || '').localeCompare(bVal || '');
-        }
-        
-        return newSort === 'desc' ? -result : result;
-      });
-      
-      // Reorder rows in DOM
-      rows.forEach(row => tbody.appendChild(row));
-    }
-
-    function getCellValue(row, columnIndex, sortType) {
-      const cell = row.children[columnIndex];
-      if (!cell) return '';
-      
-      // Handle different cell contents
-      if (sortType === 'number') {
-        // For progress bars and percentages
-        const percentMatch = cell.textContent.match(/(\d+(?:\.\d+)?)%/);
-        if (percentMatch) return percentMatch[1];
-        
-        // For fractions like "8/14"
-        const fractionMatch = cell.textContent.match(/(\d+)\/\d+/);
-        if (fractionMatch) return fractionMatch[1];
-        
-        // For plain numbers (tag content)
-        const numberMatch = cell.textContent.match(/\d+/);
-        if (numberMatch) return numberMatch[0];
-        
-        return '0';
-      } else if (sortType === 'date') {
-        // Extract date from cell, handle "No date" case
-        const dateText = cell.textContent.trim();
-        return dateText === 'No date' ? '' : dateText;
-      } else if (sortType === 'rag') {
-        // Special handling for RAG status sorting
-        const cellText = cell.textContent.trim().toUpperCase();
-        
-        // Map RAG values to sort order (lower numbers = higher priority when sorting)
-        // Scale: Red, Amber Red, Amber, Green Amber, Green, Pending
-        // Use array to ensure we check most specific patterns first
-        // Scale: Pending (needs assessment), Red, Amber Red, Amber, Green Amber, Green
-        const ragMapping = [
-          { pattern: 'AMBERRED', order: 3 },      // Compound tag renders as concatenated text
-          { pattern: 'AMBER_RED', order: 3 },     // Third priority
-          { pattern: 'AMBER RED', order: 3 },     // Handle both formats
-          { pattern: 'GREENAMBER', order: 5 },    // Compound tag renders as concatenated text  
-          { pattern: 'GREEN_AMBER', order: 5 },   // Check this before "GREEN" and "AMBER"
-          { pattern: 'GREEN/AMBER', order: 5 },   // Handle both formats
-          { pattern: 'GREEN AMBER', order: 5 },
-          { pattern: 'PENDING', order: 1 },       // Highest priority - needs assessment
-          { pattern: 'RED', order: 2 },           // Second priority - assessed but failing
-          { pattern: 'AMBER', order: 4 },         // Check after compound patterns
-          { pattern: 'GREEN', order: 6 }          // Lowest priority - assessed and good
-        ];
-        
-        // Find the first matching pattern (most specific wins)
-        for (const mapping of ragMapping) {
-          if (cellText.includes(mapping.pattern)) {
-            return mapping.order;
-          }
-        }
-        
-        // Default for unrecognized patterns
-        return 999;
-      } else {
-        // For other text, get the visible text
-        return cell.textContent.trim();
-      }
-    }
-
-    // Initialize table sorting
-    domContentLoadedHandler = function() {
-      initTableSort();
-    };
-
-    // Event listener setup
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', domContentLoadedHandler);
-    } else {
-      domContentLoadedHandler();
-    }
-
-    // Cleanup function
-    window.addEventListener('beforeunload', function() {
-      // Clean up sort handlers
-      sortHandlers.forEach(handler => {
-        handler.element.removeEventListener('click', handler.click);
-        handler.element.removeEventListener('keydown', handler.key);
-      });
-      
-      if (domContentLoadedHandler) {
-        document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
-      }
-    });
-  })();
-</script>
-{% endblock %} 

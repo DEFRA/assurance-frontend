@@ -141,7 +141,7 @@ const getRequestContext = (prompt, request) => {
     region: config.get(CONFIG_KEYS.region),
     service: config.get(CONFIG_KEYS.service),
     timeoutMs: config.get(CONFIG_KEYS.timeoutMs),
-    sessionId: request.state?.['assurance-session']?.id,
+    sessionId: request.auth?.credentials?.agentcoreSessionId,
     requestBody: JSON.stringify({ prompt })
   }
 }

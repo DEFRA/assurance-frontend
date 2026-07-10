@@ -81,9 +81,9 @@ describe('agentcore service', () => {
     config.get.mockImplementation(getDefaultConfigValue)
 
     mockRequest = {
-      state: {
-        'assurance-session': {
-          id: 'session-123'
+      auth: {
+        credentials: {
+          agentcoreSessionId: '550e8400-e29b-41d4-a716-446655440000'
         }
       },
       logger: {
@@ -172,7 +172,8 @@ describe('agentcore service', () => {
         path: '/target/invocations',
         method: 'POST',
         headers: expect.objectContaining({
-          'x-amzn-bedrock-agentcore-runtime-session-id': 'session-123'
+          'x-amzn-bedrock-agentcore-runtime-session-id':
+            '550e8400-e29b-41d4-a716-446655440000'
         }),
         body: JSON.stringify({ prompt: 'How are you?' })
       })

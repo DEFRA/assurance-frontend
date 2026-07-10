@@ -110,7 +110,8 @@ export const plugin = {
         refreshToken: tokenSet.refresh_token,
         tokenExpires:
           Date.now() + (tokenSet.expires_in || ONE_HOUR_SECONDS) * 1000,
-        expires: Date.now() + appConfig.get('session.cache.ttl')
+        expires: Date.now() + appConfig.get('session.cache.ttl'),
+        agentcoreSessionId: crypto.randomUUID()
       }
 
       // Update the existing session with user data

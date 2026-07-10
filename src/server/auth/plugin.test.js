@@ -17,7 +17,8 @@ jest.mock('openid-client', () => ({
 jest.mock('node:crypto', () => ({
   randomBytes: jest.fn().mockReturnValue({
     toString: jest.fn().mockReturnValue('mock-session-id')
-  })
+  }),
+  randomUUID: jest.fn().mockReturnValue('550e8400-e29b-41d4-a716-446655440000')
 }))
 
 jest.mock('~/src/server/common/helpers/logging/logger.js', () => ({

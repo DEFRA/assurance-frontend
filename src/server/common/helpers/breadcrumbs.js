@@ -25,6 +25,10 @@ const BASE_BREADCRUMBS = {
   ADMIN: {
     text: 'Admin',
     href: '/admin'
+  },
+  DIGITAL_ASSISTANT: {
+    text: 'Digital Assistant',
+    href: '/digital-assistant'
   }
 }
 
@@ -149,6 +153,14 @@ export function getAdminBreadcrumbs(subPageName = null) {
   }
 
   return breadcrumbs
+}
+
+/**
+ * Generate breadcrumbs for digital assistant pages
+ * @returns {Array} Breadcrumb items
+ */
+export function getDigitalAssistantBreadcrumbs() {
+  return [BASE_BREADCRUMBS.HOME, { text: 'Digital Assistant' }]
 }
 
 /**

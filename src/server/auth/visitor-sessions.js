@@ -38,7 +38,7 @@ async function createOrUpdateVisitorSession(request, sessionCache) {
     }
 
     // Create new visitor session
-    const newSessionId = crypto.randomBytes(16).toString('hex')
+    const newSessionId = crypto.randomBytes(17).toString('hex')
     const visitor = {
       id: crypto.randomBytes(16).toString('hex'),
       firstVisit: Date.now(),

@@ -8,6 +8,7 @@ import {
   getDeliveryPartnersBreadcrumbs,
   getDeliveryPartnerDetailBreadcrumbs,
   getAdminBreadcrumbs,
+  getDigitalAssistantBreadcrumbs,
   truncateBreadcrumbText
 } from '~/src/server/common/helpers/breadcrumbs.js'
 
@@ -361,6 +362,22 @@ describe('Breadcrumb Helpers', () => {
         },
         {
           text: 'Admin'
+        }
+      ])
+    })
+  })
+
+  describe('getDigitalAssistantBreadcrumbs', () => {
+    it('should return correct breadcrumbs for digital assistant page', () => {
+      const result = getDigitalAssistantBreadcrumbs()
+
+      expect(result).toEqual([
+        {
+          text: 'Home',
+          href: '/'
+        },
+        {
+          text: 'Digital Assistant'
         }
       ])
     })

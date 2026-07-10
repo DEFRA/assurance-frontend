@@ -12,6 +12,7 @@ import { deliveryGroupsDev } from './delivery-groups-dev/index.js'
 import { deliveryGroupStandards } from './delivery-group-standards/index.js'
 import { deliveryPartners } from './delivery-partners/index.js'
 import { accessibility } from './accessibility/index.js'
+import { digitalAssistant } from './digital-assistant/index.js'
 import { cookies } from './cookies/index.js'
 import { insights } from './insights/index.js'
 import { themes } from './themes/index.js'
@@ -40,6 +41,7 @@ export const router = {
         deliveryGroupStandards,
         deliveryPartners,
         accessibility,
+        digitalAssistant,
         cookies,
         insights,
         themes

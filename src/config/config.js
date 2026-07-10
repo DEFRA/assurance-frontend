@@ -236,6 +236,42 @@ export const config = convict({
       env: 'API_VERSION'
     }
   },
+  agentcore: {
+    gatewayUrl: {
+      doc: 'AgentCore gateway URL',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'AGENTCORE_GATEWAY_URL'
+    },
+    region: {
+      doc: 'AWS region for AgentCore gateway signing',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'AGENTCORE_REGION'
+    },
+    service: {
+      doc: 'AWS service name for SigV4 signing',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'AGENTCORE_SERVICE'
+    },
+    timeoutMs: {
+      doc: 'Timeout for AgentCore gateway requests in milliseconds',
+      format: Number,
+      default: 100000,
+      env: 'AGENTCORE_TIMEOUT_MS'
+    },
+    target: {
+      doc: 'AWS target for AgentCore gateway signing',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'AGENTCORE_TARGET'
+    }
+  },
   azure: {
     tenantId: {
       doc: 'Azure AD Tenant ID',

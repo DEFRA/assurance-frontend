@@ -1,6 +1,7 @@
 import { SignatureV4 } from '@aws-sdk/signature-v4'
 import { HttpRequest } from '@aws-sdk/protocol-http'
 import { defaultProvider } from '@aws-sdk/credential-provider-node'
+import { fromTemporaryCredentials } from '@aws-sdk/credential-providers'
 import { handleChat } from './agentcore.js'
 
 jest.mock('@aws-sdk/signature-v4', () => ({
@@ -13,6 +14,10 @@ jest.mock('@aws-sdk/protocol-http', () => ({
 
 jest.mock('@aws-sdk/credential-provider-node', () => ({
   defaultProvider: jest.fn()
+}))
+
+jest.mock('@aws-sdk/credential-providers', () => ({
+  fromTemporaryCredentials: jest.fn()
 }))
 
 jest.mock('~/src/config/config.js', () => ({
@@ -29,7 +34,10 @@ const getDefaultConfigValue = (key) => {
     'agentcore.target': 'target',
     'agentcore.region': 'eu-west-2',
     'agentcore.service': 'service',
-    'agentcore.timeoutMs': 10000
+    'agentcore.timeoutMs': 10000,
+    'agentcore.assumeRoleArn': null,
+    'agentcore.assumeRoleExternalId': null,
+    'agentcore.assumeRoleSessionName': null
   }
 
   return values[key]
@@ -65,6 +73,7 @@ describe('agentcore service', () => {
   let mockRequest
   let mockSigner
   let mockCredentialsProvider
+  let mockAssumeRoleCredentialsProvider
   const originalFetch = global.fetch
 
   beforeEach(() => {
@@ -72,11 +81,13 @@ describe('agentcore service', () => {
 
     global.fetch = jest.fn()
     mockCredentialsProvider = jest.fn()
+    mockAssumeRoleCredentialsProvider = jest.fn()
     mockSigner = {
       sign: jest.fn()
     }
 
     defaultProvider.mockReturnValue(mockCredentialsProvider)
+    fromTemporaryCredentials.mockReturnValue(mockAssumeRoleCredentialsProvider)
     SignatureV4.mockImplementation(() => mockSigner)
     config.get.mockImplementation(getDefaultConfigValue)
 
@@ -192,6 +203,60 @@ describe('agentcore service', () => {
     )
 
     expect(result).toBe('Agent response text')
+  })
+
+  test('assumes role when cross-account AgentCore role ARN is configured', async () => {
+    config.get.mockImplementation((key) => {
+      if (key === 'agentcore.assumeRoleArn') {
+        return 'arn:aws:iam::123456789012:role/agentcore-cross-account'
+      }
+
+      if (key === 'agentcore.assumeRoleExternalId') {
+        return 'external-id-value'
+      }
+
+      if (key === 'agentcore.assumeRoleSessionName') {
+        return 'agentcore-cross-account-session'
+      }
+
+      return getDefaultConfigValue(key)
+    })
+
+    mockSigner.sign.mockResolvedValue({
+      headers: {
+        'content-type': 'application/json',
+        Authorization: 'AWS4-HMAC-SHA256 signed'
+      }
+    })
+
+    global.fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: {
+        get: jest.fn(() => 'application/json')
+      },
+      json: jest.fn().mockResolvedValue({ message: 'Agent response text' })
+    })
+
+    await handleChat('How are you?', mockRequest)
+
+    expect(defaultProvider).toHaveBeenCalled()
+    expect(fromTemporaryCredentials).toHaveBeenCalledWith({
+      masterCredentials: mockCredentialsProvider,
+      clientConfig: {
+        region: 'eu-west-2'
+      },
+      params: {
+        RoleArn: 'arn:aws:iam::123456789012:role/agentcore-cross-account',
+        RoleSessionName: 'agentcore-cross-account-session',
+        ExternalId: 'external-id-value'
+      }
+    })
+    expect(SignatureV4).toHaveBeenCalledWith(
+      expect.objectContaining({
+        credentials: mockAssumeRoleCredentialsProvider
+      })
+    )
   })
 
   test('returns streamed content from event-stream response', async () => {

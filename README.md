@@ -90,6 +90,37 @@ The assurance application is integrated with Entra ID, in order to sign-in the f
 
 > To test this in docker compose you need to set `AZURE_CLIENT_SECRET` in your environment variables and add this to docker compose.
 
+### AgentCore Cross-Account Configuration (ECS)
+
+When running this service in ECS, AgentCore can be hosted in a different AWS account.
+By default, the service uses the ECS task role credentials. For cross-account access,
+configure an IAM role in the AgentCore account and allow this service to assume it.
+
+Environment variables:
+
+- `AGENTCORE_GATEWAY_URL`: AgentCore gateway base URL.
+- `AGENTCORE_TARGET`: AgentCore runtime target.
+- `AGENTCORE_REGION`: AWS region used for SigV4 signing and STS.
+- `AGENTCORE_SERVICE`: AWS service name for SigV4 signing.
+- `AGENTCORE_ASSUME_ROLE_ARN`: Role ARN in the target account to assume for AgentCore calls.
+- `AGENTCORE_ASSUME_ROLE_EXTERNAL_ID` (optional): External ID expected by the target role trust policy.
+- `AGENTCORE_ASSUME_ROLE_SESSION_NAME` (optional): Session name used when assuming role.
+
+If `AGENTCORE_ASSUME_ROLE_ARN` is not set, no role assumption is performed and the
+ECS task role credentials are used directly.
+
+Example task environment:
+
+```bash
+AGENTCORE_GATEWAY_URL=https://agentcore-runtime.example.amazonaws.com
+AGENTCORE_TARGET=my-agent-target
+AGENTCORE_REGION=eu-west-2
+AGENTCORE_SERVICE=bedrock-agentcore
+AGENTCORE_ASSUME_ROLE_ARN=arn:aws:iam::123456789012:role/agentcore-cross-account-runtime
+AGENTCORE_ASSUME_ROLE_EXTERNAL_ID=assurance-frontend-prod
+AGENTCORE_ASSUME_ROLE_SESSION_NAME=assurance-frontend-agentcore
+```
+
 ## Local Development
 
 ### Setup

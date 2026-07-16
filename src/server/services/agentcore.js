@@ -3,13 +3,17 @@ import { SignatureV4 } from '@aws-sdk/signature-v4'
 import { HttpRequest } from '@aws-sdk/protocol-http'
 import { config } from '~/src/config/config.js'
 import { defaultProvider } from '@aws-sdk/credential-provider-node'
+import { fromTemporaryCredentials } from '@aws-sdk/credential-providers'
 
 const CONFIG_KEYS = {
   gatewayUrl: 'agentcore.gatewayUrl',
   target: 'agentcore.target',
   region: 'agentcore.region',
   service: 'agentcore.service',
-  timeoutMs: 'agentcore.timeoutMs'
+  timeoutMs: 'agentcore.timeoutMs',
+  assumeRoleArn: 'agentcore.assumeRoleArn',
+  assumeRoleExternalId: 'agentcore.assumeRoleExternalId',
+  assumeRoleSessionName: 'agentcore.assumeRoleSessionName'
 }
 
 const FALLBACK_ERROR_MESSAGE =
@@ -141,9 +145,43 @@ const getRequestContext = (prompt, request) => {
     region: config.get(CONFIG_KEYS.region),
     service: config.get(CONFIG_KEYS.service),
     timeoutMs: config.get(CONFIG_KEYS.timeoutMs),
+    assumeRoleArn: config.get(CONFIG_KEYS.assumeRoleArn),
+    assumeRoleExternalId: config.get(CONFIG_KEYS.assumeRoleExternalId),
+    assumeRoleSessionName: config.get(CONFIG_KEYS.assumeRoleSessionName),
     sessionId: request.auth?.credentials?.agentcoreSessionId,
     requestBody: JSON.stringify({ prompt })
   }
+}
+
+const getCredentialsProvider = ({
+  region,
+  assumeRoleArn,
+  assumeRoleExternalId,
+  assumeRoleSessionName
+}) => {
+  const baseCredentialsProvider = defaultProvider()
+
+  if (typeof assumeRoleArn !== 'string' || !assumeRoleArn) {
+    return baseCredentialsProvider
+  }
+
+  const assumeRoleParams = {
+    RoleArn: assumeRoleArn,
+    RoleSessionName:
+      assumeRoleSessionName || 'assurance-frontend-agentcore-runtime'
+  }
+
+  if (typeof assumeRoleExternalId === 'string' && assumeRoleExternalId) {
+    assumeRoleParams.ExternalId = assumeRoleExternalId
+  }
+
+  return fromTemporaryCredentials({
+    masterCredentials: baseCredentialsProvider,
+    clientConfig: {
+      region
+    },
+    params: assumeRoleParams
+  })
 }
 
 const sendSignedRequest = async (prompt, request) => {
@@ -155,11 +193,12 @@ const sendSignedRequest = async (prompt, request) => {
 
   const { endpoint, region, service, timeoutMs, sessionId, requestBody } =
     requestContext
+  const credentialsProvider = getCredentialsProvider(requestContext)
 
   const signer = new SignatureV4({
     service,
     region,
-    credentials: defaultProvider(),
+    credentials: credentialsProvider,
     sha256: Sha256
   })
 

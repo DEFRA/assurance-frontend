@@ -270,6 +270,27 @@ export const config = convict({
       nullable: true,
       default: null,
       env: 'AGENTCORE_TARGET'
+    },
+    assumeRoleArn: {
+      doc: 'Optional IAM role ARN to assume for cross-account AgentCore access',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'AGENTCORE_ASSUME_ROLE_ARN'
+    },
+    assumeRoleExternalId: {
+      doc: 'Optional external ID for AgentCore assume-role',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'AGENTCORE_ASSUME_ROLE_EXTERNAL_ID'
+    },
+    assumeRoleSessionName: {
+      doc: 'Optional session name for AgentCore assume-role',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'AGENTCORE_ASSUME_ROLE_SESSION_NAME'
     }
   },
   azure: {

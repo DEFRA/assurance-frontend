@@ -1,11 +1,8 @@
-import { fetch as undiciFetch } from 'undici'
 import { config } from '~/src/config/config.js'
 import { fetcher, getApiUrl } from './fetcher.js'
 
-// Mock dependencies
-jest.mock('undici', () => ({
-  fetch: jest.fn()
-}))
+// Mock global fetch
+global.fetch = jest.fn()
 
 // Need to mock config.get to return appropriate values for logger-options.js
 jest.mock('~/src/config/config.js', () => ({
@@ -66,13 +63,13 @@ describe('fetcher', () => {
       },
       text: jest.fn().mockResolvedValue(JSON.stringify(mockResponseData))
     }
-    undiciFetch.mockResolvedValue(mockResponse)
+    fetch.mockResolvedValue(mockResponse)
 
     // Act
     const result = await fetcher('/test', {}, mockRequest)
 
     // Assert
-    expect(undiciFetch).toHaveBeenCalledWith(
+    expect(fetch).toHaveBeenCalledWith(
       `${mockApiUrl}/test`,
       expect.objectContaining({
         method: 'GET',
@@ -98,13 +95,13 @@ describe('fetcher', () => {
       },
       text: jest.fn().mockResolvedValue(JSON.stringify(mockResponseData))
     }
-    undiciFetch.mockResolvedValue(mockResponse)
+    fetch.mockResolvedValue(mockResponse)
 
     // Act
     const result = await fetcher('/test', { method: 'POST' }, mockRequest)
 
     // Assert
-    expect(undiciFetch).toHaveBeenCalledWith(
+    expect(fetch).toHaveBeenCalledWith(
       `${mockApiUrl}/test`,
       expect.objectContaining({
         method: 'POST'
@@ -123,7 +120,7 @@ describe('fetcher', () => {
         get: jest.fn().mockReturnValue('text/plain')
       }
     }
-    undiciFetch.mockResolvedValue(mockResponse)
+    fetch.mockResolvedValue(mockResponse)
 
     // Act
     const result = await fetcher('/test', {}, mockRequest)
@@ -142,7 +139,7 @@ describe('fetcher', () => {
         get: jest.fn()
       }
     }
-    undiciFetch.mockResolvedValue(mockResponse)
+    fetch.mockResolvedValue(mockResponse)
 
     // Act
     const result = await fetcher('/test', {}, mockRequest)
@@ -156,7 +153,7 @@ describe('fetcher', () => {
   test('should handle network errors', async () => {
     // Arrange
     const networkError = new Error('Network error')
-    undiciFetch.mockRejectedValue(networkError)
+    fetch.mockRejectedValue(networkError)
 
     // Act
     const result = await fetcher('/test', {}, mockRequest)
@@ -171,7 +168,7 @@ describe('fetcher', () => {
     // Arrange
     const timeoutError = new Error('Timeout')
     timeoutError.name = 'AbortError'
-    undiciFetch.mockRejectedValue(timeoutError)
+    fetch.mockRejectedValue(timeoutError)
 
     // Act
     const result = await fetcher('/test', {}, mockRequest)
@@ -189,7 +186,7 @@ describe('fetcher', () => {
     // Arrange
     const connError = new Error('Connection refused')
     connError.code = 'ECONNREFUSED'
-    undiciFetch.mockRejectedValue(connError)
+    fetch.mockRejectedValue(connError)
 
     // Act
     const result = await fetcher('/test', {}, mockRequest)
@@ -214,13 +211,13 @@ describe('fetcher', () => {
       },
       text: jest.fn().mockResolvedValue(JSON.stringify({ data: 'test' }))
     }
-    undiciFetch.mockResolvedValue(mockResponse)
+    fetch.mockResolvedValue(mockResponse)
 
     // Act
     await fetcher(absoluteUrl, {}, mockRequest)
 
     // Assert
-    expect(undiciFetch).toHaveBeenCalledWith(absoluteUrl, expect.anything())
+    expect(fetch).toHaveBeenCalledWith(absoluteUrl, expect.anything())
   })
 
   test('getApiUrl should return the configured API URL', () => {

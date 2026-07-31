@@ -1,4 +1,3 @@
-import { fetch as undiciFetch } from 'undici'
 import Boom from '@hapi/boom'
 import { config } from '~/src/config/config.js'
 import { logger as baseLogger } from '~/src/server/common/helpers/logging/logger.js'
@@ -15,7 +14,7 @@ async function fetcher(url, options = {}, request) {
   log.info(`Making ${options?.method || 'GET'} request to ${fullUrl}`)
 
   try {
-    const response = await undiciFetch(fullUrl, {
+    const response = await fetch(fullUrl, {
       ...options,
       method: options?.method ?? 'GET',
       headers: {

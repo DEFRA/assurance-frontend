@@ -10,7 +10,6 @@ import { plugin as sessionCache } from '~/src/server/common/helpers/session-cach
 import { getCacheEngine } from '~/src/server/common/helpers/session-cache/cache-engine.js'
 import { pulse } from '~/src/server/common/helpers/pulse.js'
 import { requestTracing } from '~/src/server/common/helpers/request-tracing.js'
-import { setupProxy } from '~/src/server/common/helpers/proxy/setup-proxy.js'
 import { navigation } from '~/src/server/common/helpers/navigation.js'
 import { hasAdminRole } from '~/src/server/common/helpers/auth.js'
 import Inert from '@hapi/inert'
@@ -20,7 +19,6 @@ import { logger } from '~/src/server/common/helpers/logging/logger.js'
 import { plugin as requestExtensionsPlugin } from './plugins/request-extensions.js'
 
 export async function createServer() {
-  setupProxy()
   const server = hapi.server({
     port: config.get('port'),
     routes: {
